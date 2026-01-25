@@ -1,0 +1,136 @@
+package com.fullStc.config;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.fullStc.security.filter.JwtCheckFilter;
+import com.fullStc.security.handler.CustomAccessDeniedHandler;
+import com.fullStc.util.JwtUtil;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+// Spring Security 설정
+@Configuration
+@Slf4j
+@RequiredArgsConstructor
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    private final JwtUtil jwtUtil;
+    
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
+    private String allowedOrigins;
+
+    // PasswordEncoder 빈 등록
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // SecurityFilterChain 설정
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        log.info("---------------------security config---------------------------");
+
+        // CORS 설정
+        http.cors(httpSecurityCorsConfigurer -> {
+            httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource());
+        });
+
+        // 세션을 사용하지 않음 (STATELESS)
+        http.sessionManagement(sessionConfig -> sessionConfig
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // CSRF 보호 활성화 (Double Submit Cookie 패턴)
+        // 쿠키에 CSRF 토큰 저장, 헤더에서 검증
+        http.csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+            // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
+            .ignoringRequestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**")
+        );
+
+        // 인가 설정
+        http.authorizeHttpRequests(auth -> {
+            // Swagger UI 경로는 인증 없이 접근 가능 (정확한 경로 포함)
+            auth.requestMatchers(
+                    "/swagger-ui/**", 
+                    "/v3/api-docs",           // 정확히 /v3/api-docs
+                    "/v3/api-docs/**",        // /v3/api-docs/로 시작하는 모든 경로
+                    "/swagger-ui.html"
+            ).permitAll();
+            // 로그아웃은 인증 필요
+            auth.requestMatchers("/api/auth/logout").authenticated();
+            // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
+            auth.requestMatchers("/api/auth/**").permitAll();
+            // 나머지는 인증 필요
+            auth.anyRequest().authenticated();
+        });
+
+        // Form Login 비활성화 (JWT 기반 REST API이므로 불필요)
+        http.formLogin(config -> config.disable());
+
+        // JWT 체크 필터 추가
+        http.addFilterBefore(new JwtCheckFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+
+        // 예외 처리 설정
+        http.exceptionHandling(config -> {
+            config.accessDeniedHandler(new CustomAccessDeniedHandler());
+        });
+
+        // 보안 HTTP 헤더 설정
+        http.headers(headers -> headers
+            .frameOptions(frameOptions -> frameOptions.deny()) // X-Frame-Options: DENY (클릭재킹 방지)
+            .contentTypeOptions(contentTypeOptions -> {}) // X-Content-Type-Options: nosniff
+            .httpStrictTransportSecurity(hsts -> hsts
+                .maxAgeInSeconds(31536000) // 1년
+            )
+        );
+
+        return http.build();
+    }
+
+    // CORS 설정 (외부화)
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // application.properties에서 허용할 Origin 읽기
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toList());
+        
+        log.info("CORS 허용 Origin: {}", origins);
+        configuration.setAllowedOrigins(origins);
+        
+        configuration.setAllowedMethods(Arrays.asList("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With", "Cookie", "X-CSRF-TOKEN"));
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "X-CSRF-TOKEN"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // preflight 요청 캐시 시간 (1시간)
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+}
