@@ -10,18 +10,19 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 회원 정보를 위한 DTO (UserDetails 구현)
+// 회원 정보를 위한 DTO (UserDetails, OAuth2User 구현)
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class MemberDTO implements UserDetails {
+public class MemberDTO implements UserDetails, OAuth2User {
     // 회원 고유 ID
     private Long id;
 
@@ -82,6 +83,17 @@ public class MemberDTO implements UserDetails {
     @Override
     public boolean isCredentialsNonExpired() {
         return true;
+    }
+
+    // OAuth2User 구현 메서드
+    @Override
+    public Map<String, Object> getAttributes() {
+        return getClaims();
+    }
+
+    @Override
+    public String getName() {
+        return email != null ? email : "";
     }
 
     // JWT 클레임 생성을 위한 메서드

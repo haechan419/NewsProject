@@ -40,8 +40,22 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 인증이 필요 없는 엔드포인트 목록
+    const publicEndpoints = [
+      '/api/auth/login',
+      '/api/auth/signup',
+      '/api/auth/find-email',
+      '/api/auth/find-password',
+      '/api/auth/reset-password',
+    ];
+
+    // 인증이 필요 없는 엔드포인트에서는 리다이렉트하지 않음
+    const isPublicEndpoint = publicEndpoints.some(endpoint => 
+      originalRequest.url?.includes(endpoint)
+    );
+
     // 401 에러이고, 아직 재시도하지 않은 경우
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint) {
       originalRequest._retry = true;
 
       try {

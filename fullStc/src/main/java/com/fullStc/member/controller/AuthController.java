@@ -14,10 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
+import com.fullStc.member.dto.FindEmailDTO;
+import com.fullStc.member.dto.FindPasswordDTO;
 import com.fullStc.member.dto.LoginDTO;
 import com.fullStc.member.dto.LoginResponseDTO;
 import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.member.dto.RefreshTokenRequestDTO;
+import com.fullStc.member.dto.ResetPasswordDTO;
 import com.fullStc.member.dto.SignUpDTO;
 import com.fullStc.member.dto.TokenDTO;
 import com.fullStc.member.service.AuthService;
@@ -30,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 // 인증 관련 컨트롤러
-@Tag(name = "인증", description = "인증 관련 API (회원가입, 로그인, 토큰 갱신, 로그아웃)")
+@Tag(name = "인증", description = "인증 관련 API (회원가입, 로그인, 토큰 갱신, 로그아웃, 아이디/비밀번호 찾기)")
 @RestController
 @RequestMapping("/api/auth")
 @Slf4j
@@ -174,6 +177,45 @@ public class AuthController {
         refreshTokenCookie.setMaxAge(0);
         response.addCookie(refreshTokenCookie);
         
+        return ResponseEntity.ok().build();
+    }
+
+    // 아이디 찾기
+    @Operation(summary = "아이디 찾기", description = "닉네임을 입력하여 등록된 이메일을 찾습니다. 이메일은 마스킹되어 이메일로 발송됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "아이디 찾기 성공 (이메일 발송됨)"),
+            @ApiResponse(responseCode = "400", description = "존재하지 않는 닉네임 또는 소셜 로그인 계정")
+    })
+    @PostMapping("/find-email")
+    public ResponseEntity<String> findEmail(@Validated @RequestBody FindEmailDTO findEmailDTO) {
+        log.info("아이디 찾기 요청: nickname={}", findEmailDTO.getNickname());
+        String maskedEmail = authService.findEmail(findEmailDTO);
+        return ResponseEntity.ok(maskedEmail);
+    }
+
+    // 비밀번호 찾기
+    @Operation(summary = "비밀번호 찾기", description = "이메일로 비밀번호 재설정 토큰을 생성합니다. 토큰은 1시간 동안 유효합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "비밀번호 재설정 토큰 생성 성공"),
+            @ApiResponse(responseCode = "400", description = "존재하지 않는 이메일 또는 소셜 로그인 계정")
+    })
+    @PostMapping("/find-password")
+    public ResponseEntity<String> findPassword(@Validated @RequestBody FindPasswordDTO findPasswordDTO) {
+        log.info("비밀번호 찾기 요청: email={}", findPasswordDTO.getEmail());
+        String token = authService.requestPasswordReset(findPasswordDTO);
+        return ResponseEntity.ok(token);
+    }
+
+    // 비밀번호 재설정
+    @Operation(summary = "비밀번호 재설정", description = "토큰을 사용하여 비밀번호를 재설정합니다. 토큰은 이메일로 발송된 링크에서 확인할 수 있습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "비밀번호 재설정 성공"),
+            @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 토큰, 또는 이미 사용된 토큰")
+    })
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Validated @RequestBody ResetPasswordDTO resetPasswordDTO) {
+        log.info("비밀번호 재설정 요청: token={}", resetPasswordDTO.getToken());
+        authService.resetPassword(resetPasswordDTO);
         return ResponseEntity.ok().build();
     }
 }

@@ -22,6 +22,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fullStc.security.filter.JwtCheckFilter;
 import com.fullStc.security.handler.CustomAccessDeniedHandler;
+import com.fullStc.security.handler.CustomOAuth2FailureHandler;
+import com.fullStc.security.handler.CustomOAuth2SuccessHandler;
+import com.fullStc.security.service.CustomOAuth2UserService;
 import com.fullStc.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -35,9 +38,15 @@ import lombok.extern.slf4j.Slf4j;
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+    private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
     
-    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String allowedOrigins;
+    
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     // PasswordEncoder 빈 등록
     @Bean
@@ -65,7 +74,15 @@ public class SecurityConfig {
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
             .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
             // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
-            .ignoringRequestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .ignoringRequestMatchers("/api/auth/**",
+                    "/api/boards/**",
+                    "/api/comments/**",
+                    "/api/files/**",
+                    "/api/ai/**",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/oauth2/**",
+                    "/login/oauth2/**")
         );
 
         // 인가 설정
@@ -77,16 +94,46 @@ public class SecurityConfig {
                     "/v3/api-docs/**",        // /v3/api-docs/로 시작하는 모든 경로
                     "/swagger-ui.html"
             ).permitAll();
+            
+            // 정적 리소스 허용 (Swagger UI CSS, favicon 등)
+            auth.requestMatchers(
+                    "/favicon.ico",
+                    "/error",
+                    "/static/**",
+                    "/public/**",
+                    "/resources/**",
+                    "/css/**",
+                    "/js/**",
+                    "/images/**",
+                    "/*.ico",
+                    "/*.css",
+                    "/*.js",
+                    "/default-ui.css"  // Swagger UI CSS
+            ).permitAll();
+            
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
             // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
             auth.requestMatchers("/api/auth/**").permitAll();
+            // OAuth2 경로 허용
+            auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
+            // /login 경로 허용 (OAuth2 에러 리다이렉트용)
+            auth.requestMatchers("/login").permitAll();
             // 나머지는 인증 필요
             auth.anyRequest().authenticated();
         });
 
         // Form Login 비활성화 (JWT 기반 REST API이므로 불필요)
         http.formLogin(config -> config.disable());
+
+        // OAuth2 로그인 설정
+        http.oauth2Login(oauth2 -> oauth2
+            .userInfoEndpoint(userInfo -> userInfo
+                .userService(customOAuth2UserService)
+            )
+            .successHandler(customOAuth2SuccessHandler)
+            .failureHandler(customOAuth2FailureHandler)
+        );
 
         // JWT 체크 필터 추가
         http.addFilterBefore(new JwtCheckFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);

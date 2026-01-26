@@ -8,14 +8,20 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 import com.fullStc.member.domain.Member;
+import com.fullStc.member.domain.PasswordResetToken;
 import com.fullStc.member.domain.RefreshToken;
 import com.fullStc.member.domain.enums.MemberRole;
+import com.fullStc.member.dto.FindEmailDTO;
+import com.fullStc.member.dto.FindPasswordDTO;
 import com.fullStc.member.dto.RefreshTokenRequestDTO;
+import com.fullStc.member.dto.ResetPasswordDTO;
 import com.fullStc.member.dto.SignUpDTO;
 import com.fullStc.member.dto.TokenDTO;
 import com.fullStc.member.repository.BaseRepositoryTest;
+import com.fullStc.member.repository.PasswordResetTokenRepository;
 import com.fullStc.member.repository.RefreshTokenRepository;
 import com.fullStc.member.repository.TestHelper;
 import com.fullStc.util.JwtUtil;
@@ -28,6 +34,9 @@ public class AuthServiceTests extends BaseRepositoryTest {
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -218,5 +227,232 @@ public class AuthServiceTests extends BaseRepositoryTest {
         List<RefreshToken> tokens = refreshTokenRepository.findByMemberId(member.getId());
         assertThat(tokens).isEmpty();
         log.info("로그아웃 성공: 모든 RefreshToken 삭제됨");
+    }
+
+    // 아이디 찾기 성공
+    @Test
+    public void testFindEmail_Success() {
+        // given
+        String email = TestHelper.generateUniqueEmail("findemail");
+        String nickname = TestHelper.generateUniqueNickname("FindEmailUser");
+        TestHelper.createMember(memberRepository, passwordEncoder, email, nickname);
+
+        FindEmailDTO findEmailDTO = FindEmailDTO.builder()
+                .nickname(nickname)
+                .build();
+
+        // when
+        String foundEmail = authService.findEmail(findEmailDTO);
+
+        // then
+        assertThat(foundEmail).isNotNull();
+        assertThat(foundEmail).isEqualTo(email); // 전체 이메일 반환 확인
+        assertThat(foundEmail).contains("@");
+        log.info("아이디 찾기 성공: foundEmail={}", foundEmail);
+    }
+
+    // 아이디 찾기 실패 - 존재하지 않는 닉네임
+    @Test
+    public void testFindEmail_NicknameNotFound() {
+        // given
+        FindEmailDTO findEmailDTO = FindEmailDTO.builder()
+                .nickname("NonExistentUser")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.findEmail(findEmailDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("해당 닉네임으로 등록된 회원을 찾을 수 없습니다");
+        log.info("존재하지 않는 닉네임 검증 성공");
+    }
+
+    // 아이디 찾기 실패 - 소셜 로그인 계정
+    @Test
+    public void testFindEmail_SocialAccount() {
+        // given
+        String email = TestHelper.generateUniqueEmail("social");
+        String nickname = TestHelper.generateUniqueNickname("SocialUser");
+        TestHelper.createMember(memberRepository, passwordEncoder, email, nickname, "kakao", "kakao_12345", MemberRole.USER);
+
+        FindEmailDTO findEmailDTO = FindEmailDTO.builder()
+                .nickname(nickname)
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.findEmail(findEmailDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("소셜 로그인 계정은 이메일 찾기를 사용할 수 없습니다");
+        log.info("소셜 로그인 계정 검증 성공");
+    }
+
+    // 비밀번호 찾기 성공
+    @Test
+    public void testRequestPasswordReset_Success() {
+        // given
+        String email = TestHelper.generateUniqueEmail("reset");
+        String nickname = TestHelper.generateUniqueNickname("ResetUser");
+        Member member = TestHelper.createMember(memberRepository, passwordEncoder, email, nickname);
+
+        FindPasswordDTO findPasswordDTO = FindPasswordDTO.builder()
+                .email(email)
+                .build();
+
+        // when
+        String token = authService.requestPasswordReset(findPasswordDTO);
+
+        // then
+        assertThat(token).isNotNull();
+        assertThat(token).isNotEmpty();
+        List<PasswordResetToken> tokens = passwordResetTokenRepository.findByMemberId(member.getId());
+        assertThat(tokens).hasSize(1);
+        assertThat(tokens.get(0).getToken()).isEqualTo(token);
+        assertThat(tokens.get(0).isUsed()).isFalse();
+        assertThat(tokens.get(0).isExpired()).isFalse();
+        log.info("비밀번호 재설정 요청 성공: token={}", token);
+    }
+
+    // 비밀번호 찾기 실패 - 존재하지 않는 이메일
+    @Test
+    public void testRequestPasswordReset_EmailNotFound() {
+        // given
+        FindPasswordDTO findPasswordDTO = FindPasswordDTO.builder()
+                .email("nonexistent@test.com")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.requestPasswordReset(findPasswordDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("해당 이메일로 등록된 회원을 찾을 수 없습니다");
+        log.info("존재하지 않는 이메일 검증 성공");
+    }
+
+    // 비밀번호 찾기 실패 - 소셜 로그인 계정
+    @Test
+    public void testRequestPasswordReset_SocialAccount() {
+        // given
+        String email = TestHelper.generateUniqueEmail("socialreset");
+        String nickname = TestHelper.generateUniqueNickname("SocialResetUser");
+        TestHelper.createMember(memberRepository, passwordEncoder, email, nickname, "naver", "naver_12345", MemberRole.USER);
+
+        FindPasswordDTO findPasswordDTO = FindPasswordDTO.builder()
+                .email(email)
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.requestPasswordReset(findPasswordDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("소셜 로그인 계정은 비밀번호 재설정을 사용할 수 없습니다");
+        log.info("소셜 로그인 계정 비밀번호 재설정 검증 성공");
+    }
+
+    // 비밀번호 재설정 성공
+    @Test
+    public void testResetPassword_Success() {
+        // given
+        String email = TestHelper.generateUniqueEmail("resetpass");
+        String nickname = TestHelper.generateUniqueNickname("ResetPassUser");
+        Member member = TestHelper.createMember(memberRepository, passwordEncoder, email, nickname, "local", null, MemberRole.USER);
+        String oldPassword = member.getPassword();
+
+        // 비밀번호 재설정 토큰 생성
+        FindPasswordDTO findPasswordDTO = FindPasswordDTO.builder()
+                .email(email)
+                .build();
+        String token = authService.requestPasswordReset(findPasswordDTO);
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElse(null);
+        assertThat(resetToken).isNotNull();
+
+        ResetPasswordDTO resetPasswordDTO = ResetPasswordDTO.builder()
+                .token(resetToken.getToken())
+                .newPassword("NewPass1234!")
+                .build();
+
+        // when
+        authService.resetPassword(resetPasswordDTO);
+
+        // then
+        Member updatedMember = memberRepository.findById(member.getId()).orElse(null);
+        assertThat(updatedMember).isNotNull();
+        assertThat(updatedMember.getPassword()).isNotEqualTo(oldPassword);
+        
+        PasswordResetToken usedToken = passwordResetTokenRepository.findByToken(resetToken.getToken()).orElse(null);
+        assertThat(usedToken).isNotNull();
+        assertThat(usedToken.isUsed()).isTrue();
+        log.info("비밀번호 재설정 성공: 비밀번호 변경됨");
+    }
+
+    // 비밀번호 재설정 실패 - 유효하지 않은 토큰
+    @Test
+    public void testResetPassword_InvalidToken() {
+        // given
+        ResetPasswordDTO resetPasswordDTO = ResetPasswordDTO.builder()
+                .token("invalid-token")
+                .newPassword("NewPass1234!")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.resetPassword(resetPasswordDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("유효하지 않은 토큰입니다");
+        log.info("유효하지 않은 토큰 검증 성공");
+    }
+
+    // 비밀번호 재설정 실패 - 만료된 토큰
+    @Test
+    public void testResetPassword_ExpiredToken() {
+        // given
+        String email = TestHelper.generateUniqueEmail("expiredreset");
+        String nickname = TestHelper.generateUniqueNickname("ExpiredResetUser");
+        Member member = TestHelper.createMember(memberRepository, passwordEncoder, email, nickname);
+
+        // 만료된 토큰 생성
+        PasswordResetToken expiredToken = PasswordResetToken.builder()
+                .member(member)
+                .token("expired-token")
+                .expiryDate(LocalDateTime.now().minusHours(1)) // 만료됨
+                .used(false)
+                .build();
+        passwordResetTokenRepository.save(expiredToken);
+
+        ResetPasswordDTO resetPasswordDTO = ResetPasswordDTO.builder()
+                .token("expired-token")
+                .newPassword("NewPass1234!")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.resetPassword(resetPasswordDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("만료된 토큰입니다");
+        log.info("만료된 토큰 검증 성공");
+    }
+
+    // 비밀번호 재설정 실패 - 이미 사용된 토큰
+    @Test
+    public void testResetPassword_UsedToken() {
+        // given
+        String email = TestHelper.generateUniqueEmail("usedreset");
+        String nickname = TestHelper.generateUniqueNickname("UsedResetUser");
+        Member member = TestHelper.createMember(memberRepository, passwordEncoder, email, nickname);
+
+        // 이미 사용된 토큰 생성
+        PasswordResetToken usedToken = PasswordResetToken.builder()
+                .member(member)
+                .token("used-token")
+                .expiryDate(LocalDateTime.now().plusHours(1))
+                .used(true) // 이미 사용됨
+                .build();
+        passwordResetTokenRepository.save(usedToken);
+
+        ResetPasswordDTO resetPasswordDTO = ResetPasswordDTO.builder()
+                .token("used-token")
+                .newPassword("NewPass1234!")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.resetPassword(resetPasswordDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("이미 사용된 토큰입니다");
+        log.info("이미 사용된 토큰 검증 성공");
     }
 }

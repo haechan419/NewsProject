@@ -56,11 +56,20 @@ class DataInitializerTest extends BaseRepositoryTest {
             "Entertainment", "Economy", "Sports", "IT/Technology", "Society/Issues"
         };
 
+        // 생성된 회원 인덱스 추적 (검증용)
+        java.util.Set<Integer> createdIndices = new java.util.HashSet<>();
+
         // when - 더미 데이터 생성
         for (int i = 0; i < 10; i++) {
             // 기존 회원이 있는지 확인 (중복 방지)
             if (memberRepository.existsByEmail(emails[i])) {
                 log.warn("이미 존재하는 이메일: {}, 건너뜀", emails[i]);
+                continue;
+            }
+            
+            // 닉네임 중복 확인 (중복 방지)
+            if (memberRepository.existsByNickname(nicknames[i])) {
+                log.warn("이미 존재하는 닉네임: {}, 건너뜀", nicknames[i]);
                 continue;
             }
             
@@ -77,6 +86,7 @@ class DataInitializerTest extends BaseRepositoryTest {
                     role,
                     password);
             log.info("회원 생성 완료: email={}, nickname={}", savedMember.getEmail(), savedMember.getNickname());
+            createdIndices.add(i); // 생성된 인덱스 추가
 
             // 관심 카테고리 추가 (각 회원마다 1-3개 랜덤하게)
             int categoryCount = (i % 3) + 1;
@@ -104,8 +114,8 @@ class DataInitializerTest extends BaseRepositoryTest {
         // 기존 데이터가 있을 수 있으므로 최소 10개 이상인지 확인
         assertThat(allMembers.size()).isGreaterThanOrEqualTo(10);
 
-        // 각 회원 검증
-        for (int i = 0; i < 10; i++) {
+        // 각 회원 검증 (이번 테스트에서 새로 생성된 회원만 검증)
+        for (int i : createdIndices) {
             Member member = memberRepository.findByEmail(emails[i]).orElse(null);
             assertThat(member).isNotNull();
             assertThat(member.getNickname()).isEqualTo(nicknames[i]);
@@ -125,10 +135,26 @@ class DataInitializerTest extends BaseRepositoryTest {
             assertThat(memberCategories).hasSize(expectedCategoryCount);
         }
 
-        // RefreshToken 검증 (5개 생성됨)
+        // RefreshToken 검증 (실제 생성된 회원 중 짝수 인덱스만큼 생성됨)
         List<RefreshToken> allTokens = refreshTokenRepository.findAll();
-        // 기존 토큰이 있을 수 있으므로 최소 5개 이상인지 확인
-        assertThat(allTokens.size()).isGreaterThanOrEqualTo(5);
+        // 실제 생성된 회원 중 짝수 인덱스(i % 2 == 0)인 회원 수만큼 RefreshToken 생성
+        long expectedTokenCount = createdIndices.stream()
+            .filter(i -> i % 2 == 0)
+            .count();
+        // 기존 토큰이 있을 수 있으므로 최소 expectedTokenCount 이상인지 확인
+        assertThat(allTokens.size()).isGreaterThanOrEqualTo((int)expectedTokenCount);
+        
+        // 이번 테스트에서 생성된 회원들에 대해 RefreshToken이 올바르게 생성되었는지 확인
+        for (int i : createdIndices) {
+            if (i % 2 == 0) {
+                // 짝수 인덱스 회원은 RefreshToken이 있어야 함
+                Member member = memberRepository.findByEmail(emails[i]).orElse(null);
+                if (member != null) {
+                    List<RefreshToken> memberTokens = refreshTokenRepository.findByMemberId(member.getId());
+                    assertThat(memberTokens).isNotEmpty();
+                }
+            }
+        }
 
         // 통계 출력 (이미 조회한 회원들의 정보 사용)
         int localCount = 0;

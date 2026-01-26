@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fullStc.member.dto.CategoryUpdateDTO;
 import com.fullStc.member.dto.MemberDTO;
+import com.fullStc.member.dto.ProfileUpdateDTO;
 import com.fullStc.member.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,5 +71,30 @@ public class UserController {
         
         userService.updateUserCategories(userId, categoryUpdateDTO);
         return ResponseEntity.ok().build();
+    }
+
+    // 프로필 업데이트 (닉네임 수정)
+    @Operation(summary = "프로필 업데이트", description = "사용자의 닉네임을 수정합니다. 닉네임은 중복될 수 없으며, 2-20자의 한글/영문/숫자만 사용 가능합니다. JWT 토큰이 필요합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "업데이트 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (닉네임 중복, 유효성 검증 실패)"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
+    })
+    @SecurityRequirement(name = "JWT")
+    @PutMapping("/profile")
+    public ResponseEntity<MemberDTO> updateProfile(
+            @Validated @RequestBody ProfileUpdateDTO profileUpdateDTO,
+            Authentication authentication) {
+        log.info("프로필 업데이트 요청");
+        
+        // SecurityContext에서 사용자 정보 가져오기
+        MemberDTO memberDTO = (MemberDTO) authentication.getPrincipal();
+        Long userId = memberDTO.getId();
+        
+        userService.updateUserProfile(userId, profileUpdateDTO);
+        
+        // 업데이트된 사용자 정보 반환
+        MemberDTO updatedUserInfo = userService.getUserInfo(userId);
+        return ResponseEntity.ok(updatedUserInfo);
     }
 }

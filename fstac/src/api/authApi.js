@@ -33,3 +33,35 @@ export const getMyInfo = async () => {
   const response = await apiClient.get('/api/user/me');
   return response.data;
 };
+
+// 아이디 찾기
+export const findEmail = async (nickname) => {
+  const response = await apiClient.post('/api/auth/find-email', {
+    nickname,
+  });
+  return response.data;
+};
+
+// 비밀번호 찾기 (재설정 토큰 생성)
+export const findPassword = async (email) => {
+  const response = await apiClient.post('/api/auth/find-password', {
+    email,
+  });
+  return response.data; // 토큰 반환
+};
+
+// 비밀번호 재설정
+export const resetPassword = async (token, newPassword) => {
+  await apiClient.post('/api/auth/reset-password', {
+    token,
+    newPassword,
+  });
+};
+
+// 프로필 업데이트 (닉네임 수정)
+export const updateProfile = async (nickname) => {
+  const response = await apiClient.put('/api/user/profile', {
+    nickname,
+  });
+  return response.data;
+};

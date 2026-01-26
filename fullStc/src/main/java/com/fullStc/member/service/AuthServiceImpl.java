@@ -2,6 +2,7 @@ package com.fullStc.member.service;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -9,16 +10,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fullStc.member.domain.Member;
+import com.fullStc.member.domain.PasswordResetToken;
 import com.fullStc.member.domain.RefreshToken;
 import com.fullStc.member.domain.enums.MemberRole;
+import com.fullStc.member.dto.FindEmailDTO;
+import com.fullStc.member.dto.FindPasswordDTO;
 import com.fullStc.member.dto.LoginDTO;
 import com.fullStc.member.dto.LoginResponseDTO;
 import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.member.dto.RefreshTokenRequestDTO;
+import com.fullStc.member.dto.ResetPasswordDTO;
 import com.fullStc.member.dto.SignUpDTO;
 import com.fullStc.member.dto.TokenDTO;
 import com.fullStc.member.repository.MemberCategoryRepository;
 import com.fullStc.member.repository.MemberRepository;
+import com.fullStc.member.repository.PasswordResetTokenRepository;
 import com.fullStc.member.repository.RefreshTokenRepository;
 import com.fullStc.util.JwtUtil;
 
@@ -35,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final MemberRepository memberRepository;
     private final MemberCategoryRepository memberCategoryRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -225,5 +232,84 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.deleteByMemberId(userId);
 
         log.info("로그아웃 완료: userId={}", userId);
+    }
+
+    // 아이디 찾기 (닉네임으로 이메일 찾기)
+    @Override
+    public String findEmail(FindEmailDTO findEmailDTO) {
+        log.info("아이디 찾기 요청: nickname={}", findEmailDTO.getNickname());
+
+        Member member = memberRepository.findByNickname(findEmailDTO.getNickname())
+                .orElseThrow(() -> new RuntimeException("해당 닉네임으로 등록된 회원을 찾을 수 없습니다"));
+
+        // 소셜 로그인 사용자는 이메일 찾기 불가
+        if (!"local".equals(member.getProvider())) {
+            throw new RuntimeException("소셜 로그인 계정은 이메일 찾기를 사용할 수 없습니다");
+        }
+
+        // 이메일 전체 반환 (화면에 표시)
+        log.info("아이디 찾기 완료: nickname={}, email={}", findEmailDTO.getNickname(), member.getEmail());
+        return member.getEmail();
+    }
+
+    // 비밀번호 찾기 (재설정 토큰 생성 및 반환)
+    @Override
+    public String requestPasswordReset(FindPasswordDTO findPasswordDTO) {
+        log.info("비밀번호 재설정 요청: email={}", findPasswordDTO.getEmail());
+
+        Member member = memberRepository.findByEmail(findPasswordDTO.getEmail())
+                .orElseThrow(() -> new RuntimeException("해당 이메일로 등록된 회원을 찾을 수 없습니다"));
+
+        // 소셜 로그인 사용자는 비밀번호 재설정 불가
+        if (!"local".equals(member.getProvider())) {
+            throw new RuntimeException("소셜 로그인 계정은 비밀번호 재설정을 사용할 수 없습니다");
+        }
+
+        // 기존 토큰 삭제
+        passwordResetTokenRepository.deleteByMemberId(member.getId());
+
+        // 새 토큰 생성
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(token)
+                .member(member)
+                .expiryDate(LocalDateTime.now().plusHours(1)) // 1시간 유효
+                .used(false)
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("비밀번호 재설정 토큰 생성 완료: email={}, token={}", findPasswordDTO.getEmail(), token);
+        return token;
+    }
+
+    // 비밀번호 재설정 (토큰으로 비밀번호 변경)
+    @Override
+    public void resetPassword(ResetPasswordDTO resetPasswordDTO) {
+        log.info("비밀번호 재설정 실행: token={}", resetPasswordDTO.getToken());
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(resetPasswordDTO.getToken())
+                .orElseThrow(() -> new RuntimeException("유효하지 않은 토큰입니다"));
+
+        // 토큰 만료 확인
+        if (resetToken.isExpired()) {
+            throw new RuntimeException("만료된 토큰입니다");
+        }
+
+        // 이미 사용된 토큰 확인
+        if (resetToken.isUsed()) {
+            throw new RuntimeException("이미 사용된 토큰입니다");
+        }
+
+        // 비밀번호 변경
+        Member member = resetToken.getMember();
+        member.changePassword(passwordEncoder.encode(resetPasswordDTO.getNewPassword()));
+        memberRepository.save(member);
+
+        // 토큰 사용 처리
+        resetToken.markAsUsed();
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("비밀번호 재설정 완료: userId={}", member.getId());
     }
 }

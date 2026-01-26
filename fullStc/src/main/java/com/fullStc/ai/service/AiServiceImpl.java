@@ -1,0 +1,99 @@
+package com.fullStc.ai.service;
+
+import com.fullStc.ai.dto.ChatRequestDTO;
+import com.fullStc.ai.dto.ChatResponseDTO;
+import com.fullStc.ai.dto.PythonChatRequestDTO;
+import com.fullStc.ai.dto.PythonChatResponseDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * AI 채팅 서비스 구현체
+ * Python FastAPI 서버와 통신
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AiServiceImpl implements AiService {
+    
+    private final RestTemplate restTemplate;
+    
+    /** Python FastAPI 서버 URL */
+    @Value("${ai.python.server.url:http://localhost:8000}")
+    private String pythonServerUrl;
+    
+    @Override
+    public ChatResponseDTO chat(ChatRequestDTO requestDTO) {
+        log.info("AI 채팅 요청: {}", requestDTO.getMessage());
+        
+        try {
+            // Python 서버로 전송할 요청 생성
+            PythonChatRequestDTO pythonRequest = convertToPhythonRequest(requestDTO);
+            
+            // HTTP 헤더 설정
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            // HTTP 요청 생성
+            HttpEntity<PythonChatRequestDTO> httpEntity = new HttpEntity<>(pythonRequest, headers);
+            
+            // Python 서버에 POST 요청
+            String url = pythonServerUrl + "/chat";
+            log.debug("Python 서버 요청 URL: {}", url);
+            
+            PythonChatResponseDTO pythonResponse = restTemplate.postForObject(
+                url,
+                httpEntity,
+                PythonChatResponseDTO.class
+            );
+            
+            if (pythonResponse == null || pythonResponse.getReply() == null) {
+                log.error("Python 서버로부터 빈 응답 수신");
+                throw new RuntimeException("AI 응답을 받지 못했습니다.");
+            }
+            
+            log.info("AI 채팅 응답 수신 완료");
+            
+            return ChatResponseDTO.builder()
+                    .reply(pythonResponse.getReply())
+                    .timestamp(LocalDateTime.now())
+                    .build();
+                    
+        } catch (RestClientException e) {
+            log.error("Python 서버 통신 에러: {}", e.getMessage());
+            throw new RuntimeException("AI 서버와 통신 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    /**
+     * DTO 변환: 클라이언트 요청 → Python 요청
+     */
+    private PythonChatRequestDTO convertToPhythonRequest(ChatRequestDTO requestDTO) {
+        List<PythonChatRequestDTO.ConversationMessage> history = null;
+        
+        if (requestDTO.getConversationHistory() != null) {
+            history = requestDTO.getConversationHistory().stream()
+                    .map(msg -> new PythonChatRequestDTO.ConversationMessage(
+                            msg.getRole(),
+                            msg.getContent()
+                    ))
+                    .collect(Collectors.toList());
+        }
+        
+        return PythonChatRequestDTO.builder()
+                .message(requestDTO.getMessage())
+                .conversationHistory(history)
+                .build();
+    }
+}

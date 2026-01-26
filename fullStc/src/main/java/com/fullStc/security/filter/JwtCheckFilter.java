@@ -44,6 +44,16 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             return true;
         }
 
+        // OAuth2 경로는 체크하지 않음 (OAuth2 인증 플로우)
+        if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
+            return true;
+        }
+
+        // /login 경로는 체크하지 않음 (OAuth2 에러 리다이렉트용)
+        if (path.equals("/login") || path.startsWith("/login?")) {
+            return true;
+        }
+
         // Swagger UI 경로는 체크하지 않음
         if (path.startsWith("/swagger-ui/") 
             || path.startsWith("/v3/api-docs")  // /v3/api-docs 또는 /v3/api-docs/ 모두 포함
