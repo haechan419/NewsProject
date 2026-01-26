@@ -1,0 +1,89 @@
+/* TopBar.css */
+.top-bar-container {
+    width: 100%;
+    background-color: #f5f5f5; /* 연한 회색 배경 */
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .upper-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 40px;
+    position: relative;
+  }
+  
+  .logo-area {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%); /* 중앙 정렬 */
+    text-align: center;
+  }
+  
+  .logo-text {
+    font-size: 20px;
+    font-weight: 800;
+    color: #5d87c9; /* 로고 파란색 톤 */
+    margin: 0;
+    line-height: 1;
+  }
+  
+  .logo-highlight {
+    color: #5d87c9; 
+  }
+  
+  .user-menu {
+    margin-left: auto; /* 오른쪽 끝으로 밀기 */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 12px;
+    color: #333;
+  }
+  
+  .user-menu a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .user-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .user-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* 내비게이션 바 */
+  /* .nav-bar {
+    border-top: 1px solid #e0e0e0;
+  } */
+  
+  .nav-bar ul {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    margin: 0;
+    padding: 15px 0;
+    gap: 60px; /* 메뉴 간격 */
+  }
+  
+  .nav-bar li {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .nav-bar li:hover {
+    color: #000;
+    text-decoration: underline;
+  }

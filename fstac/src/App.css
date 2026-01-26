@@ -1,4 +1,25 @@
 .App {
-  min-height: 100vh;
   width: 100%;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* 전역 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.App > * {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 포커스 효과 */
+*:focus-visible {
+  outline: 2px solid #4A90E2;
+  outline-offset: 2px;
 }

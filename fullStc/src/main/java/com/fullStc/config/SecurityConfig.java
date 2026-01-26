@@ -65,10 +65,16 @@ public class SecurityConfig {
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
             .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
             // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
-            .ignoringRequestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .ignoringRequestMatchers( "/api/auth/**", 
+            "/api/boards/**",    
+            "/api/comments/**",  
+            "/api/files/**",     
+            "/api/ai/**",
+            "/swagger-ui/**", 
+            "/v3/api-docs/**")
         );
 
-        // 인가 설정
+        // 인가 설정 - 모든 API에 인증 필수
         http.authorizeHttpRequests(auth -> {
             // Swagger UI 경로는 인증 없이 접근 가능 (정확한 경로 포함)
             auth.requestMatchers(
@@ -79,9 +85,9 @@ public class SecurityConfig {
             ).permitAll();
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
-            // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
+            // 인증 관련 API는 인증 없이 접근 가능 (로그인, 회원가입 등 - 로그아웃 제외)
             auth.requestMatchers("/api/auth/**").permitAll();
-            // 나머지는 인증 필요
+            // 나머지 모든 API는 인증 필요 (게시판, 댓글, 파일 등)
             auth.anyRequest().authenticated();
         });
 
