@@ -71,18 +71,20 @@ public class SecurityConfig {
         // CSRF 보호 활성화 (Double Submit Cookie 패턴)
         // 쿠키에 CSRF 토큰 저장, 헤더에서 검증
         http.csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-            // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
-            .ignoringRequestMatchers("/api/auth/**",
-                    "/api/boards/**",
-                    "/api/comments/**",
-                    "/api/files/**",
-                    "/api/ai/**",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/oauth2/**",
-                    "/login/oauth2/**")
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .ignoringRequestMatchers(
+                        "/api/auth/**",
+                        "/api/boards/**",
+//                        "/api/comments/**",
+                        "/api/files/**",
+                        "/api/ai/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/oauth2/**",
+                        "/login/oauth2/**",
+                        "/admin/**"  // <--- ★ 여기 추가하세요! (콤마 주의)
+                )
         );
 
         // 인가 설정
@@ -110,6 +112,9 @@ public class SecurityConfig {
                     "/*.js",
                     "/default-ui.css"  // Swagger UI CSS
             ).permitAll();
+
+            // ★ 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
+            auth.requestMatchers("/admin/**").permitAll();
             
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
