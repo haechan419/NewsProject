@@ -1,6 +1,9 @@
+import { lazy, Suspense } from 'react';
 import AppRouter from './router/AppRouter';
-import FloatingAI from './components/FloatingAI/FloatingAI';
 import { useSelector } from 'react-redux';
+
+// FloatingAI 컴포넌트를 lazy로 로드
+const FloatingAI = lazy(() => import('./components/FloatingAI/FloatingAI'));
 
 function App() {
   // 로그인 상태 확인 (로그인한 사용자에게만 FloatingAI 표시)
@@ -10,7 +13,11 @@ function App() {
     <div className="App">
       <AppRouter />
       {/* 로그인한 사용자에게만 FloatingAI 표시 */}
-      {isAuthenticated && <FloatingAI />}
+      {isAuthenticated && (
+        <Suspense fallback={null}>
+          <FloatingAI />
+        </Suspense>
+      )}
     </div>
   );
 }

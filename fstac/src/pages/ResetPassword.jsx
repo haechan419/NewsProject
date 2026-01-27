@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/authApi';
+import ResetPasswordForm from '../components/auth/ResetPasswordForm';
 import './ResetPassword.css';
 
 const ResetPassword = () => {
@@ -71,65 +72,30 @@ const ResetPassword = () => {
     }
   };
 
+  const handleNewPasswordChange = (e) => {
+    setNewPassword(e.target.value);
+    setValidationErrors({ ...validationErrors, newPassword: '' });
+    setError('');
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    setConfirmPassword(e.target.value);
+    setValidationErrors({ ...validationErrors, confirmPassword: '' });
+    setError('');
+  };
+
   return (
-    <div className="reset-password-container">
-      <div className="reset-password-box">
-        <h2 className="reset-password-title">비밀번호 재설정</h2>
-        <form onSubmit={handleSubmit} className="reset-password-form">
-          <div className="form-group">
-            <label htmlFor="newPassword">새 비밀번호</label>
-            <input
-              type="password"
-              id="newPassword"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setValidationErrors({ ...validationErrors, newPassword: '' });
-                setError('');
-              }}
-              className={validationErrors.newPassword ? 'error' : ''}
-              placeholder="새 비밀번호를 입력하세요 (최소 8자, 영문/숫자/특수문자 포함)"
-              disabled={isLoading || !token}
-            />
-            {validationErrors.newPassword && (
-              <span className="error-message">{validationErrors.newPassword}</span>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">비밀번호 확인</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setValidationErrors({ ...validationErrors, confirmPassword: '' });
-                setError('');
-              }}
-              className={validationErrors.confirmPassword ? 'error' : ''}
-              placeholder="비밀번호를 다시 입력하세요"
-              disabled={isLoading || !token}
-            />
-            {validationErrors.confirmPassword && (
-              <span className="error-message">{validationErrors.confirmPassword}</span>
-            )}
-          </div>
-
-          {error && <div className="error-message server-error">{error}</div>}
-
-          <button type="submit" className="reset-password-button" disabled={isLoading || !token}>
-            {isLoading ? '처리 중...' : '비밀번호 재설정'}
-          </button>
-        </form>
-
-        <div className="reset-password-footer">
-          <p>
-            <Link to="/login">로그인</Link>
-          </p>
-        </div>
-      </div>
-    </div>
+    <ResetPasswordForm
+      newPassword={newPassword}
+      onNewPasswordChange={handleNewPasswordChange}
+      confirmPassword={confirmPassword}
+      onConfirmPasswordChange={handleConfirmPasswordChange}
+      validationErrors={validationErrors}
+      error={error}
+      isLoading={isLoading}
+      token={token}
+      onSubmit={handleSubmit}
+    />
   );
 };
 

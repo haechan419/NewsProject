@@ -48,10 +48,10 @@ public class AuthController {
     private boolean httpsEnabled;
 
     // 회원가입
-    @Operation(summary = "회원가입", description = "새로운 회원을 등록합니다. 이메일과 닉네임은 중복될 수 없습니다.")
+    @Operation(summary = "회원가입", description = "새로운 회원을 등록합니다. 이메일과 닉네임은 중복될 수 없습니다. 관심 카테고리는 선택사항이며, 최대 3개까지 선택할 수 있습니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "회원가입 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청 (이메일/닉네임 중복, 유효성 검증 실패)")
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (이메일/닉네임 중복, 유효성 검증 실패, 카테고리 3개 초과)")
     })
     @PostMapping("/signup")
     public ResponseEntity<Long> signUp(@Validated @RequestBody SignUpDTO signUpDTO) {

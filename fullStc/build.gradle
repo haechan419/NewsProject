@@ -26,30 +26,47 @@ repositories {
 
 
 dependencies {
-	// 1. Spring Boot 기본 (공통)
+	// Spring Boot 기본 (공통)
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient 사용용
+	implementation 'org.springframework.boot:spring-boot-starter-json'
 
-	// 2. 데이터베이스 & 롬복 (공통)
+	// 데이터베이스 & 롬복 (공통)
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 	annotationProcessor 'org.projectlombok:lombok'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-	// 3. [File A에서 가져옴] 이미지 썸네일
+//	// MySQL
+//	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+//	runtimeOnly 'com.mysql:mysql-connector-j' // MySQL 드라이버 유지
+
+	// [File A에서 가져옴] 이미지 썸네일
 	implementation 'net.coobird:thumbnailator:0.4.20'
 
-	// 4. [File B에서 가져옴] JWT (로그인 토큰) - 필수!
+	// JWT (JSON Web Token)
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+	// [File B에서 가져옴] JWT (로그인 토큰) - 필수!
 	implementation 		'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly		'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly		'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-	// 5. [File B에서 가져옴] 유틸리티 & 문서화
-	implementation 'com.google.code.gson:gson:2.10.1'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+	// [File B에서 가져옴] 유틸리티 & 문서화
+	implementation 'net.coobird:thumbnailator:0.4.20'           // 이미지 썸네일
+	implementation 'com.google.code.gson:gson:2.10.1'           // JSON 파싱
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0' // Swagger
+	implementation 'com.rometools:rome:2.1.0'                   // RSS/Atom 피드
+	implementation 'org.jsoup:jsoup:1.17.2'                     // HTML 파싱
+	implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8' // 캐시
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 	// 6. 테스트 설정
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

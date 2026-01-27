@@ -131,6 +131,21 @@
       color: #333;
       padding-bottom: 10px;
   }
+
+  .category-tabs span {
+      padding: 8px 20px;
+      border-radius: 20px;
+      transition: all 0.3s ease;
+  }
+
+  .category-tabs span:hover {
+      background-color: #f0f0f0;
+  }
+
+  .category-tabs span.active {
+      background-color: #3e5c46;
+      color: white;
+  }
   
   .divider {
       border: none;
@@ -213,4 +228,65 @@
       font-size: 14px;
       font-weight: bold;
       color: #333;
+  }
+
+  /* 뉴스 리스트 스타일 */
+  .news-list {
+      margin-top: 60px;
+      text-align: left;
+  }
+
+  .news-items {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+  }
+
+  .news-item {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+  }
+
+  .news-item:hover {
+      background-color: #f0f0f0;
+      transform: translateX(5px);
+  }
+
+  .news-item-number {
+      width: 40px;
+      height: 40px;
+      background-color: #3e5c46;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      flex-shrink: 0;
+  }
+
+  .news-item-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+  }
+
+  .news-item-content h4 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+  }
+
+  .news-views {
+      font-size: 12px;
+      color: #888;
   }

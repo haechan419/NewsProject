@@ -73,3 +73,23 @@ export const faceLogin = async (email) => {
   });
   return response.data;
 };
+
+// 카테고리 목록 조회
+export const getCategories = async () => {
+  const response = await apiClient.get('/api/category/list');
+  return response.data;
+};
+
+// 내 관심 카테고리 조회
+export const getMyCategories = async () => {
+  const response = await apiClient.get('/api/category/my');
+  return response.data;
+};
+
+// 관심 카테고리 업데이트
+export const updateCategories = async (categories) => {
+  const response = await apiClient.put('/api/category/my', {
+    categories,
+  });
+  return response.data;
+};

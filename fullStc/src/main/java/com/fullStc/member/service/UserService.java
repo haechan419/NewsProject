@@ -1,6 +1,5 @@
 package com.fullStc.member.service;
 
-import com.fullStc.member.dto.CategoryUpdateDTO;
 import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.member.dto.ProfileUpdateDTO;
 
@@ -9,9 +8,6 @@ public interface UserService {
     
     // 사용자 정보 조회
     MemberDTO getUserInfo(Long userId);
-    
-    // 관심 카테고리 업데이트
-    void updateUserCategories(Long userId, CategoryUpdateDTO categoryUpdateDTO);
     
     // 프로필 업데이트 (닉네임 수정)
     void updateUserProfile(Long userId, ProfileUpdateDTO profileUpdateDTO);

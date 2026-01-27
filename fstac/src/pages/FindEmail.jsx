@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { findEmail } from '../api/authApi';
+import FindEmailForm from '../components/auth/FindEmailForm';
 import '../styles/common.css';
 import './FindEmail.css';
 
@@ -62,52 +63,22 @@ const FindEmail = () => {
     }
   };
 
+  const handleNicknameChange = (e) => {
+    setNickname(e.target.value);
+    setValidationError('');
+    setError('');
+  };
+
   return (
-    <div className="auth-container">
-      <div className="auth-box">
-        <h2 className="auth-title">아이디 찾기</h2>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="nickname">닉네임</label>
-            <input
-              type="text"
-              id="nickname"
-              value={nickname}
-              onChange={(e) => {
-                setNickname(e.target.value);
-                setValidationError('');
-                setError('');
-              }}
-              className={validationError ? 'error' : ''}
-              placeholder="닉네임을 입력하세요"
-              disabled={isLoading}
-            />
-            {validationError && (
-              <span className="error-message">{validationError}</span>
-            )}
-          </div>
-
-          {error && <div className="error-message server-error">{error}</div>}
-          {successMessage && (
-            <div className="success-message">
-              {successMessage.split('\n').map((line, index) => (
-                <p key={index}>{line}</p>
-              ))}
-            </div>
-          )}
-
-          <button type="submit" className="auth-button" disabled={isLoading}>
-            {isLoading ? '처리 중...' : '아이디 찾기'}
-          </button>
-        </form>
-
-        <div className="auth-footer">
-          <p>
-            <Link to="/login">로그인</Link> | <Link to="/find-password">비밀번호 찾기</Link>
-          </p>
-        </div>
-      </div>
-    </div>
+    <FindEmailForm
+      nickname={nickname}
+      onNicknameChange={handleNicknameChange}
+      validationError={validationError}
+      error={error}
+      successMessage={successMessage}
+      isLoading={isLoading}
+      onSubmit={handleSubmit}
+    />
   );
 };
 

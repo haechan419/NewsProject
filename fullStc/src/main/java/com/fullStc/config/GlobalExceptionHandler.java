@@ -44,6 +44,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    // IllegalArgumentException 처리 (잘못된 인자 오류)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("IllegalArgumentException 발생: {}", ex.getMessage());
+        
+        Map<String, Object> response = new HashMap<>();
+        String message = ex.getMessage() != null ? ex.getMessage() : "잘못된 요청입니다";
+        
+        response.put("error", "ERROR_BAD_REQUEST");
+        response.put("message", message);
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     // RuntimeException 처리 (로그인 실패 등)
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {

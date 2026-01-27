@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
@@ -13,6 +13,7 @@ from PIL import Image
 import json
 from pathlib import Path
 import shutil
+from quality_check import run_one, quality_score_and_flags
 
 # 환경 변수 로드
 load_dotenv()
@@ -100,6 +101,26 @@ class FaceRecognitionResponse(BaseModel):
     matched_user_name: Optional[str] = None  # 매칭된 사용자 이름
     confidence: Optional[float] = None  # 매칭 신뢰도
     error: Optional[str] = None
+
+
+# ===== 뉴스 품질 검증 관련 모델 =====
+class NewsItem(BaseModel):
+    """뉴스 아이템"""
+    id: Optional[str] = None
+    title: str
+    ai_summary: Optional[str] = None
+    aiSummary: Optional[str] = None  # camelCase 지원
+    content: str
+    cross_source_count: Optional[int] = 1
+
+
+class QualityCheckResponse(BaseModel):
+    """품질 검증 응답"""
+    news_id: Optional[str] = None
+    quality_score: int
+    risk_flags: List[str]
+    badge: str
+    evidence_summary: str
 
 
 # ===== 시스템 프롬프트 =====
@@ -698,6 +719,39 @@ async def get_face_info(user_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"얼굴 정보 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+# ===== 뉴스 품질 검증 API =====
+@app.post("/news/quality-check", response_model=List[QualityCheckResponse])
+async def check_news_quality(news_items: List[NewsItem]):
+    """
+    뉴스 품질 검증 API
+    여러 뉴스 아이템의 품질을 검증하고 점수를 반환합니다.
+    """
+    try:
+        results = []
+        for item in news_items:
+            # NewsItem을 Dict로 변환
+            item_dict = {
+                "id": item.id,
+                "title": item.title,
+                "ai_summary": item.ai_summary or item.aiSummary or "",
+                "content": item.content,
+                "cross_source_count": item.cross_source_count or 1
+            }
+            # quality_check의 run_one 함수 사용
+            result = run_one(item_dict)
+            results.append(QualityCheckResponse(**result))
+        
+        logger.info(f"뉴스 품질 검증 완료: {len(results)}개 아이템 처리")
+        return results
+    
+    except Exception as e:
+        logger.error(f"뉴스 품질 검증 중 오류 발생: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"뉴스 품질 검증 중 오류가 발생했습니다: {str(e)}"
         )
 
 

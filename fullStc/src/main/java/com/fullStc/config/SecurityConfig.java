@@ -79,10 +79,14 @@ public class SecurityConfig {
                     "/api/comments/**",
                     "/api/files/**",
                     "/api/ai/**",
+                    "/api/category/**",
+                    "/api/user/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/oauth2/**",
-                    "/login/oauth2/**")
+                    "/login/oauth2/**",
+                    "/admin/**"
+            )
         );
 
         // 인가 설정
@@ -110,13 +114,18 @@ public class SecurityConfig {
                     "/*.js",
                     "/default-ui.css"  // Swagger UI CSS
             ).permitAll();
-            
+
+            // 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
+            auth.requestMatchers("/admin/**").permitAll();
+
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
             // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
             auth.requestMatchers("/api/auth/**").permitAll();
             // 얼굴 인식 API는 인증 없이 접근 가능 (로그인 페이지에서 사용)
             auth.requestMatchers("/api/ai/face/recognize").permitAll();
+            // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
+            auth.requestMatchers("/api/category/list").permitAll();
             // OAuth2 경로 허용
             auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
             // /login 경로 허용 (OAuth2 에러 리다이렉트용)

@@ -1,6 +1,7 @@
 package com.fullStc.member.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fullStc.member.domain.Member;
+import com.fullStc.member.domain.MemberCategory;
 import com.fullStc.member.domain.PasswordResetToken;
 import com.fullStc.member.domain.RefreshToken;
 import com.fullStc.member.domain.enums.MemberRole;
@@ -60,6 +62,9 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("이미 존재하는 닉네임입니다");
         }
 
+        // 카테고리 유효성 검증
+        signUpDTO.validateCategories();
+
         // 회원 생성
         Member member = Member.builder()
                 .email(signUpDTO.getEmail())
@@ -73,6 +78,26 @@ public class AuthServiceImpl implements AuthService {
         member.addRole(MemberRole.USER);
 
         Member savedMember = memberRepository.save(member);
+        
+        // 관심 카테고리 저장 (선택사항)
+        if (signUpDTO.getCategories() != null && !signUpDTO.getCategories().isEmpty()) {
+            // 최대 3개까지만 저장하고 유효한 카테고리만 필터링
+            List<String> categoriesToSave = signUpDTO.getCategories().stream()
+                    .limit(3)
+                    .filter(category -> category != null && !category.trim().isEmpty())
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+            
+            for (String category : categoriesToSave) {
+                MemberCategory memberCategory = MemberCategory.builder()
+                        .member(savedMember)
+                        .category(category)
+                        .build();
+                memberCategoryRepository.save(memberCategory);
+            }
+            log.info("관심 카테고리 저장 완료: userId={}, categories={}", savedMember.getId(), categoriesToSave);
+        }
+        
         log.info("회원가입 완료: id={}, email={}", savedMember.getId(), savedMember.getEmail());
 
         return savedMember.getId();

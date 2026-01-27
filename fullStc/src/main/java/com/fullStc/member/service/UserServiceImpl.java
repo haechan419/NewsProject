@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fullStc.member.domain.Member;
 import com.fullStc.member.domain.MemberCategory;
 import com.fullStc.member.domain.enums.MemberRole;
-import com.fullStc.member.dto.CategoryUpdateDTO;
 import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.member.dto.ProfileUpdateDTO;
 import com.fullStc.member.repository.MemberCategoryRepository;
@@ -63,29 +62,6 @@ public class UserServiceImpl implements UserService {
         return memberDTO;
     }
 
-    // 관심 카테고리 업데이트
-    @Override
-    public void updateUserCategories(Long userId, CategoryUpdateDTO categoryUpdateDTO) {
-        log.info("관심 카테고리 업데이트: userId={}, categories={}", userId, categoryUpdateDTO.getCategories());
-
-        Member member = memberRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
-
-        // 기존 카테고리 삭제
-        memberCategoryRepository.deleteByMemberId(userId);
-
-        // 새로운 카테고리 추가
-        for (String category : categoryUpdateDTO.getCategories()) {
-            MemberCategory memberCategory = MemberCategory.builder()
-                    .member(member)
-                    .category(category)
-                    .build();
-            memberCategoryRepository.save(memberCategory);
-        }
-
-        log.info("관심 카테고리 업데이트 완료: userId={}, categories={}", userId, categoryUpdateDTO.getCategories());
-    }
-
     // 프로필 업데이트 (닉네임 수정)
     @Override
     public void updateUserProfile(Long userId, ProfileUpdateDTO profileUpdateDTO) {
@@ -96,10 +72,10 @@ public class UserServiceImpl implements UserService {
 
         String newNickname = profileUpdateDTO.getNickname().trim();
 
-        // 현재 닉네임과 동일한 경우 변경하지 않음
+        // 현재 닉네임과 동일한 경우 중복 메시지 반환
         if (member.getNickname().equals(newNickname)) {
-            log.info("닉네임이 동일하여 변경하지 않음: userId={}, nickname={}", userId, newNickname);
-            return;
+            log.warn("현재 닉네임과 동일: userId={}, nickname={}", userId, newNickname);
+            throw new IllegalArgumentException("중복되는 닉네임입니다");
         }
 
         // 닉네임 중복 확인

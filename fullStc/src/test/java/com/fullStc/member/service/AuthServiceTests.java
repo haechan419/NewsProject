@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import com.fullStc.member.dto.ResetPasswordDTO;
 import com.fullStc.member.dto.SignUpDTO;
 import com.fullStc.member.dto.TokenDTO;
 import com.fullStc.member.repository.BaseRepositoryTest;
+import com.fullStc.member.repository.MemberCategoryRepository;
 import com.fullStc.member.repository.PasswordResetTokenRepository;
 import com.fullStc.member.repository.RefreshTokenRepository;
 import com.fullStc.member.repository.TestHelper;
@@ -37,6 +39,9 @@ public class AuthServiceTests extends BaseRepositoryTest {
 
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    private MemberCategoryRepository memberCategoryRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -63,6 +68,72 @@ public class AuthServiceTests extends BaseRepositoryTest {
         assertThat(savedMember.getProvider()).isEqualTo("local");
         assertThat(savedMember.getMemberRoleList()).contains(MemberRole.USER);
         log.info("회원가입 성공: userId={}, email={}", userId, savedMember.getEmail());
+    }
+
+    // 회원가입 성공 - 카테고리 포함
+    @Test
+    public void testSignUp_WithCategories() {
+        // given
+        SignUpDTO signUpDTO = SignUpDTO.builder()
+                .email(TestHelper.generateUniqueEmail("signupcat"))
+                .password("Test1234!")
+                .nickname(TestHelper.generateUniqueNickname("SignUpCatUser"))
+                .categories(Arrays.asList("정치", "경제", "엔터"))
+                .build();
+
+        // when
+        Long userId = authService.signUp(signUpDTO);
+
+        // then
+        assertThat(userId).isNotNull();
+        Member savedMember = memberRepository.findById(userId).orElse(null);
+        assertThat(savedMember).isNotNull();
+        
+        // 카테고리 확인
+        List<com.fullStc.member.domain.MemberCategory> categories = memberCategoryRepository.findByMemberId(userId);
+        assertThat(categories).hasSize(3);
+        assertThat(categories).extracting(com.fullStc.member.domain.MemberCategory::getCategory)
+                .containsExactlyInAnyOrder("정치", "경제", "엔터");
+        log.info("회원가입 성공 (카테고리 포함): userId={}, categories={}", userId, 
+                categories.stream().map(com.fullStc.member.domain.MemberCategory::getCategory).toList());
+    }
+
+    // 회원가입 실패 - 유효하지 않은 카테고리
+    @Test
+    public void testSignUp_InvalidCategory() {
+        // given
+        SignUpDTO signUpDTO = SignUpDTO.builder()
+                .email(TestHelper.generateUniqueEmail("invalidcat"))
+                .password("Test1234!")
+                .nickname(TestHelper.generateUniqueNickname("InvalidCatUser"))
+                .categories(Arrays.asList("InvalidCategory"))
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.signUp(signUpDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("유효하지 않은 카테고리입니다");
+        log.info("유효하지 않은 카테고리 검증 성공");
+    }
+
+    // 회원가입 성공 - 카테고리 최대 3개 제한
+    @Test
+    public void testSignUp_MaxCategories() {
+        // given
+        SignUpDTO signUpDTO = SignUpDTO.builder()
+                .email(TestHelper.generateUniqueEmail("maxcat"))
+                .password("Test1234!")
+                .nickname(TestHelper.generateUniqueNickname("MaxCatUser"))
+                .categories(Arrays.asList("정치", "경제", "엔터", "IT/과학")) // 4개 (최대 3개 초과)
+                .build();
+
+        // when
+        Long userId = authService.signUp(signUpDTO);
+
+        // then - 최대 3개까지만 저장되어야 함
+        List<com.fullStc.member.domain.MemberCategory> categories = memberCategoryRepository.findByMemberId(userId);
+        assertThat(categories).hasSize(3); // 최대 3개까지만 저장
+        log.info("카테고리 최대 3개 제한 검증 성공: 저장된 카테고리 수={}", categories.size());
     }
 
     // 회원가입 실패 - 이메일 중복

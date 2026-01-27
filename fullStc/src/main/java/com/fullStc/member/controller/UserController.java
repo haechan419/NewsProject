@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fullStc.member.dto.CategoryUpdateDTO;
 import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.member.dto.ProfileUpdateDTO;
 import com.fullStc.member.service.UserService;
@@ -23,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 // 사용자 관련 컨트롤러
-@Tag(name = "사용자", description = "사용자 정보 조회 및 관심 카테고리 관리 API")
+@Tag(name = "사용자", description = "사용자 정보 조회 및 프로필 관리 API")
 @RestController
 @RequestMapping("/api/user")
 @Slf4j
@@ -49,28 +48,6 @@ public class UserController {
         
         MemberDTO userInfo = userService.getUserInfo(userId);
         return ResponseEntity.ok(userInfo);
-    }
-
-    // 관심 카테고리 업데이트
-    @Operation(summary = "관심 카테고리 업데이트", description = "사용자의 관심 카테고리를 업데이트합니다. 기존 카테고리는 모두 삭제되고 새로운 카테고리로 교체됩니다. JWT 토큰이 필요합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "업데이트 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청 (카테고리 목록이 비어있음)"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
-    })
-    @SecurityRequirement(name = "JWT")
-    @PutMapping("/categories")
-    public ResponseEntity<Void> updateCategories(
-            @Validated @RequestBody CategoryUpdateDTO categoryUpdateDTO,
-            Authentication authentication) {
-        log.info("관심 카테고리 업데이트 요청");
-        
-        // SecurityContext에서 사용자 정보 가져오기
-        MemberDTO memberDTO = (MemberDTO) authentication.getPrincipal();
-        Long userId = memberDTO.getId();
-        
-        userService.updateUserCategories(userId, categoryUpdateDTO);
-        return ResponseEntity.ok().build();
     }
 
     // 프로필 업데이트 (닉네임 수정)
