@@ -1,5 +1,6 @@
 package com.fullStc.news.controller;
 
+import com.fullStc.news.domain.NewsCluster;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,6 +11,7 @@ import com.fullStc.news.dto.NewsResponse;
 import com.fullStc.news.service.NewsAggregatorService;
 import com.fullStc.news.service.PipelineOrchestratorService;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -43,4 +45,5 @@ public class NewsController {
         // 3. 반환
         return response;
     }
+
 }

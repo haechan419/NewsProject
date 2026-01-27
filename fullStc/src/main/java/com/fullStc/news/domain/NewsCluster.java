@@ -1,9 +1,12 @@
 package com.fullStc.news.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -63,6 +66,10 @@ public class NewsCluster {
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
     }
+
+    @JsonIgnore  // 👈 이거 필수! (안 붙이면 프론트가 다운됨)
+    @OneToMany(mappedBy = "newsCluster")
+    private List<News> newsList = new ArrayList<>();
 
     @PreUpdate
     void preUpdate() {
