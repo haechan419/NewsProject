@@ -115,6 +115,8 @@ public class SecurityConfig {
             auth.requestMatchers("/api/auth/logout").authenticated();
             // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
             auth.requestMatchers("/api/auth/**").permitAll();
+            // 얼굴 인식 API는 인증 없이 접근 가능 (로그인 페이지에서 사용)
+            auth.requestMatchers("/api/ai/face/recognize").permitAll();
             // OAuth2 경로 허용
             auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
             // /login 경로 허용 (OAuth2 에러 리다이렉트용)

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserInfoAsync } from '../slices/authSlice';
 import { updateProfile } from '../api/authApi';
+import { registerFace } from '../api/faceApi';
 import './ProfileEdit.css';
 
 const ProfileEdit = () => {
@@ -10,6 +11,20 @@ const ProfileEdit = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // 얼굴 등록 관련 상태
+  const [faceImage, setFaceImage] = useState(null);
+  const [facePreview, setFacePreview] = useState(null);
+  const [isRegisteringFace, setIsRegisteringFace] = useState(false);
+  const [faceMessage, setFaceMessage] = useState('');
+  const fileInputRef = useRef(null);
+  
+  // 카메라 관련 상태
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -96,24 +111,377 @@ const ProfileEdit = () => {
     navigate('/');
   };
 
+  // 얼굴 이미지 선택 핸들러
+  const handleFaceImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // 파일 크기 검증 (10MB 제한)
+      if (file.size > 10 * 1024 * 1024) {
+        setFaceMessage('이미지 크기는 10MB 이하여야 합니다.');
+        return;
+      }
+
+      // 이미지 파일 검증
+      if (!file.type.startsWith('image/')) {
+        setFaceMessage('이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFacePreview(reader.result);
+        setFaceImage(reader.result);
+        setFaceMessage('');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 얼굴 등록 핸들러
+  const handleRegisterFace = async () => {
+    if (!faceImage) {
+      setFaceMessage('이미지를 선택해주세요.');
+      return;
+    }
+
+    if (!user?.email) {
+      setFaceMessage('사용자 정보를 불러올 수 없습니다.');
+      return;
+    }
+
+    setIsRegisteringFace(true);
+    setFaceMessage('얼굴을 분석하고 데이터베이스에 저장하는 중...');
+
+    try {
+      // Base64 데이터에서 헤더 제거 (이미 data:image/... 형식이므로 그대로 사용)
+      const response = await registerFace(
+        faceImage,
+        user.email, // userId로 email 사용
+        user.nickname || user.email // userName
+      );
+
+      if (response.success && response.data?.success) {
+        setFaceMessage('얼굴 등록이 완료되었습니다! 데이터베이스에 저장되었습니다.');
+        // 성공 메시지 표시 후 3초 뒤 초기화
+        setTimeout(() => {
+          setFaceImage(null);
+          setFacePreview(null);
+          setFaceMessage('');
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }, 3000);
+      } else {
+        const errorMsg = response.data?.message || response.message || '얼굴 등록에 실패했습니다.';
+        setFaceMessage(errorMsg);
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          '얼굴 등록 중 오류가 발생했습니다.';
+      setFaceMessage(errorMessage);
+    } finally {
+      setIsRegisteringFace(false);
+    }
+  };
+
+  // 얼굴 이미지 초기화
+  const handleResetFace = () => {
+    setFaceImage(null);
+    setFacePreview(null);
+    setFaceMessage('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    // 카메라가 활성화되어 있으면 종료
+    if (isCameraActive) {
+      stopCamera();
+    }
+  };
+
+  // 카메라 시작
+  const startCamera = async () => {
+    console.log('카메라 시작 함수 호출됨');
+    try {
+      setCameraError('');
+      setFaceMessage('');
+      setIsCameraActive(true); // 먼저 활성화하여 로딩 화면 표시
+      setIsVideoReady(false);
+      
+      // 카메라 지원 여부 확인
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('카메라를 지원하지 않는 브라우저');
+        setCameraError('이 브라우저는 카메라를 지원하지 않습니다.');
+        // 에러 메시지를 보여주기 위해 isCameraActive는 true로 유지
+        return;
+      }
+
+      console.log('카메라 권한 요청 중...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: 'user' // 전면 카메라 우선
+        },
+        audio: false
+      });
+      
+      console.log('카메라 스트림 받음:', stream);
+      streamRef.current = stream;
+      
+      // 비디오 요소가 준비될 때까지 대기
+      const setupVideo = () => {
+        if (videoRef.current) {
+          console.log('비디오 요소에 스트림 할당');
+          const video = videoRef.current;
+          video.srcObject = stream;
+          setIsVideoReady(false);
+          
+          // 비디오 로드 및 재생 보장
+          let timeoutId = null;
+          
+          // 비디오 준비 완료 처리 함수
+          const handleVideoReady = () => {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+            setIsVideoReady(true);
+          };
+          
+          // 비디오 메타데이터 로드 완료 시
+          video.onloadedmetadata = () => {
+            console.log('비디오 메타데이터 로드 완료');
+            video.play()
+              .then(() => {
+                console.log('비디오 재생 시작');
+                handleVideoReady();
+              })
+              .catch(err => {
+                console.error('비디오 재생 에러:', err);
+                // 재생 실패해도 비디오는 표시
+                handleVideoReady();
+              });
+          };
+          
+          // 비디오 재생 시작 이벤트
+          video.onplaying = () => {
+            console.log('비디오 재생 중');
+            handleVideoReady();
+          };
+          
+          // 비디오 로드 시작 이벤트
+          video.onloadstart = () => {
+            console.log('비디오 로드 시작');
+          };
+          
+          // 에러 발생 시에도 비디오 표시 시도
+          video.onerror = (err) => {
+            console.error('비디오 에러:', err);
+            // 에러가 발생해도 일정 시간 후 표시 시도
+            setTimeout(() => {
+              if (videoRef.current && videoRef.current.srcObject) {
+                handleVideoReady();
+              }
+            }, 1000);
+          };
+          
+          // 타임아웃 설정: 3초 후에도 준비되지 않으면 강제로 표시
+          timeoutId = setTimeout(() => {
+            if (videoRef.current && videoRef.current.srcObject) {
+              console.log('타임아웃: 비디오 강제 표시');
+              handleVideoReady();
+            }
+          }, 3000);
+        } else {
+          // 비디오 요소가 아직 준비되지 않았으면 잠시 후 다시 시도
+          console.log('비디오 요소가 아직 준비되지 않음, 재시도...');
+          setTimeout(setupVideo, 100);
+        }
+      };
+      
+      setupVideo();
+    } catch (error) {
+      console.error('카메라 접근 에러:', error);
+      let errorMessage = '카메라에 접근할 수 없습니다.';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = '카메라에 접근할 수 없습니다. 다른 애플리케이션에서 카메라를 사용 중일 수 있습니다.';
+      }
+      
+      setCameraError(errorMessage);
+      // 에러 메시지를 보여주기 위해 isCameraActive는 true로 유지
+      console.error('카메라 에러 메시지 설정:', errorMessage);
+    }
+  };
+
+  // 카메라 종료
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsVideoReady(false);
+  };
+
+  // 사진 촬영 및 바로 등록
+  const capturePhoto = async () => {
+    if (!videoRef.current) {
+      setFaceMessage('카메라가 준비되지 않았습니다.');
+      return;
+    }
+
+    const video = videoRef.current;
+    
+    // 비디오가 로드되었는지 확인
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      setFaceMessage('카메라가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    if (!user?.email) {
+      setFaceMessage('사용자 정보를 불러올 수 없습니다.');
+      return;
+    }
+
+    // 촬영 중 상태 표시
+    setIsRegisteringFace(true);
+    setFaceMessage('사진을 촬영하고 등록하는 중...');
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      
+      const ctx = canvas.getContext('2d');
+      // 좌우 반전된 비디오를 원래대로 되돌림
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Canvas를 Base64 이미지로 변환
+      const imageData = canvas.toDataURL('image/png');
+      
+      // 카메라 종료
+      stopCamera();
+      
+      // 미리보기 설정
+      setFacePreview(imageData);
+      setFaceImage(imageData);
+      
+      // 바로 얼굴 등록 API 호출 (DB에 저장됨)
+      const response = await registerFace(
+        imageData,
+        user.email, // userId로 email 사용
+        user.nickname || user.email // userName
+      );
+
+      if (response.success && response.data?.success) {
+        setFaceMessage('얼굴 등록이 완료되었습니다! 데이터베이스에 저장되었습니다.');
+        // 성공 메시지 표시 후 3초 뒤 초기화
+        setTimeout(() => {
+          setFaceImage(null);
+          setFacePreview(null);
+          setFaceMessage('');
+        }, 3000);
+      } else {
+        const errorMsg = response.data?.message || response.message || '얼굴 등록에 실패했습니다.';
+        setFaceMessage(errorMsg);
+        // 실패 시 이미지는 유지하여 재시도 가능하게 함
+      }
+    } catch (error) {
+      console.error('얼굴 등록 에러:', error);
+      const errorMessage = error.response?.data?.data?.message || 
+                          error.response?.data?.message ||
+                          error.response?.data?.error || 
+                          error.message || 
+                          '얼굴 등록 중 오류가 발생했습니다.';
+      setFaceMessage(errorMessage);
+      // 에러 발생 시에도 이미지는 유지하여 재시도 가능하게 함
+    } finally {
+      setIsRegisteringFace(false);
+    }
+  };
+
+  // 카메라 모드 토글
+  const handleCameraToggle = () => {
+    console.log('카메라 토글 버튼 클릭됨, 현재 상태:', isCameraActive);
+    if (isCameraActive) {
+      console.log('카메라 종료');
+      stopCamera();
+    } else {
+      console.log('카메라 시작');
+      // 기존 이미지가 있으면 초기화
+      if (facePreview) {
+        setFaceImage(null);
+        setFacePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+      startCamera();
+    }
+  };
+
+  // 비디오가 준비되면 재생 보장
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      const video = videoRef.current;
+      
+      // 비디오가 재생 중이 아니면 재생 시도
+      if (video.paused && video.readyState >= video.HAVE_METADATA) {
+        video.play().catch(err => {
+          console.error('비디오 재생 에러:', err);
+        });
+      }
+    }
+  }, [isCameraActive, isVideoReady]);
+
+  // 컴포넌트 언마운트 시 카메라 정리
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  if (isLoading && !user) {
+    return (
+      <div className="profile-edit-container">
+        <div className="profile-edit-box">
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ marginTop: '20px', color: '#666' }}>사용자 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="profile-edit-container">
       <div className="profile-edit-box">
-        <h2 className="profile-edit-title">프로필 수정</h2>
+        <div className="profile-header">
+          <h2 className="profile-edit-title">프로필 수정</h2>
+          <p className="profile-subtitle">계정 정보와 얼굴 인식 설정을 관리할 수 있습니다</p>
+        </div>
         
         {isAutoGeneratedNickname && (
-          <div className="info-message" style={{ 
-            marginBottom: '20px',
-            padding: '12px',
-            backgroundColor: '#fff3cd',
-            borderRadius: '6px',
-            border: '1px solid #ffc107',
-            color: '#856404'
-          }}>
-            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+          <div className="info-message">
+            <div className="info-message-title">
               💡 닉네임 안내
             </div>
-            <div style={{ fontSize: '14px' }}>
+            <div className="info-message-content">
               현재 닉네임이 자동으로 생성되었습니다. 원하는 닉네임으로 변경해주세요.
             </div>
           </div>
@@ -172,6 +540,184 @@ const ProfileEdit = () => {
               className="disabled-input"
               style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
             />
+          </div>
+
+          {/* 얼굴 등록 섹션 */}
+          <div className="form-group face-register-section">
+            <label htmlFor="face-image">얼굴 등록</label>
+            
+            {/* 카메라/파일 선택 버튼 */}
+            {!facePreview && (
+              <div className="face-upload-options">
+                <button
+                  type="button"
+                  onClick={handleCameraToggle}
+                  className="camera-button"
+                  disabled={isRegisteringFace || isLoading}
+                >
+                  {isCameraActive ? '📷 카메라 끄기' : '📷 카메라로 촬영'}
+                </button>
+                <label htmlFor="face-image" className="file-upload-button">
+                  📁 파일에서 선택
+                  <input
+                    type="file"
+                    id="face-image"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFaceImageSelect}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="face-upload-area">
+              {isCameraActive ? (
+                <div className="camera-container">
+                  <div className="camera-video-wrapper">
+                    {!isVideoReady && !cameraError && (
+                      <div className="camera-loading">
+                        <div className="loading-spinner"></div>
+                        <p>카메라를 준비하는 중...</p>
+                      </div>
+                    )}
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`camera-video ${isVideoReady ? 'video-ready' : 'video-loading'}`}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        display: 'block',
+                        minHeight: '400px',
+                        objectFit: 'cover',
+                        backgroundColor: '#000'
+                      }}
+                    />
+                    {!cameraError && isVideoReady && (
+                      <div className="camera-overlay">
+                        <div className="face-guide-frame">
+                          <svg className="face-guide-svg" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+                            {/* 얼굴 윤곽 (타원) */}
+                            <ellipse cx="100" cy="120" rx="70" ry="90" fill="none" stroke="rgba(102, 126, 234, 0.8)" strokeWidth="3" strokeDasharray="5,5"/>
+                            {/* 왼쪽 눈 */}
+                            <ellipse cx="80" cy="100" rx="8" ry="6" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
+                            {/* 오른쪽 눈 */}
+                            <ellipse cx="120" cy="100" rx="8" ry="6" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
+                            {/* 코 */}
+                            <ellipse cx="100" cy="125" rx="5" ry="8" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
+                            {/* 입 */}
+                            <ellipse cx="100" cy="150" rx="15" ry="8" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
+                          </svg>
+                        </div>
+                        <div className="camera-guide">얼굴을 프레임 안에 맞춰주세요</div>
+                      </div>
+                    )}
+                  </div>
+                  {cameraError ? (
+                    <div className="face-message error">
+                      {cameraError}
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="cancel-camera-button"
+                        style={{ marginTop: '12px', width: '100%' }}
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="camera-controls">
+                      <button
+                        type="button"
+                        onClick={capturePhoto}
+                        className="capture-button"
+                        disabled={isRegisteringFace || isLoading}
+                      >
+                        {isRegisteringFace ? '⏳ 처리 중...' : '📸 촬영하기'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="cancel-camera-button"
+                        disabled={isRegisteringFace || isLoading}
+                      >
+                        취소
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : facePreview ? (
+                <div className="face-preview-container">
+                  <img src={facePreview} alt="얼굴 미리보기" className="face-preview-image" />
+                  {isRegisteringFace ? (
+                    <div className="face-preview-actions">
+                      <div style={{ 
+                        textAlign: 'center', 
+                        padding: '20px',
+                        color: '#666'
+                      }}>
+                        <div className="loading-spinner" style={{ margin: '0 auto 10px' }}></div>
+                        <p>얼굴을 등록하는 중...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="face-preview-actions">
+                      {faceMessage && faceMessage.includes('완료') ? (
+                        <div style={{ 
+                          textAlign: 'center', 
+                          padding: '20px',
+                          color: '#28a745',
+                          fontWeight: 'bold'
+                        }}>
+                          ✓ {faceMessage}
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleRegisterFace}
+                            className="register-face-button"
+                            disabled={isRegisteringFace || isLoading}
+                          >
+                            얼굴 등록
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleResetFace}
+                            className="reset-face-button"
+                            disabled={isRegisteringFace || isLoading}
+                          >
+                            초기화
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="face-upload-placeholder">
+                  <div className="face-upload-icon">📷</div>
+                  <div className="face-upload-text">
+                    카메라로 촬영하거나 파일을 선택해주세요
+                    <br />
+                    <small style={{ color: '#999', fontSize: '12px' }}>
+                      (한 명의 얼굴이 명확하게 보이는 사진)
+                    </small>
+                  </div>
+                </div>
+              )}
+            </div>
+            {faceMessage && (
+              <div className={`face-message ${faceMessage.includes('완료') ? 'success' : 'error'}`}>
+                {faceMessage}
+              </div>
+            )}
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              얼굴 인식을 위해 한 명의 얼굴이 명확하게 보이는 사진을 업로드해주세요. (최대 10MB)
+            </small>
           </div>
 
           {successMessage && (

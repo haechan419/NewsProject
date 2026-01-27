@@ -65,3 +65,11 @@ export const updateProfile = async (nickname) => {
   });
   return response.data;
 };
+
+// 얼굴 인식 로그인
+export const faceLogin = async (email) => {
+  const response = await apiClient.post('/api/auth/face-login', {
+    email,
+  });
+  return response.data;
+};

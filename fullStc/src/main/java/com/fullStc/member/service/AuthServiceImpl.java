@@ -312,4 +312,36 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("비밀번호 재설정 완료: userId={}", member.getId());
     }
+    
+    // 얼굴 인식 기반 로그인
+    @Override
+    public LoginResponseDTO faceLogin(String email) {
+        log.info("얼굴 인식 로그인 요청: email={}", email);
+        
+        // 회원 조회
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다: " + email));
+        
+        // 계정 활성화 확인
+        if (!member.isEnabled()) {
+            log.warn("얼굴 인식 로그인 실패: 비활성화된 계정 - email={}", email);
+            throw new RuntimeException("비활성화된 계정입니다");
+        }
+        
+        // 얼굴 데이터가 등록되어 있는지 확인
+        // (선택사항: 얼굴 데이터가 없어도 로그인 가능하게 할 수 있음)
+        
+        // MemberDTO 생성
+        MemberDTO memberDTO = createMemberDTO(member);
+        
+        // 토큰 생성 및 저장
+        TokenDTO tokenDTO = generateAndSaveTokens(member, memberDTO);
+        
+        // 로그인 응답 생성
+        LoginResponseDTO loginResponse = buildLoginResponse(memberDTO, tokenDTO);
+        
+        log.info("얼굴 인식 로그인 성공: userId={}, email={}", member.getId(), member.getEmail());
+        
+        return loginResponse;
+    }
 }

@@ -44,6 +44,11 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             return true;
         }
 
+        // 얼굴 인식 API는 체크하지 않음 (로그인 페이지에서 사용)
+        if (path.equals("/api/ai/face/recognize")) {
+            return true;
+        }
+
         // OAuth2 경로는 체크하지 않음 (OAuth2 인증 플로우)
         if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
             return true;

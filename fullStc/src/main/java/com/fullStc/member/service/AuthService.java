@@ -32,4 +32,7 @@ public interface AuthService {
     
     // 비밀번호 재설정 (토큰으로 비밀번호 변경)
     void resetPassword(ResetPasswordDTO resetPasswordDTO);
+    
+    // 얼굴 인식 기반 로그인
+    LoginResponseDTO faceLogin(String email);
 }

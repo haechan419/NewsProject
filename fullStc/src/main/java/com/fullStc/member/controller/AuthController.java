@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.util.Map;
+
 import com.fullStc.member.dto.FindEmailDTO;
 import com.fullStc.member.dto.FindPasswordDTO;
 import com.fullStc.member.dto.LoginDTO;
@@ -217,5 +219,50 @@ public class AuthController {
         log.info("비밀번호 재설정 요청: token={}", resetPasswordDTO.getToken());
         authService.resetPassword(resetPasswordDTO);
         return ResponseEntity.ok().build();
+    }
+    
+    // 얼굴 인식 기반 로그인
+    @Operation(summary = "얼굴 인식 로그인", description = "얼굴 인식으로 로그인합니다. 얼굴 인식 성공 시 자동으로 로그인됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "얼굴 인식 로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "얼굴 인식 실패 또는 회원을 찾을 수 없음")
+    })
+    @PostMapping("/face-login")
+    public ResponseEntity<LoginResponseDTO> faceLogin(
+            @RequestBody Map<String, String> request,
+            HttpServletResponse response) {
+        String email = request.get("email");
+        log.info("얼굴 인식 로그인 요청: email={}", email);
+        
+        if (email == null || email.isEmpty()) {
+            throw new RuntimeException("이메일이 필요합니다");
+        }
+        
+        LoginResponseDTO loginResponse = authService.faceLogin(email);
+        
+        // Access Token을 HttpOnly 쿠키에 저장
+        Cookie accessTokenCookie = new Cookie("accessToken", loginResponse.getToken().getAccessToken());
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(httpsEnabled);
+        accessTokenCookie.setPath("/");
+        accessTokenCookie.setMaxAge(2 * 60 * 60); // 2시간
+        accessTokenCookie.setAttribute("SameSite", "Lax");
+        response.addCookie(accessTokenCookie);
+        
+        // Refresh Token을 HttpOnly 쿠키에 저장
+        Cookie refreshTokenCookie = new Cookie("refreshToken", loginResponse.getToken().getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(httpsEnabled);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(60 * 60 * 24 * 7); // 7일
+        refreshTokenCookie.setAttribute("SameSite", "Lax");
+        response.addCookie(refreshTokenCookie);
+        
+        // 보안: 쿠키에 저장하므로 응답 본문에서 토큰 제거 (사용자 정보만 반환)
+        LoginResponseDTO safeResponse = LoginResponseDTO.builder()
+            .user(loginResponse.getUser())
+            .build();
+        
+        return ResponseEntity.ok(safeResponse);
     }
 }

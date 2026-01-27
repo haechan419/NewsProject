@@ -1,2 +1,497 @@
 /* Login 페이지 전용 스타일 */
 /* 공통 스타일은 common.css에서 import */
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 로그인 성공 알림 모달 */
+.notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.notification-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 32px 40px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  animation: fadeIn 0.3s ease-out;
+  min-width: 360px;
+  max-width: 90%;
+}
+
+.notification-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: #4caf50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.notification-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.notification-message {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.notification-button {
+  width: 100%;
+  padding: 14px 28px;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  margin-top: 8px;
+}
+
+.notification-button:hover {
+  background-color: #5568d3;
+  transform: translateY(-1px);
+}
+
+/* 성공 메시지 */
+.success-message {
+  text-align: center;
+  padding: 10px;
+  background-color: #d4edda;
+  border-radius: 6px;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  margin-bottom: 10px;
+}
+
+/* OAuth 에러 메시지 */
+.oauth-error-rate-limit {
+  margin-bottom: 10px;
+  padding: 12px;
+  background-color: #fff3cd;
+  border-radius: 6px;
+  border: 1px solid #ffc107;
+  color: #856404;
+  position: relative;
+}
+
+.oauth-error-default {
+  margin-bottom: 10px;
+  padding: 12px;
+  background-color: #f8d7da;
+  border-radius: 6px;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  position: relative;
+}
+
+.oauth-error-close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.oauth-error-close-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.oauth-error-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  padding-right: 24px;
+}
+
+.oauth-error-message {
+  font-size: 14px;
+}
+
+.oauth-error-content {
+  padding-right: 24px;
+}
+
+/* 구분선 */
+.divider-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.divider {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #e0e0e0;
+}
+
+.divider-text {
+  color: #666;
+  font-size: 14px;
+}
+
+/* 소셜 로그인 버튼 */
+.social-button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.social-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.social-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.social-button-kakao {
+  background-color: #FEE500;
+  color: #000;
+}
+
+.social-button-kakao:hover:not(:disabled) {
+  box-shadow: 0 5px 15px rgba(254, 229, 0, 0.4);
+}
+
+.social-button-kakao:disabled {
+  background-color: #ccc;
+}
+
+.social-button-naver {
+  background-color: #03C75A;
+  color: #fff;
+  margin-top: 10px;
+}
+
+.social-button-naver:hover:not(:disabled) {
+  box-shadow: 0 5px 15px rgba(3, 199, 90, 0.4);
+}
+
+.social-button-naver:disabled {
+  background-color: #ccc;
+}
+
+.social-button-google {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #dadce0;
+  margin-top: 10px;
+}
+
+.social-button-google:hover:not(:disabled) {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.social-button-google:disabled {
+  background-color: #ccc;
+}
+
+.social-button.disabled {
+  background-color: #ccc !important;
+}
+
+/* 얼굴 인식 로그인 버튼 */
+.face-login-button {
+  width: 100%;
+  padding: 14px;
+  background-color: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.face-login-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.face-login-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* 카메라 컨테이너 */
+.camera-container {
+  width: 100%;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.camera-video-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.camera-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #666;
+  z-index: 10;
+}
+
+.camera-loading-spinner {
+  border: 4px solid rgba(102, 126, 234, 0.3);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+.camera-video {
+  width: 100%;
+  height: auto;
+  display: block;
+  min-height: 300px;
+  max-height: 400px;
+  object-fit: cover;
+  background-color: #000;
+  border-radius: 8px;
+  transform: scaleX(-1);
+}
+
+.camera-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.face-outline-container {
+  width: 200px;
+  height: 250px;
+  max-width: 60%;
+  max-height: 60%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.face-outline-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.5));
+}
+
+.face-guide-text {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+/* 카메라 에러 메시지 */
+.camera-error {
+  padding: 12px;
+  background-color: #f8d7da;
+  border-radius: 6px;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  margin-bottom: 12px;
+}
+
+.camera-error-close-button {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* 자동 인식 토글 */
+.auto-recognition-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.auto-recognition-label {
+  font-size: 14px;
+  color: #333;
+}
+
+.auto-recognition-button {
+  padding: 6px 12px;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.auto-recognition-button.off {
+  background-color: #ccc;
+}
+
+/* 얼굴 인식 버튼 그룹 */
+.face-recognition-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.face-recognition-button {
+  flex: 1;
+  padding: 14px;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.face-recognition-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.face-recognition-button-cancel {
+  background-color: #6c757d;
+}
+
+/* 얼굴 인식 메시지 */
+.face-recognition-message {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.face-recognition-message.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.face-recognition-message.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+/* 푸터 */
+.auth-footer p {
+  margin-top: 12px;
+}
