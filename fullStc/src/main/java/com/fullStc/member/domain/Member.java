@@ -40,14 +40,14 @@ public class Member {
     private Long id;
 
     // 이메일 (유니크, 소셜 로그인 포함 모든 로그인에서 사용)
-    @Column(unique = true, nullable = false, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci")
+    @Column(unique = true, nullable = false)
     private String email;
 
     // 비밀번호 (일반 로그인 시 사용, 소셜 로그인은 null 가능)
     private String password;
 
     // 닉네임(중복 불가, null 불가)
-    @Column(unique = true, nullable = false, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci")
+    @Column(unique = true, nullable = false)
     private String nickname;
 
     // 로그인 제공자 (local: 일반 로그인, kakao: 카카오, naver: 네이버, google: 구글)

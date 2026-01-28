@@ -9,8 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fullStc.member.domain.Member;
 import com.fullStc.member.domain.MemberCategory;
 import com.fullStc.member.domain.enums.MemberRole;
+import com.fullStc.member.dto.CategoryUpdateDTO;
 import com.fullStc.member.dto.MemberDTO;
-import com.fullStc.member.dto.ProfileUpdateDTO;
 import com.fullStc.member.repository.MemberCategoryRepository;
 import com.fullStc.member.repository.MemberRepository;
 
@@ -62,32 +62,26 @@ public class UserServiceImpl implements UserService {
         return memberDTO;
     }
 
-    // 프로필 업데이트 (닉네임 수정)
+    // 관심 카테고리 업데이트
     @Override
-    public void updateUserProfile(Long userId, ProfileUpdateDTO profileUpdateDTO) {
-        log.info("프로필 업데이트: userId={}, nickname={}", userId, profileUpdateDTO.getNickname());
+    public void updateUserCategories(Long userId, CategoryUpdateDTO categoryUpdateDTO) {
+        log.info("관심 카테고리 업데이트: userId={}, categories={}", userId, categoryUpdateDTO.getCategories());
 
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
 
-        String newNickname = profileUpdateDTO.getNickname().trim();
+        // 기존 카테고리 삭제
+        memberCategoryRepository.deleteByMemberId(userId);
 
-        // 현재 닉네임과 동일한 경우 중복 메시지 반환
-        if (member.getNickname().equals(newNickname)) {
-            log.warn("현재 닉네임과 동일: userId={}, nickname={}", userId, newNickname);
-            throw new IllegalArgumentException("중복되는 닉네임입니다");
+        // 새로운 카테고리 추가
+        for (String category : categoryUpdateDTO.getCategories()) {
+            MemberCategory memberCategory = MemberCategory.builder()
+                    .member(member)
+                    .category(category)
+                    .build();
+            memberCategoryRepository.save(memberCategory);
         }
 
-        // 닉네임 중복 확인
-        if (memberRepository.existsByNickname(newNickname)) {
-            log.warn("닉네임 중복: userId={}, nickname={}", userId, newNickname);
-            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다");
-        }
-
-        // 닉네임 변경
-        member.changeNickname(newNickname);
-        memberRepository.save(member);
-
-        log.info("프로필 업데이트 완료: userId={}, nickname={}", userId, newNickname);
+        log.info("관심 카테고리 업데이트 완료: userId={}, categories={}", userId, categoryUpdateDTO.getCategories());
     }
 }

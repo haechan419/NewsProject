@@ -14,15 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
-import java.util.Map;
-
-import com.fullStc.member.dto.FindEmailDTO;
-import com.fullStc.member.dto.FindPasswordDTO;
 import com.fullStc.member.dto.LoginDTO;
 import com.fullStc.member.dto.LoginResponseDTO;
 import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.member.dto.RefreshTokenRequestDTO;
-import com.fullStc.member.dto.ResetPasswordDTO;
 import com.fullStc.member.dto.SignUpDTO;
 import com.fullStc.member.dto.TokenDTO;
 import com.fullStc.member.service.AuthService;
@@ -35,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 // 인증 관련 컨트롤러
-@Tag(name = "인증", description = "인증 관련 API (회원가입, 로그인, 토큰 갱신, 로그아웃, 아이디/비밀번호 찾기)")
+@Tag(name = "인증", description = "인증 관련 API (회원가입, 로그인, 토큰 갱신, 로그아웃)")
 @RestController
 @RequestMapping("/api/auth")
 @Slf4j
@@ -48,10 +43,10 @@ public class AuthController {
     private boolean httpsEnabled;
 
     // 회원가입
-    @Operation(summary = "회원가입", description = "새로운 회원을 등록합니다. 이메일과 닉네임은 중복될 수 없습니다. 관심 카테고리는 선택사항이며, 최대 3개까지 선택할 수 있습니다.")
+    @Operation(summary = "회원가입", description = "새로운 회원을 등록합니다. 이메일과 닉네임은 중복될 수 없습니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "회원가입 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청 (이메일/닉네임 중복, 유효성 검증 실패, 카테고리 3개 초과)")
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (이메일/닉네임 중복, 유효성 검증 실패)")
     })
     @PostMapping("/signup")
     public ResponseEntity<Long> signUp(@Validated @RequestBody SignUpDTO signUpDTO) {
@@ -180,89 +175,5 @@ public class AuthController {
         response.addCookie(refreshTokenCookie);
         
         return ResponseEntity.ok().build();
-    }
-
-    // 아이디 찾기
-    @Operation(summary = "아이디 찾기", description = "닉네임을 입력하여 등록된 이메일을 찾습니다. 이메일은 마스킹되어 이메일로 발송됩니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "아이디 찾기 성공 (이메일 발송됨)"),
-            @ApiResponse(responseCode = "400", description = "존재하지 않는 닉네임 또는 소셜 로그인 계정")
-    })
-    @PostMapping("/find-email")
-    public ResponseEntity<String> findEmail(@Validated @RequestBody FindEmailDTO findEmailDTO) {
-        log.info("아이디 찾기 요청: nickname={}", findEmailDTO.getNickname());
-        String maskedEmail = authService.findEmail(findEmailDTO);
-        return ResponseEntity.ok(maskedEmail);
-    }
-
-    // 비밀번호 찾기
-    @Operation(summary = "비밀번호 찾기", description = "이메일로 비밀번호 재설정 토큰을 생성합니다. 토큰은 1시간 동안 유효합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "비밀번호 재설정 토큰 생성 성공"),
-            @ApiResponse(responseCode = "400", description = "존재하지 않는 이메일 또는 소셜 로그인 계정")
-    })
-    @PostMapping("/find-password")
-    public ResponseEntity<String> findPassword(@Validated @RequestBody FindPasswordDTO findPasswordDTO) {
-        log.info("비밀번호 찾기 요청: email={}", findPasswordDTO.getEmail());
-        String token = authService.requestPasswordReset(findPasswordDTO);
-        return ResponseEntity.ok(token);
-    }
-
-    // 비밀번호 재설정
-    @Operation(summary = "비밀번호 재설정", description = "토큰을 사용하여 비밀번호를 재설정합니다. 토큰은 이메일로 발송된 링크에서 확인할 수 있습니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "비밀번호 재설정 성공"),
-            @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 토큰, 또는 이미 사용된 토큰")
-    })
-    @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@Validated @RequestBody ResetPasswordDTO resetPasswordDTO) {
-        log.info("비밀번호 재설정 요청: token={}", resetPasswordDTO.getToken());
-        authService.resetPassword(resetPasswordDTO);
-        return ResponseEntity.ok().build();
-    }
-    
-    // 얼굴 인식 기반 로그인
-    @Operation(summary = "얼굴 인식 로그인", description = "얼굴 인식으로 로그인합니다. 얼굴 인식 성공 시 자동으로 로그인됩니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "얼굴 인식 로그인 성공"),
-            @ApiResponse(responseCode = "400", description = "얼굴 인식 실패 또는 회원을 찾을 수 없음")
-    })
-    @PostMapping("/face-login")
-    public ResponseEntity<LoginResponseDTO> faceLogin(
-            @RequestBody Map<String, String> request,
-            HttpServletResponse response) {
-        String email = request.get("email");
-        log.info("얼굴 인식 로그인 요청: email={}", email);
-        
-        if (email == null || email.isEmpty()) {
-            throw new RuntimeException("이메일이 필요합니다");
-        }
-        
-        LoginResponseDTO loginResponse = authService.faceLogin(email);
-        
-        // Access Token을 HttpOnly 쿠키에 저장
-        Cookie accessTokenCookie = new Cookie("accessToken", loginResponse.getToken().getAccessToken());
-        accessTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setSecure(httpsEnabled);
-        accessTokenCookie.setPath("/");
-        accessTokenCookie.setMaxAge(2 * 60 * 60); // 2시간
-        accessTokenCookie.setAttribute("SameSite", "Lax");
-        response.addCookie(accessTokenCookie);
-        
-        // Refresh Token을 HttpOnly 쿠키에 저장
-        Cookie refreshTokenCookie = new Cookie("refreshToken", loginResponse.getToken().getRefreshToken());
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(httpsEnabled);
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(60 * 60 * 24 * 7); // 7일
-        refreshTokenCookie.setAttribute("SameSite", "Lax");
-        response.addCookie(refreshTokenCookie);
-        
-        // 보안: 쿠키에 저장하므로 응답 본문에서 토큰 제거 (사용자 정보만 반환)
-        LoginResponseDTO safeResponse = LoginResponseDTO.builder()
-            .user(loginResponse.getUser())
-            .build();
-        
-        return ResponseEntity.ok(safeResponse);
     }
 }
