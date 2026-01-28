@@ -14,14 +14,14 @@ const ProfileEdit = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   // 얼굴 등록 관련 상태
   const [faceImage, setFaceImage] = useState(null);
   const [facePreview, setFacePreview] = useState(null);
   const [isRegisteringFace, setIsRegisteringFace] = useState(false);
   const [faceMessage, setFaceMessage] = useState('');
   const fileInputRef = useRef(null);
-  
+
   // 카메라 관련 상태
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
@@ -161,10 +161,10 @@ const ProfileEdit = () => {
 
     try {
       await updateProfile(nickname.trim());
-      
+
       // Redux 상태 업데이트
       dispatch(fetchUserInfoAsync());
-      
+
       setSuccessMessage('닉네임이 성공적으로 수정되었습니다!');
     } catch (error) {
       // 에러를 조용히 처리 (콘솔에 로그하지 않음)
@@ -198,10 +198,10 @@ const ProfileEdit = () => {
 
     try {
       await updateCategories(selectedCategories);
-      
+
       // Redux 상태 업데이트
       dispatch(fetchUserInfoAsync());
-      
+
       setSuccessMessage('관심 카테고리가 성공적으로 수정되었습니다!');
     } catch (error) {
       // 에러를 조용히 처리 (콘솔에 로그하지 않음)
@@ -283,10 +283,10 @@ const ProfileEdit = () => {
         setFaceMessage(errorMsg);
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.data?.message || 
-                          error.response?.data?.error || 
-                          error.message || 
-                          '얼굴 등록 중 오류가 발생했습니다.';
+      const errorMessage = error.response?.data?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        '얼굴 등록 중 오류가 발생했습니다.';
       setFaceMessage(errorMessage);
     } finally {
       setIsRegisteringFace(false);
@@ -315,7 +315,7 @@ const ProfileEdit = () => {
       setFaceMessage('');
       setIsCameraActive(true); // 먼저 활성화하여 로딩 화면 표시
       setIsVideoReady(false);
-      
+
       // 카메라 지원 여부 확인
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.error('카메라를 지원하지 않는 브라우저');
@@ -333,10 +333,10 @@ const ProfileEdit = () => {
         },
         audio: false
       });
-      
+
       console.log('카메라 스트림 받음:', stream);
       streamRef.current = stream;
-      
+
       // 비디오 요소가 준비될 때까지 대기
       const setupVideo = () => {
         if (videoRef.current) {
@@ -344,10 +344,10 @@ const ProfileEdit = () => {
           const video = videoRef.current;
           video.srcObject = stream;
           setIsVideoReady(false);
-          
+
           // 비디오 로드 및 재생 보장
           let timeoutId = null;
-          
+
           // 비디오 준비 완료 처리 함수
           const handleVideoReady = () => {
             if (timeoutId) {
@@ -356,7 +356,7 @@ const ProfileEdit = () => {
             }
             setIsVideoReady(true);
           };
-          
+
           // 비디오 메타데이터 로드 완료 시
           video.onloadedmetadata = () => {
             console.log('비디오 메타데이터 로드 완료');
@@ -371,18 +371,18 @@ const ProfileEdit = () => {
                 handleVideoReady();
               });
           };
-          
+
           // 비디오 재생 시작 이벤트
           video.onplaying = () => {
             console.log('비디오 재생 중');
             handleVideoReady();
           };
-          
+
           // 비디오 로드 시작 이벤트
           video.onloadstart = () => {
             console.log('비디오 로드 시작');
           };
-          
+
           // 에러 발생 시에도 비디오 표시 시도
           video.onerror = (err) => {
             console.error('비디오 에러:', err);
@@ -393,7 +393,7 @@ const ProfileEdit = () => {
               }
             }, 1000);
           };
-          
+
           // 타임아웃 설정: 3초 후에도 준비되지 않으면 강제로 표시
           timeoutId = setTimeout(() => {
             if (videoRef.current && videoRef.current.srcObject) {
@@ -407,12 +407,12 @@ const ProfileEdit = () => {
           setTimeout(setupVideo, 100);
         }
       };
-      
+
       setupVideo();
     } catch (error) {
       console.error('카메라 접근 에러:', error);
       let errorMessage = '카메라에 접근할 수 없습니다.';
-      
+
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.';
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
@@ -420,7 +420,7 @@ const ProfileEdit = () => {
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
         errorMessage = '카메라에 접근할 수 없습니다. 다른 애플리케이션에서 카메라를 사용 중일 수 있습니다.';
       }
-      
+
       setCameraError(errorMessage);
       // 에러 메시지를 보여주기 위해 isCameraActive는 true로 유지
       console.error('카메라 에러 메시지 설정:', errorMessage);
@@ -448,7 +448,7 @@ const ProfileEdit = () => {
     }
 
     const video = videoRef.current;
-    
+
     // 비디오가 로드되었는지 확인
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
       setFaceMessage('카메라가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
@@ -468,23 +468,23 @@ const ProfileEdit = () => {
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
-      
+
       const ctx = canvas.getContext('2d');
       // 좌우 반전된 비디오를 원래대로 되돌림
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
+
       // Canvas를 Base64 이미지로 변환
       const imageData = canvas.toDataURL('image/png');
-      
+
       // 카메라 종료
       stopCamera();
-      
+
       // 미리보기 설정
       setFacePreview(imageData);
       setFaceImage(imageData);
-      
+
       // 바로 얼굴 등록 API 호출 (DB에 저장됨)
       const response = await registerFace(
         imageData,
@@ -507,11 +507,11 @@ const ProfileEdit = () => {
       }
     } catch (error) {
       console.error('얼굴 등록 에러:', error);
-      const errorMessage = error.response?.data?.data?.message || 
-                          error.response?.data?.message ||
-                          error.response?.data?.error || 
-                          error.message || 
-                          '얼굴 등록 중 오류가 발생했습니다.';
+      const errorMessage = error.response?.data?.data?.message ||
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        '얼굴 등록 중 오류가 발생했습니다.';
       setFaceMessage(errorMessage);
       // 에러 발생 시에도 이미지는 유지하여 재시도 가능하게 함
     } finally {
@@ -549,7 +549,7 @@ const ProfileEdit = () => {
   useEffect(() => {
     if (isCameraActive && videoRef.current && streamRef.current) {
       const video = videoRef.current;
-      
+
       // 비디오가 재생 중이 아니면 재생 시도
       if (video.paused && video.readyState >= video.HAVE_METADATA) {
         video.play().catch(err => {

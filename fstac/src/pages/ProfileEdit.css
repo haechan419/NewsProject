@@ -187,8 +187,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 얼굴 등록 섹션 */
@@ -396,7 +401,8 @@
   width: 100%;
   height: auto;
   display: block;
-  transform: scaleX(-1); /* 좌우 반전 (거울 효과) */
+  transform: scaleX(-1);
+  /* 좌우 반전 (거울 효과) */
   min-height: 400px;
   max-height: 500px;
   object-fit: cover;
@@ -407,7 +413,8 @@
 }
 
 .camera-video.video-loading {
-  opacity: 0.3; /* 로딩 중에도 비디오는 보이되 약간 투명하게 */
+  opacity: 0.3;
+  /* 로딩 중에도 비디오는 보이되 약간 투명하게 */
 }
 
 .camera-video.video-ready {
@@ -476,10 +483,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.8;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.02);

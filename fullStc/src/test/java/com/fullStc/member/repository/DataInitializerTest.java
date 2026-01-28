@@ -1,9 +1,6 @@
 package com.fullStc.member.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.annotation.Rollback;
 
 import com.fullStc.config.TestConfig;
 
@@ -37,11 +34,12 @@ class DataInitializerTest extends BaseRepositoryTest {
 
     @Test
     @DisplayName("더미 데이터 300개 생성")
+    @Rollback(false) // 트랜잭션 롤백 방지 - 실제 DB에 저장
     void createDummyData() {
 
         int TOTAL = 300;
 
-        String[] providers = {"local", "kakao", "naver", "google"};
+        String[] providers = { "local", "kakao", "naver", "google" };
         // 카테고리 목록 (정치, 경제, 엔터, IT/과학, 스포츠, 국제)
         String[] categories = {
                 "정치", "경제", "엔터", "IT/과학", "스포츠", "국제"
@@ -68,8 +66,7 @@ class DataInitializerTest extends BaseRepositoryTest {
                     provider,
                     provider.equals("local") ? null : provider + "_" + i,
                     role,
-                    password
-            );
+                    password);
 
             // 관심 카테고리 (1~3개)
             int categoryCount = (i % 3) + 1;
@@ -79,8 +76,7 @@ class DataInitializerTest extends BaseRepositoryTest {
                         MemberCategory.builder()
                                 .member(member)
                                 .category(categories[(i + j) % categories.length])
-                                .build()
-                );
+                                .build());
             }
 
             // RefreshToken (3명 중 1명)
@@ -90,13 +86,20 @@ class DataInitializerTest extends BaseRepositoryTest {
                                 .member(member)
                                 .token("refresh-token-" + i)
                                 .expiryDate(LocalDateTime.now().plusDays(7))
-                                .build()
-                );
+                                .build());
             }
 
             log.info("생성 완료: {}", email);
+
+            // 100개마다 flush하여 즉시 DB에 반영
+            if (i % 100 == 0) {
+                memberRepository.flush();
+                log.info("{}명까지 저장 완료 (flush)", i);
+            }
         }
 
+        // 최종 flush
+        memberRepository.flush();
         log.info("더미 회원 300명 생성 완료");
     }
 }

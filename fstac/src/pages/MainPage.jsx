@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import TopBar from '../components/layout/TopBar';
+import TopBar from '../layouts/TopBar';
 import './MainPage.css';
 
 const MainPage = () => {
