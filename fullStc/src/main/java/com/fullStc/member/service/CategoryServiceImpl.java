@@ -61,7 +61,14 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
 
         // 카테고리 유효성 검증
-        categoryUpdateDTO.validateCategories();
+        if (categoryUpdateDTO.getCategories() != null && !categoryUpdateDTO.getCategories().isEmpty()) {
+            List<String> validCategories = Arrays.asList(NewsCategory.getAllDisplayNames());
+            for (String category : categoryUpdateDTO.getCategories()) {
+                if (!validCategories.contains(category)) {
+                    throw new IllegalArgumentException("유효하지 않은 카테고리입니다: " + category);
+                }
+            }
+        }
 
         // 카테고리 개수 검증 (최대 3개)
         if (categoryUpdateDTO.getCategories() != null && categoryUpdateDTO.getCategories().size() > 3) {

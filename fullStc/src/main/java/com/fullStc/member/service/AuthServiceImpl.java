@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fullStc.member.domain.Member;
 import com.fullStc.member.domain.RefreshToken;
 import com.fullStc.member.domain.enums.MemberRole;
+import com.fullStc.member.dto.FaceLoginDTO;
 import com.fullStc.member.dto.LoginDTO;
 import com.fullStc.member.dto.LoginResponseDTO;
 import com.fullStc.member.dto.MemberDTO;
@@ -75,21 +76,55 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponseDTO login(LoginDTO loginDTO) {
         log.info("로그인 요청: email={}", loginDTO.getEmail());
-        
+
         // 사용자 조회 및 검증
         Member member = validateLogin(loginDTO);
-        
+
         // MemberDTO 생성
         MemberDTO memberDTO = createMemberDTO(member);
-        
+
         // 토큰 생성 및 저장
         TokenDTO tokenDTO = generateAndSaveTokens(member, memberDTO);
-        
+
         // 로그인 응답 생성
         LoginResponseDTO loginResponse = buildLoginResponse(memberDTO, tokenDTO);
-        
+
         log.info("로그인 성공: userId={}, email={}", member.getId(), member.getEmail());
-        
+
+        return loginResponse;
+    }
+
+    // 얼굴 로그인
+    @Override
+    public LoginResponseDTO faceLogin(FaceLoginDTO faceLoginDTO) {
+        String userId = faceLoginDTO.getUserId();
+        log.info("얼굴 로그인 요청: userId={}", userId);
+
+        if (userId == null || userId.isEmpty()) {
+            throw new RuntimeException("사용자 ID가 필요합니다");
+        }
+
+        // 매칭된 사용자 ID로 회원 조회
+        Member member = memberRepository.findByEmail(userId)
+                .orElseThrow(() -> new RuntimeException("등록된 사용자를 찾을 수 없습니다"));
+
+        // 계정 활성화 확인
+        if (!member.isEnabled()) {
+            log.warn("얼굴 로그인 실패: 비활성화된 계정 - email={}", faceLoginDTO.getMatchedUserId());
+            throw new RuntimeException("비활성화된 계정입니다");
+        }
+
+        // MemberDTO 생성
+        MemberDTO memberDTO = createMemberDTO(member);
+
+        // 토큰 생성 및 저장
+        TokenDTO tokenDTO = generateAndSaveTokens(member, memberDTO);
+
+        // 로그인 응답 생성
+        LoginResponseDTO loginResponse = buildLoginResponse(memberDTO, tokenDTO);
+
+        log.info("얼굴 로그인 성공: userId={}, email={}", member.getId(), member.getEmail());
+
         return loginResponse;
     }
 
@@ -97,17 +132,17 @@ public class AuthServiceImpl implements AuthService {
     private Member validateLogin(LoginDTO loginDTO) {
         Member member = memberRepository.findByEmail(loginDTO.getEmail())
                 .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다"));
-        
+
         if (!passwordEncoder.matches(loginDTO.getPassword(), member.getPassword())) {
             log.warn("로그인 실패: 비밀번호 불일치 - email={}", loginDTO.getEmail());
             throw new RuntimeException("비밀번호가 일치하지 않습니다");
         }
-        
+
         if (!member.isEnabled()) {
             log.warn("로그인 실패: 비활성화된 계정 - email={}", loginDTO.getEmail());
             throw new RuntimeException("비활성화된 계정입니다");
         }
-        
+
         return member;
     }
 
@@ -132,9 +167,9 @@ public class AuthServiceImpl implements AuthService {
     // 토큰 생성 및 RefreshToken 저장
     private TokenDTO generateAndSaveTokens(Member member, MemberDTO memberDTO) {
         Map<String, Object> claims = memberDTO.getClaims();
-        String accessToken = jwtUtil.generateToken(claims, 60);  // 60분
-        String refreshToken = jwtUtil.generateToken(claims, 60 * 24);  // 1일
-        
+        String accessToken = jwtUtil.generateToken(claims, 60); // 60분
+        String refreshToken = jwtUtil.generateToken(claims, 60 * 24); // 1일
+
         // Refresh Token 저장
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .member(member)
@@ -142,7 +177,7 @@ public class AuthServiceImpl implements AuthService {
                 .expiryDate(LocalDateTime.now().plusDays(7))
                 .build();
         refreshTokenRepository.save(refreshTokenEntity);
-        
+
         return TokenDTO.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -161,7 +196,7 @@ public class AuthServiceImpl implements AuthService {
                 .roleNames(memberDTO.getRoleNames())
                 .categories(memberDTO.getCategories())
                 .build();
-        
+
         return LoginResponseDTO.builder()
                 .token(tokenDTO)
                 .user(userInfo)
@@ -181,7 +216,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 새로운 Access Token 생성
         Map<String, Object> claims = memberDTO.getClaims();
-        String newAccessToken = jwtUtil.generateToken(claims, 60);  // 60분
+        String newAccessToken = jwtUtil.generateToken(claims, 60); // 60분
 
         log.info("토큰 갱신 완료: userId={}", member.getId());
 
