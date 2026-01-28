@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { findPassword } from '../api/authApi';
-import FindPasswordForm from '../components/auth/FindPasswordForm';
 import '../styles/common.css';
 import './FindPassword.css';
 
@@ -47,21 +46,45 @@ const FindPassword = () => {
     }
   };
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    setValidationError('');
-    setError('');
-  };
-
   return (
-    <FindPasswordForm
-      email={email}
-      onEmailChange={handleEmailChange}
-      validationError={validationError}
-      error={error}
-      isLoading={isLoading}
-      onSubmit={handleSubmit}
-    />
+    <div className="auth-container">
+      <div className="auth-box">
+        <h2 className="auth-title">비밀번호 찾기</h2>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="email">이메일</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setValidationError('');
+                setError('');
+              }}
+              className={validationError ? 'error' : ''}
+              placeholder="이메일을 입력하세요"
+              disabled={isLoading}
+            />
+            {validationError && (
+              <span className="error-message">{validationError}</span>
+            )}
+          </div>
+
+          {error && <div className="error-message server-error">{error}</div>}
+
+          <button type="submit" className="auth-button" disabled={isLoading}>
+            {isLoading ? '처리 중...' : '비밀번호 찾기'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            <Link to="/login">로그인</Link> | <Link to="/find-email">아이디 찾기</Link>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 

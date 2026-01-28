@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { signUp, getCategories } from '../api/authApi';
-import SignUpForm from '../components/auth/SignUpForm';
+import { useNavigate, Link } from 'react-router-dom';
+import { signUp } from '../api/authApi';
 import '../styles/common.css';
 import './SignUp.css';
 
@@ -10,52 +9,11 @@ const SignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nickname, setNickname] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [availableCategories, setAvailableCategories] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
-
-  // 카테고리 목록 로드
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const categories = await getCategories();
-        setAvailableCategories(categories);
-      } catch (err) {
-        console.error('카테고리 목록 로드 실패:', err);
-        // 기본 카테고리 목록 설정
-        setAvailableCategories(['정치', '경제', '엔터', 'IT/과학', '스포츠', '국제']);
-      }
-    };
-    loadCategories();
-  }, []);
-
-  // 카테고리 선택/해제 핸들러
-  const handleCategoryToggle = (category) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(category)) {
-        // 이미 선택된 경우 제거
-        return prev.filter(cat => cat !== category);
-      } else {
-        // 최대 3개까지만 선택 가능
-        if (prev.length >= 3) {
-          setValidationErrors({
-            ...validationErrors,
-            categories: '관심 카테고리는 최대 3개까지 선택할 수 있습니다.'
-          });
-          return prev;
-        }
-        setValidationErrors({
-          ...validationErrors,
-          categories: ''
-        });
-        return [...prev, category];
-      }
-    });
-  };
 
   // 유효성 검사
   const validate = () => {
@@ -91,11 +49,6 @@ const SignUp = () => {
       errors.nickname = '닉네임은 2자 이상 20자 이하여야 합니다.';
     }
 
-    // 카테고리 검증 (선택사항이지만 선택 시 최대 3개)
-    if (selectedCategories.length > 3) {
-      errors.categories = '관심 카테고리는 최대 3개까지 선택할 수 있습니다.';
-    }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -116,7 +69,6 @@ const SignUp = () => {
         email,
         password,
         nickname,
-        categories: selectedCategories, // 선택한 카테고리 전송
       });
       // 회원가입 성공 시 로그인 페이지로 이동
       navigate('/login', { state: { message: '회원가입이 완료되었습니다. 로그인해주세요.' } });
@@ -129,48 +81,105 @@ const SignUp = () => {
     }
   };
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    setValidationErrors({ ...validationErrors, email: '' });
-    setError('');
-  };
-
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    setValidationErrors({ ...validationErrors, password: '' });
-    setError('');
-  };
-
-  const handleConfirmPasswordChange = (e) => {
-    setConfirmPassword(e.target.value);
-    setValidationErrors({ ...validationErrors, confirmPassword: '' });
-    setError('');
-  };
-
-  const handleNicknameChange = (e) => {
-    setNickname(e.target.value);
-    setValidationErrors({ ...validationErrors, nickname: '' });
-    setError('');
-  };
-
   return (
-    <SignUpForm
-      email={email}
-      onEmailChange={handleEmailChange}
-      password={password}
-      onPasswordChange={handlePasswordChange}
-      confirmPassword={confirmPassword}
-      onConfirmPasswordChange={handleConfirmPasswordChange}
-      nickname={nickname}
-      onNicknameChange={handleNicknameChange}
-      selectedCategories={selectedCategories}
-      availableCategories={availableCategories}
-      onCategoryToggle={handleCategoryToggle}
-      validationErrors={validationErrors}
-      error={error}
-      isLoading={isLoading}
-      onSubmit={handleSubmit}
-    />
+    <div className="auth-container">
+      <div className="auth-box">
+        <h2 className="auth-title">회원가입</h2>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="email">이메일</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setValidationErrors({ ...validationErrors, email: '' });
+                setError('');
+              }}
+              className={validationErrors.email ? 'error' : ''}
+              placeholder="이메일을 입력하세요"
+              disabled={isLoading}
+            />
+            {validationErrors.email && (
+              <span className="error-message">{validationErrors.email}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">비밀번호</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setValidationErrors({ ...validationErrors, password: '' });
+                setError('');
+              }}
+              className={validationErrors.password ? 'error' : ''}
+              placeholder="비밀번호를 입력하세요 (영문, 숫자, 특수문자 포함 8자 이상)"
+              disabled={isLoading}
+            />
+            {validationErrors.password && (
+              <span className="error-message">{validationErrors.password}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">비밀번호 확인</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setValidationErrors({ ...validationErrors, confirmPassword: '' });
+                setError('');
+              }}
+              className={validationErrors.confirmPassword ? 'error' : ''}
+              placeholder="비밀번호를 다시 입력하세요"
+              disabled={isLoading}
+            />
+            {validationErrors.confirmPassword && (
+              <span className="error-message">{validationErrors.confirmPassword}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="nickname">닉네임</label>
+            <input
+              type="text"
+              id="nickname"
+              value={nickname}
+              onChange={(e) => {
+                setNickname(e.target.value);
+                setValidationErrors({ ...validationErrors, nickname: '' });
+                setError('');
+              }}
+              className={validationErrors.nickname ? 'error' : ''}
+              placeholder="닉네임을 입력하세요 (2-20자)"
+              disabled={isLoading}
+            />
+            {validationErrors.nickname && (
+              <span className="error-message">{validationErrors.nickname}</span>
+            )}
+          </div>
+
+          {error && <div className="error-message server-error">{error}</div>}
+
+          <button type="submit" className="auth-button" disabled={isLoading}>
+            {isLoading ? '가입 중...' : '회원가입'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            이미 계정이 있으신가요? <Link to="/login">로그인</Link>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 

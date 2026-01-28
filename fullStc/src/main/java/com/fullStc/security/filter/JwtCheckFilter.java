@@ -35,40 +35,12 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             return true;
         }
 
-        // 경로 변수 선언을 가장 먼저 수행
         String path = request.getRequestURI();
         log.info("check uri.......................{}", path);
-
-        // 예외 경로 설정 (토큰 검사 건너뛰기)
-
-        // 관리자 관련 API (테스트용)
-        if (path.startsWith("/admin/")) {
-            return true;
-        }
 
         // /api/auth/ 경로의 호출은 체크하지 않음 (로그인, 회원가입 등)
         // 단, 로그아웃(/api/auth/logout)은 인증이 필요하므로 필터링함
         if (path.startsWith("/api/auth/") && !path.equals("/api/auth/logout")) {
-            return true;
-        }
-
-        // 얼굴 인식 API는 체크하지 않음 (로그인 페이지에서 사용)
-        if (path.equals("/api/ai/face/recognize")) {
-            return true;
-        }
-
-        // 카테고리 목록 조회 API는 체크하지 않음 (회원가입 페이지에서 사용)
-        if (path.equals("/api/category/list") && "GET".equals(request.getMethod())) {
-            return true;
-        }
-
-        // OAuth2 경로는 체크하지 않음 (OAuth2 인증 플로우)
-        if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
-            return true;
-        }
-
-        // /login 경로는 체크하지 않음 (OAuth2 에러 리다이렉트용)
-        if (path.equals("/login") || path.startsWith("/login?")) {
             return true;
         }
 
@@ -81,7 +53,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         }
 
         // 이미지 조회 경로는 체크하지 않음 (필요시 추가)
-        if (path.startsWith("/api/products/view/") || path.startsWith("/static/") || path.startsWith("/favicon.ico")) {
+        if (path.startsWith("/api/products/view/")) {
             return true;
         }
 
@@ -100,8 +72,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             
             // 토큰 검증 및 인증 설정
             validateAndSetAuthentication(accessToken);
-
-            // 다음 필터로 진행
+            
             filterChain.doFilter(request, response);
 
         } catch (IllegalArgumentException e) {
@@ -261,7 +232,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         ));
 
         try {
-            response.setContentType("application/json;charset=UTF-8");
+            response.setContentType("application/json");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             PrintWriter printWriter = response.getWriter();
             printWriter.println(msg);

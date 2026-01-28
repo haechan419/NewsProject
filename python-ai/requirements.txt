@@ -1,27 +1,6 @@
-# FastAPI Server
+# requirements.txt - Python 패키지 의존성
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-
-# OpenAI
 openai==1.12.0
-
-# Env / Config
 python-dotenv==1.0.0
-
-# Data Validation
 pydantic==2.5.3
-
-# Image / Math
-pillow==10.2.0
-numpy==1.26.3
-
-# Data Science
-pandas==2.2.0
-scikit-learn==1.4.0
-
-# DB
-pymysql==1.1.0
-
-# HTTP / Scheduler
-requests==2.31.0
-schedule==1.2.1

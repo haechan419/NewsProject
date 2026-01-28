@@ -1,9 +1,15 @@
 # main.py - AI 챗봇 FastAPI 서버
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import logging
+from pydantic import BaseModel
+from typing import List, Optional
+from openai import OpenAI
 import os
-from config import CORS_ORIGINS
+from dotenv import load_dotenv
+import logging
+
+# 환경 변수 로드
+load_dotenv()
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -19,18 +25,43 @@ app = FastAPI(
 # CORS 설정 (Spring Boot에서 호출 허용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:8080",  # Spring Boot
+        "http://localhost:3000",  # React (CRA)
+        "http://localhost:5173",  # React (Vite)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 라우터 등록
-from routers import chat, face, news
+# OpenAI 클라이언트 초기화
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-app.include_router(chat.router)
-app.include_router(face.router)
-app.include_router(news.router)
+
+# ===== Pydantic 모델 =====
+class ConversationMessage(BaseModel):
+    """대화 메시지"""
+    role: str  # "user" 또는 "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    """채팅 요청"""
+    message: str
+    conversation_history: Optional[List[ConversationMessage]] = None
+
+
+class ChatResponse(BaseModel):
+    """채팅 응답"""
+    reply: str
+
+
+# ===== 시스템 프롬프트 =====
+SYSTEM_PROMPT = """당신은 친절하고 도움이 되는 AI 어시스턴트입니다.
+사용자의 질문에 명확하고 간결하게 답변해주세요.
+한국어로 대화합니다.
+전문적이면서도 친근한 톤을 유지합니다."""
 
 
 # ===== API 엔드포인트 =====
@@ -49,19 +80,58 @@ async def health_check():
     }
 
 
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    """
+    AI 채팅 엔드포인트
+    
+    - message: 사용자 메시지
+    - conversation_history: 이전 대화 기록 (선택)
+    """
+    logger.info(f"채팅 요청 수신: {request.message[:50]}...")
+    
+    try:
+        # 메시지 목록 구성
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        
+        # 이전 대화 기록 추가
+        if request.conversation_history:
+            for msg in request.conversation_history:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+        
+        # 현재 사용자 메시지 추가
+        messages.append({
+            "role": "user",
+            "content": request.message
+        })
+        
+        # OpenAI API 호출
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            max_tokens=1000,
+            temperature=0.7,
+        )
+        
+        # 응답 추출
+        reply = response.choices[0].message.content
+        
+        logger.info(f"AI 응답 생성 완료: {reply[:50]}...")
+        
+        return ChatResponse(reply=reply)
+        
+    except Exception as e:
+        logger.error(f"채팅 에러: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI 응답 생성 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
 # ===== 서버 실행 =====
 if __name__ == "__main__":
     import uvicorn
-    try:
-        uvicorn.run(
-            app, 
-            host="0.0.0.0", 
-            port=8000, 
-            reload=True,
-            log_level="info"
-        )
-    except KeyboardInterrupt:
-        logger.info("서버가 종료되었습니다.")
-    except Exception as e:
-        logger.error(f"서버 실행 중 오류 발생: {str(e)}")
-        raise
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

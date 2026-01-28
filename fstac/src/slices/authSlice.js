@@ -135,14 +135,11 @@ const authSlice = createSlice({
       .addCase(fetchUserInfoAsync.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
-        state.isAuthenticated = true; // 사용자 정보를 성공적으로 가져오면 인증된 것으로 간주
-        state.error = null;
         localStorage.setItem('user', JSON.stringify(action.payload));
       })
       .addCase(fetchUserInfoAsync.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        state.isAuthenticated = false; // 사용자 정보를 가져오지 못하면 인증되지 않은 것으로 간주
       });
   },
 });

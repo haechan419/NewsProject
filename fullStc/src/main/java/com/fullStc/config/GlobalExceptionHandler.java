@@ -44,44 +44,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // IllegalArgumentException 처리 (잘못된 인자 오류)
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        log.warn("IllegalArgumentException 발생: {}", ex.getMessage());
-        
-        Map<String, Object> response = new HashMap<>();
-        String message = ex.getMessage() != null ? ex.getMessage() : "잘못된 요청입니다";
-        
-        response.put("error", "ERROR_BAD_REQUEST");
-        response.put("message", message);
-        
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-    }
-
     // RuntimeException 처리 (로그인 실패 등)
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         log.error("RuntimeException 발생: {}", ex.getMessage(), ex);
         
         Map<String, Object> response = new HashMap<>();
-        String message = ex.getMessage() != null ? ex.getMessage() : "서버 오류가 발생했습니다";
         
-        // 아이디/비밀번호 찾기 관련 오류인 경우 (400 Bad Request)
-        if (message.contains("닉네임으로 등록된 회원을 찾을 수 없습니다") ||
-            message.contains("이메일로 등록된 회원을 찾을 수 없습니다") ||
-            message.contains("소셜 로그인 계정은 이메일 찾기를 사용할 수 없습니다") ||
-            message.contains("소셜 로그인 계정은 비밀번호 재설정을 사용할 수 없습니다") ||
-            message.contains("유효하지 않은 토큰입니다") ||
-            message.contains("만료된 토큰입니다") ||
-            message.contains("이미 사용된 토큰입니다")) {
-            response.put("error", "ERROR_NOT_FOUND");
-            response.put("message", message);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-        
-        // 로그인 관련 오류인 경우 (401 Unauthorized)
-        if (message.contains("비밀번호가 일치하지 않습니다") ||
-            message.contains("비활성화된 계정")) {
+        // 로그인 관련 오류인 경우
+        if (ex.getMessage() != null && (
+            ex.getMessage().contains("회원을 찾을 수 없습니다") ||
+            ex.getMessage().contains("비밀번호가 일치하지 않습니다") ||
+            ex.getMessage().contains("비활성화된 계정")
+        )) {
             response.put("error", "ERROR_LOGIN");
             response.put("message", "이메일 또는 비밀번호가 올바르지 않습니다");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
@@ -89,7 +64,7 @@ public class GlobalExceptionHandler {
         
         // 기타 RuntimeException
         response.put("error", "ERROR_SERVER");
-        response.put("message", message);
+        response.put("message", ex.getMessage() != null ? ex.getMessage() : "서버 오류가 발생했습니다");
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

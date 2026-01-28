@@ -64,9 +64,8 @@ public class DataInitializer implements ApplicationRunner {
         String[] providers = {"local", "local", "kakao", "naver", "google",
                              "local", "kakao", "local", "naver", "local"};
 
-        // 카테고리 목록 (정치, 경제, 엔터, IT/과학, 스포츠, 국제)
         String[] categories = {
-            "정치", "경제", "엔터", "IT/과학", "스포츠", "국제"
+            "Entertainment", "Economy", "Sports", "IT/Technology", "Society/Issues"
         };
 
         int createdCount = 0;

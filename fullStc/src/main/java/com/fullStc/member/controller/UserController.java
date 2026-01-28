@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fullStc.member.dto.CategoryUpdateDTO;
 import com.fullStc.member.dto.MemberDTO;
-import com.fullStc.member.dto.ProfileUpdateDTO;
 import com.fullStc.member.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 // 사용자 관련 컨트롤러
-@Tag(name = "사용자", description = "사용자 정보 조회 및 프로필 관리 API")
+@Tag(name = "사용자", description = "사용자 정보 조회 및 관심 카테고리 관리 API")
 @RestController
 @RequestMapping("/api/user")
 @Slf4j
@@ -50,28 +50,25 @@ public class UserController {
         return ResponseEntity.ok(userInfo);
     }
 
-    // 프로필 업데이트 (닉네임 수정)
-    @Operation(summary = "프로필 업데이트", description = "사용자의 닉네임을 수정합니다. 닉네임은 중복될 수 없으며, 2-20자의 한글/영문/숫자만 사용 가능합니다. JWT 토큰이 필요합니다.")
+    // 관심 카테고리 업데이트
+    @Operation(summary = "관심 카테고리 업데이트", description = "사용자의 관심 카테고리를 업데이트합니다. 기존 카테고리는 모두 삭제되고 새로운 카테고리로 교체됩니다. JWT 토큰이 필요합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "업데이트 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청 (닉네임 중복, 유효성 검증 실패)"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (카테고리 목록이 비어있음)"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
     })
     @SecurityRequirement(name = "JWT")
-    @PutMapping("/profile")
-    public ResponseEntity<MemberDTO> updateProfile(
-            @Validated @RequestBody ProfileUpdateDTO profileUpdateDTO,
+    @PutMapping("/categories")
+    public ResponseEntity<Void> updateCategories(
+            @Validated @RequestBody CategoryUpdateDTO categoryUpdateDTO,
             Authentication authentication) {
-        log.info("프로필 업데이트 요청");
+        log.info("관심 카테고리 업데이트 요청");
         
         // SecurityContext에서 사용자 정보 가져오기
         MemberDTO memberDTO = (MemberDTO) authentication.getPrincipal();
         Long userId = memberDTO.getId();
         
-        userService.updateUserProfile(userId, profileUpdateDTO);
-        
-        // 업데이트된 사용자 정보 반환
-        MemberDTO updatedUserInfo = userService.getUserInfo(userId);
-        return ResponseEntity.ok(updatedUserInfo);
+        userService.updateUserCategories(userId, categoryUpdateDTO);
+        return ResponseEntity.ok().build();
     }
 }

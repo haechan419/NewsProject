@@ -24,11 +24,11 @@ public class MemberCategoryRepositoryTests extends BaseRepositoryTest {
 
         MemberCategory category1 = MemberCategory.builder()
                 .member(member)
-                .category("정치")
+                .category("Entertainment")
                 .build();
         MemberCategory category2 = MemberCategory.builder()
                 .member(member)
-                .category("경제")
+                .category("Economy")
                 .build();
         memberCategoryRepository.save(category1);
         memberCategoryRepository.save(category2);
@@ -39,7 +39,7 @@ public class MemberCategoryRepositoryTests extends BaseRepositoryTest {
         // then
         assertThat(categories).hasSize(2);
         assertThat(categories).extracting(MemberCategory::getCategory)
-                .contains("정치", "경제");
+                .contains("Entertainment", "Economy");
         log.info("회원의 관심 카테고리 목록: {}", categories);
     }
 
@@ -52,7 +52,7 @@ public class MemberCategoryRepositoryTests extends BaseRepositoryTest {
 
         MemberCategory category = MemberCategory.builder()
                 .member(member)
-                .category("스포츠")
+                .category("Sports")
                 .build();
         memberCategoryRepository.save(category);
 
@@ -61,7 +61,7 @@ public class MemberCategoryRepositoryTests extends BaseRepositoryTest {
 
         // then
         assertThat(categories).hasSize(1);
-        assertThat(categories.get(0).getCategory()).isEqualTo("스포츠");
+        assertThat(categories.get(0).getCategory()).isEqualTo("Sports");
         log.info("회원으로 조회된 카테고리: {}", categories);
     }
 
@@ -74,11 +74,11 @@ public class MemberCategoryRepositoryTests extends BaseRepositoryTest {
 
         MemberCategory category1 = MemberCategory.builder()
                 .member(member)
-                .category("IT/과학")
+                .category("IT/Technology")
                 .build();
         MemberCategory category2 = MemberCategory.builder()
                 .member(member)
-                .category("국제")
+                .category("Society/Issues")
                 .build();
         memberCategoryRepository.save(category1);
         memberCategoryRepository.save(category2);
@@ -101,17 +101,17 @@ public class MemberCategoryRepositoryTests extends BaseRepositoryTest {
 
         MemberCategory category = MemberCategory.builder()
                 .member(member)
-                .category("엔터")
+                .category("Entertainment")
                 .build();
         memberCategoryRepository.save(category);
 
         // when
         List<MemberCategory> found = memberCategoryRepository.findByMemberIdAndCategory(
-                member.getId(), "엔터");
+                member.getId(), "Entertainment");
 
         // then
         assertThat(found).hasSize(1);
-        assertThat(found.get(0).getCategory()).isEqualTo("엔터");
+        assertThat(found.get(0).getCategory()).isEqualTo("Entertainment");
         log.info("회원 ID와 카테고리명으로 조회된 결과: {}", found);
     }
 }

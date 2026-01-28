@@ -32,7 +32,7 @@ public class MemberCategory {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
-    // 관심 카테고리명 (정치, 경제, 엔터, IT/과학, 스포츠, 국제)
+    // 관심 카테고리명 (엔터테이먼트, 경제, 스포츠, IT/기술, 사회/이슈)
     @Column(nullable = false)
     private String category;
 }

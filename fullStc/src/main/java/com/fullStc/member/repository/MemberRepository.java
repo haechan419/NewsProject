@@ -29,10 +29,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 닉네임 존재 여부 확인
     boolean existsByNickname(String nickname);
     
-    // 닉네임으로 회원 조회
-    @EntityGraph(attributePaths = {"memberRoleList"})
-    Optional<Member> findByNickname(String nickname);
-    
     // 제공자와 제공자 ID로 회원 조회 (소셜 로그인용)
     Optional<Member> findByProviderAndProviderId(String provider, String providerId);
 }
