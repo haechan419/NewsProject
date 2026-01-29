@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\hyeyeon\Desktop\haechan\2Wproject\GitHubProject\python-ai\venv"
+VIRTUAL_ENV="C:\playground\fullstack_project2\github_clone\python-ai\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

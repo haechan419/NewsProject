@@ -79,6 +79,10 @@ public class SecurityConfig {
                         "/api/comments/**",
                         "/api/files/**",
                         "/api/ai/**",
+                        "/api/qa/**",  // QA API 경로 추가 !!!!!!!!!!!!
+                        "/api/faq/**",
+                        "/api/support/**",
+                        "/api/inquiry/**",
                         "/api/category/**",
                         "/api/user/**",
                         "/swagger-ui/**",
@@ -86,6 +90,8 @@ public class SecurityConfig {
                         "/oauth2/**",
                         "/login/oauth2/**",
                         "/admin/**"));
+
+        
 
         // 인가 설정
         http.authorizeHttpRequests(auth -> {

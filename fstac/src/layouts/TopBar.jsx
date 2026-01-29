@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutAsync } from '../slices/authSlice';
@@ -8,6 +8,25 @@ const TopBar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const handleLogout = async () => {
     try {
@@ -18,6 +37,10 @@ const TopBar = () => {
       // 에러가 있어도 로그인 페이지로 이동
       navigate('/login');
     }
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   return (
@@ -37,46 +60,75 @@ const TopBar = () => {
                   {user.nickname || user.email}
                 </span>
               )}
-              <Link 
-                to="/profile/edit"
+              <button 
+                onClick={() => navigate('/support')}
                 style={{
-                  textDecoration: 'none',
+                  background: 'none',
+                  border: 'none',
                   color: '#333',
                   fontSize: '14px',
                   padding: '5px 10px',
                   fontWeight: '500'
                 }}
               >
-                프로필
-              </Link>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#333',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  padding: '5px 10px'
-                }}
-              >
-                로그아웃
+                고객센터
               </button>
+              <div className="user-icon-container" ref={dropdownRef}>
+                <div 
+                  className="user-icon"
+                  onClick={toggleDropdown}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                {isDropdownOpen && (
+                  <div className="dropdown-menu">
+                    <Link 
+                      to="/profile/edit"
+                      className="dropdown-item"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      프로필 수정
+                    </Link>
+                    <Link 
+                      to="/"
+                      className="dropdown-item"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      마이페이지
+                    </Link>
+                    <button 
+                      className="dropdown-item"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        handleLogout();
+                      }}
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
-            <Link to="/login">로그인</Link>
+            <>
+              <Link to="/login">로그인</Link>
+              <Link 
+                to="/login"
+                className="user-icon-link"
+              >
+                <div className="user-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+              </Link>
+            </>
           )}
-          <Link 
-            to={isAuthenticated ? "/profile/edit" : "/login"}
-            className="user-icon-link"
-          >
-            <div className="user-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
-          </Link>
         </div>
       </div>
 

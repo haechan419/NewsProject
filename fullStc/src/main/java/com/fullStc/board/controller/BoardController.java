@@ -19,14 +19,14 @@ public class BoardController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    public ResponseEntity<Page<BoardListResponse>> getBoards(
+    public ResponseEntity<Page<BoardListResponseDTO>> getBoards(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(boardService.getBoards(page, size));
     }
 
     @GetMapping("/type/{boardType}")
-    public ResponseEntity<Page<BoardListResponse>> getBoardsByType(
+    public ResponseEntity<Page<BoardListResponseDTO>> getBoardsByType(
             @PathVariable String boardType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -34,7 +34,7 @@ public class BoardController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Page<BoardListResponse>> searchBoards(
+    public ResponseEntity<Page<BoardListResponseDTO>> searchBoards(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -42,16 +42,16 @@ public class BoardController {
     }
 
     @GetMapping("/{boardId}")
-    public ResponseEntity<BoardDetailResponse> getBoardDetail(@PathVariable Long boardId) {
+    public ResponseEntity<BoardDetailResponseDTO> getBoardDetail(@PathVariable Long boardId) {
         return ResponseEntity.ok(boardService.getBoardDetail(boardId));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BoardCreateResponse> createBoard(
+    public ResponseEntity<BoardCreateResponseDTO> createBoard(
             @RequestPart("board") String boardJson,
             @RequestPart(value = "files", required = false) MultipartFile[] files) {
         try {
-            BoardCreateRequest request = objectMapper.readValue(boardJson, BoardCreateRequest.class);
+            BoardCreateRequestDTO request = objectMapper.readValue(boardJson, BoardCreateRequestDTO.class);
             return ResponseEntity.ok(boardService.createBoard(request, files));
         } catch (Exception e) {
             throw new RuntimeException("게시글 생성 실패: " + e.getMessage());
@@ -63,7 +63,7 @@ public class BoardController {
             @RequestPart("board") String boardJson,
             @RequestPart(value = "files", required = false) MultipartFile[] files) {
         try {
-            BoardUpdateRequest request = objectMapper.readValue(boardJson, BoardUpdateRequest.class);
+            BoardUpdateRequestDTO request = objectMapper.readValue(boardJson, BoardUpdateRequestDTO.class);
             boardService.updateBoard(boardId, request, files);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -78,14 +78,14 @@ public class BoardController {
     }
 
     @PostMapping("/{boardId}/like")
-    public ResponseEntity<LikeResponse> toggleLike(@PathVariable Long boardId) {
+    public ResponseEntity<LikeResponseDTO> toggleLike(@PathVariable Long boardId) {
         return ResponseEntity.ok(boardService.toggleLike(boardId));
     }
 
     @PostMapping("/{boardId}/vote")
-    public ResponseEntity<VoteResponse> vote(
+    public ResponseEntity<VoteResponseDTO> vote(
             @PathVariable Long boardId,
-            @RequestBody VoteRequest request) {
+            @RequestBody VoteRequestDTO request) {
         return ResponseEntity.ok(boardService.vote(boardId, request));
     }
 }

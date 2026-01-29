@@ -23,9 +23,6 @@ public class RepresentativeSummaryService {
 
     /**
      * 파이프라인에서 호출하는 메인 메소드
-     * - 클러스터 ID 목록을 받아 뉴스들을 조회하고
-     * - 1등 기사 URL 선정
-     * - AI를 통해 제목과 요약 생성 후 저장
      */
     @Transactional
     public int generateRepresentativeSummariesForClusterIds(List<Long> clusterIds, int limit) {
@@ -34,8 +31,7 @@ public class RepresentativeSummaryService {
         // 1. 요약 대상 클러스터 조회
         List<NewsCluster> clusters = newsClusterRepository.findAllById(clusterIds);
 
-        // ★ [핵심] parallelStream()을 사용하여 병렬 처리 (속도 대폭 향상)
-        // mapToInt().sum() 패턴을 사용하여 스레드 안전하게 성공 횟수를 집계합니다.
+        // ★ [핵심] parallelStream()을 사용하여 병렬 처리
         int successCount = clusters.parallelStream().mapToInt(cluster -> {
 
             // 이미 요약이 있으면 건너뜀 (API 비용 절약)
@@ -45,7 +41,6 @@ public class RepresentativeSummaryService {
 
             try {
                 // 2. 해당 그룹의 뉴스들 가져오기
-                // (병렬 스레드에서도 Repository 읽기는 문제없이 동작함)
                 List<News> newsList = newsRepository.findByDupClusterId(cluster.getId());
                 if (newsList.isEmpty()) return 0;
 
@@ -54,12 +49,12 @@ public class RepresentativeSummaryService {
                 // -------------------------------------------------------
                 News bestNews = newsList.stream()
                         .max(Comparator.comparingInt(n -> n.getQualityScore() == null ? 0 : n.getQualityScore()))
-                        .orElse(newsList.get(0)); // 점수 없으면 첫 번째 뉴스 선택
+                        .orElse(newsList.get(0));
 
-                cluster.setRepresentativeUrl(bestNews.getUrl());
+                String bestUrl = bestNews.getUrl();
 
                 // -------------------------------------------------------
-                // ★ [Step 2] AI에게 제목과 요약 생성 요청 (여기서 병렬 효과 극대화)
+                // ★ [Step 2] AI에게 제목과 요약 생성 요청
                 // -------------------------------------------------------
                 String fullResponse = openAiSummarizer.summarizeCluster(newsList);
 
@@ -69,15 +64,17 @@ public class RepresentativeSummaryService {
                     String aiTitle = parts[0];
                     String aiSummary = parts[1];
 
-                    // 4. 최종 저장
-                    cluster.setClusterTitle(aiTitle);
-                    cluster.setClusterSummary(aiSummary);
+                    // 4. 최종 저장 (★ 충돌 해결 부분!)
+                    // 기존: cluster.set... 후 repo.save(cluster) -> 에러 발생 원인
+                    // 변경: 필요한 3개 컬럼만 직접 UPDATE (파이썬과 충돌 안 남)
+                    newsClusterRepository.updateClusterSummaryInfo(
+                            cluster.getId(),
+                            bestUrl,
+                            aiTitle,
+                            aiSummary
+                    );
 
-                    // 병렬 스트림 내부에서 저장은 개별 트랜잭션처럼 동작하여 즉시 반영됨
-                    newsClusterRepository.save(cluster);
-
-                    log.info("🎉 [SUMMARY] Cluster ID={} 완료! 제목: '{}' (링크: {})",
-                            cluster.getId(), aiTitle, bestNews.getUrl());
+                    log.info("🎉 [SUMMARY] Cluster ID={} 완료! 제목: '{}'", cluster.getId(), aiTitle);
 
                     return 1; // 성공 카운트 +1
                 }
@@ -86,10 +83,11 @@ public class RepresentativeSummaryService {
                 log.error("💥 [SUMMARY] Cluster ID={} 실패: {}", cluster.getId(), e.getMessage());
             }
             return 0; // 실패 시 카운트 0
-        }).sum(); // 병렬 처리된 결과 합산
+        }).sum();
 
         return successCount;
     }
+
     /**
      * AI 응답 텍스트를 분석해서 [제목]과 [내용]으로 분리하는 메소드
      */
@@ -108,7 +106,6 @@ public class RepresentativeSummaryService {
             String summary = clean.substring(firstNewLine).trim();
             return new String[]{title, summary};
         } else {
-            // 줄바꿈이 없으면 전체를 요약으로 간주
             return new String[]{"AI 자동 생성 제목", clean};
         }
     }

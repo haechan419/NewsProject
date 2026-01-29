@@ -129,5 +129,9 @@ public class News {
      */
     @Column(name = "verified_at")
     private Instant verifiedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY) // 부모는 필요할 때만 가져온다 (성능 최적화)
+    @JoinColumn(name = "cluster_id")   // DB 테이블의 실제 컬럼명 (news 테이블의 cluster_id 컬럼)
+    private NewsCluster newsCluster;   // ★ 이 변수 이름이 'mappedBy'와 똑같아야 함!
 }
 

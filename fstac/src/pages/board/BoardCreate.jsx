@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopBar from '../../components/layout/TopBar';
+import TopBar from '../../layouts/TopBar';
 import { boardApi } from '../../api/boardApi';
 import './BoardPage.css';
 

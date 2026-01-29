@@ -21,17 +21,17 @@ public class CommentController {
     private final CommentService commentService;
 
     @GetMapping("/board/{boardId}")
-    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long boardId) {
+    public ResponseEntity<List<CommentResponseDTO>> getComments(@PathVariable Long boardId) {
         return ResponseEntity.ok(commentService.getComments(boardId));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-public ResponseEntity<CommentCreateResponse> createComment(
+public ResponseEntity<CommentCreateResponseDTO> createComment(
         @RequestPart("comment") String commentJson,
         @RequestPart(value = "files", required = false) MultipartFile[] files) {
     try {
         ObjectMapper objectMapper = new ObjectMapper();
-        CommentCreateRequest request = objectMapper.readValue(commentJson, CommentCreateRequest.class);
+        CommentCreateRequestDTO request = objectMapper.readValue(commentJson, CommentCreateRequestDTO.class);
         return ResponseEntity.ok(commentService.createComment(request, files));
     } catch (Exception e) {
         throw new RuntimeException("댓글 작성 실패: " + e.getMessage());
@@ -41,7 +41,7 @@ public ResponseEntity<CommentCreateResponse> createComment(
     @PutMapping("/{commentId}")
     public ResponseEntity<Void> updateComment(
             @PathVariable Long commentId,
-            @RequestBody CommentUpdateRequest request) {
+            @RequestBody CommentUpdateRequestDTO request) {
         commentService.updateComment(commentId, request);
         return ResponseEntity.ok().build();
     }
@@ -53,7 +53,7 @@ public ResponseEntity<CommentCreateResponse> createComment(
     }
 
     @PostMapping("/{commentId}/like")
-    public ResponseEntity<LikeResponse> toggleLike(@PathVariable Long commentId) {
+    public ResponseEntity<LikeResponseDTO> toggleLike(@PathVariable Long commentId) {
         return ResponseEntity.ok(commentService.toggleLike(commentId));
     }
 }

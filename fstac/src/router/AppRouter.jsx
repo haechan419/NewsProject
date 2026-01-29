@@ -23,6 +23,7 @@ const BoardPage = lazy(() => import('../pages/board/BoardPage'));
 const BoardDetail = lazy(() => import('../pages/board/BoardDetail'));
 const BoardCreate = lazy(() => import('../pages/board/BoardCreate'));
 const BoardModify = lazy(() => import('../pages/board/BoardModify'));
+const SupportPage = lazy(() => import('../pages/support/SupportPage'));
 
 const AppRouter = () => {
   return (
@@ -80,6 +81,14 @@ const AppRouter = () => {
             element={
                 <ProtectedRoute>
                     <BoardModify />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/support"
+            element={
+                <ProtectedRoute>
+                    <SupportPage />
                 </ProtectedRoute>
             }
         />

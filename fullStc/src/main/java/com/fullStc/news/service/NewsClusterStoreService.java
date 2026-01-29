@@ -26,27 +26,31 @@ public class NewsClusterStoreService {
                               String badge) {
 
         // 1) 존재하면 업데이트
+        // [수정됨] CAST(? AS JSON) 제거 -> 그냥 ? 로 변경
         String update = """
             UPDATE news_cluster
             SET category = COALESCE(?, category),
                 representative_news_id = COALESCE(?, representative_news_id),
                 cluster_title = COALESCE(?, cluster_title),
                 quality_score = COALESCE(?, quality_score),
-                risk_flags = COALESCE(CAST(? AS JSON), risk_flags),
+                risk_flags = COALESCE(?, risk_flags),
                 badge = COALESCE(?, badge),
                 updated_at = NOW()
             WHERE cluster_key = ?
         """;
+
+        // 순서: category, repNewsId, title, score, flagsJson, badge, clusterKey
         int updated = jdbc.update(update, category, repNewsId, title, score, flagsJson, badge, clusterKey);
 
         if (updated > 0) return getIdByKey(clusterKey);
 
         // 2) 없으면 insert (동시성 대비)
+        // [수정됨] CAST(? AS JSON) 제거 -> 그냥 ? 로 변경
         String insert = """
             INSERT INTO news_cluster
             (cluster_key, category, representative_news_id, cluster_title, quality_score, risk_flags, badge, created_at, updated_at)
             VALUES
-            (?, ?, ?, ?, ?, CAST(? AS JSON), ?, NOW(), NOW())
+            (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         """;
         try {
             jdbc.update(insert, clusterKey, category, repNewsId, title, score, flagsJson, badge);

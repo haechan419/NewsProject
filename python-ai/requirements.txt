@@ -12,7 +12,7 @@ python-dotenv==1.0.0
 pydantic==2.5.3
 
 # Image / Math
-pillow==10.2.0
+pillow
 numpy==1.26.3
 
 # Data Science
