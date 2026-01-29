@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findPassword } from '../api/authApi';
 import FindPasswordForm from '../components/auth/FindPasswordForm';
-import '../styles/common.css';
-import './FindPassword.css';
 
 const FindPassword = () => {
   const navigate = useNavigate();

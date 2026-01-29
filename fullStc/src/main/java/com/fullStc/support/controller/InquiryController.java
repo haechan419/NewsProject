@@ -1,5 +1,6 @@
 package com.fullStc.support.controller;
 
+import com.fullStc.member.dto.MemberDTO;
 import com.fullStc.support.dto.InquiryAdminRequest;
 import com.fullStc.support.dto.InquiryCreateRequest;
 import com.fullStc.support.dto.InquiryResponse;
@@ -149,12 +150,17 @@ public class InquiryController {
      */
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> principal = (Map<String, Object>) authentication.getPrincipal();
-            Object idObj = principal.get("id");
-            if (idObj instanceof Number) {
-                return ((Number) idObj).longValue();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof MemberDTO) {
+                return ((MemberDTO) principal).getId();
+            } else if (principal instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> principalMap = (Map<String, Object>) principal;
+                Object idObj = principalMap.get("id");
+                if (idObj instanceof Number) {
+                    return ((Number) idObj).longValue();
+                }
             }
         }
         throw new RuntimeException("인증 정보를 찾을 수 없습니다.");

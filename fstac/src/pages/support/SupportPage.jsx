@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { getFaqs, clickFaq, searchFaqs, createFaq, updateFaq, deleteFaq } from '../../api/faqApi';
-import { sendQaMessage } from '../../api/qaApi';
+import { sendQaMessage, getQaHistory } from '../../api/qaApi';
 import { getMyInquiries, createInquiry, getInquiryById, getAllInquiries, updateInquiry } from '../../api/inquiryApi';
+import apiClient from '../../api/axios';
 import './SupportPage.css';
 
 // 카테고리 정보
@@ -51,6 +52,16 @@ const SupportPage = () => {
 
   // 관리자 답변 상태
   const [adminResponse, setAdminResponse] = useState('');
+
+  // CSRF 토큰 가져오기 (컴포넌트 마운트 시)
+  useEffect(() => {
+    // CSRF 토큰을 받기 위해 인증이 필요 없는 GET 요청 사용
+    // /api/category/list는 permitAll로 설정되어 있어 CSRF 토큰을 받을 수 있음
+    apiClient.get('/api/category/list')
+      .catch(() => {
+        // CSRF 토큰만 받으면 되므로 에러는 무시
+      });
+  }, []);
 
   // FAQ 목록 로드
   useEffect(() => {

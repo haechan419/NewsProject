@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUp, getCategories } from '../api/authApi';
 import SignUpForm from '../components/auth/SignUpForm';
-import '../styles/common.css';
-import './SignUp.css';
 
 const SignUp = () => {
   const [email, setEmail] = useState('');

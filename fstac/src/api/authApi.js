@@ -66,6 +66,32 @@ export const updateProfile = async (nickname) => {
   return response.data;
 };
 
+// 계정 비활성(회원탈퇴)
+export const deactivateAccount = async () => {
+  // 현재 로그인한 사용자 기준으로 계정 비활성
+  const response = await apiClient.delete('/api/user/me');
+  return response.data;
+};
+
+// 프로필 이미지 업로드/변경
+export const uploadProfileImage = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await apiClient.post('/api/user/profile/image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// 프로필 이미지 삭제
+export const deleteProfileImage = async () => {
+  const response = await apiClient.delete('/api/user/profile/image');
+  return response.data;
+};
+
 // 얼굴 인식 로그인
 export const faceLogin = async (email) => {
   const response = await apiClient.post('/api/auth/face-login', {

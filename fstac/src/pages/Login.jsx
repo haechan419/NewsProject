@@ -5,8 +5,6 @@ import { loginAsync, clearError, setCredentials, fetchUserInfoAsync } from '../s
 import { recognizeFace } from '../api/faceApi';
 import { faceLogin } from '../api/authApi';
 import LoginForm from '../components/auth/LoginForm';
-import '../styles/common.css';
-import './Login.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,7 +12,7 @@ const Login = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isKakaoLoginLoading, setIsKakaoLoginLoading] = useState(false);
   const [showOAuthError, setShowOAuthError] = useState(null);
-  
+
   // 얼굴 인식 관련 상태
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
@@ -30,7 +28,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoading, error, isAuthenticated, user } = useSelector((state) => state.auth);
-  
+
   // 회원가입 성공 메시지 확인
   const successMessage = location.state?.message;
 
@@ -38,7 +36,7 @@ const Login = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const oauthError = urlParams.get('error');
-    
+
     if (oauthError) {
       // OAuth 에러 타입 저장
       setShowOAuthError(oauthError);
@@ -58,19 +56,19 @@ const Login = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const oauthSuccess = urlParams.get('oauth');
-    
+
     // 이미 처리되었으면 다시 처리하지 않음
     if (oauthSuccess === 'success' && !oauthNotificationShownRef.current) {
       oauthNotificationShownRef.current = true; // 플래그 설정
-      
+
       // 사용자 정보 조회 (OAuth 성공 후 쿠키에 토큰이 저장되어 있음)
       const fetchUserAndNavigate = async () => {
         try {
           const result = await dispatch(fetchUserInfoAsync());
-          
+
           // URL에서 파라미터 제거 (이동 전에)
           window.history.replaceState({}, '', '/login');
-          
+
           if (fetchUserInfoAsync.fulfilled.match(result)) {
             // 즉시 홈으로 이동
             navigate('/', { replace: true });
@@ -90,7 +88,7 @@ const Login = () => {
           navigate('/', { replace: true });
         }
       };
-      
+
       fetchUserAndNavigate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,10 +140,10 @@ const Login = () => {
     if (isKakaoLoginLoading) {
       return;
     }
-    
+
     setIsKakaoLoginLoading(true);
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-    
+
     // 리다이렉트 전에 약간의 지연을 두어 중복 클릭 방지
     setTimeout(() => {
       window.location.href = `${apiBaseUrl}/oauth2/authorization/${provider}`;
@@ -168,7 +166,7 @@ const Login = () => {
       setFaceRecognitionMessage('');
       setIsCameraActive(true);
       setIsVideoReady(false);
-      
+
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setCameraError('이 브라우저는 카메라를 지원하지 않습니다.');
         return;
@@ -182,17 +180,17 @@ const Login = () => {
         },
         audio: false
       });
-      
+
       streamRef.current = stream;
-      
+
       const setupVideo = () => {
         if (videoRef.current) {
           const video = videoRef.current;
           video.srcObject = stream;
           setIsVideoReady(false);
-          
+
           let timeoutId = null;
-          
+
           const handleVideoReady = () => {
             if (timeoutId) {
               clearTimeout(timeoutId);
@@ -200,7 +198,7 @@ const Login = () => {
             }
             setIsVideoReady(true);
           };
-          
+
           video.onloadedmetadata = () => {
             video.play()
               .then(() => {
@@ -211,11 +209,11 @@ const Login = () => {
                 handleVideoReady();
               });
           };
-          
+
           video.onplaying = () => {
             handleVideoReady();
           };
-          
+
           video.onerror = (err) => {
             console.error('비디오 에러:', err);
             setTimeout(() => {
@@ -224,7 +222,7 @@ const Login = () => {
               }
             }, 1000);
           };
-          
+
           timeoutId = setTimeout(() => {
             if (videoRef.current && videoRef.current.srcObject) {
               handleVideoReady();
@@ -234,12 +232,12 @@ const Login = () => {
           setTimeout(setupVideo, 100);
         }
       };
-      
+
       setupVideo();
     } catch (error) {
       console.error('카메라 접근 에러:', error);
       let errorMessage = '카메라에 접근할 수 없습니다.';
-      
+
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.';
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
@@ -247,7 +245,7 @@ const Login = () => {
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
         errorMessage = '카메라에 접근할 수 없습니다. 다른 애플리케이션에서 카메라를 사용 중일 수 있습니다.';
       }
-      
+
       setCameraError(errorMessage);
     }
   };
@@ -259,7 +257,7 @@ const Login = () => {
       clearInterval(autoRecognitionIntervalRef.current);
       autoRecognitionIntervalRef.current = null;
     }
-    
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -283,7 +281,7 @@ const Login = () => {
     }
 
     const video = videoRef.current;
-    
+
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
       if (!isAuto) {
         setFaceRecognitionMessage('카메라가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
@@ -305,44 +303,44 @@ const Login = () => {
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
-      
+
       const ctx = canvas.getContext('2d');
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
+
       const imageData = canvas.toDataURL('image/png');
-      
+
       // 얼굴 인식 API 호출
       const response = await recognizeFace(imageData);
-      
+
       if (response.success && response.data?.faceDetected && response.data?.matchedUserId) {
         const matchedEmail = response.data.matchedUserId;
         setFaceRecognitionMessage('얼굴 인식 성공! 로그인 중...');
-        
+
         // 자동 인식 인터벌 정리
         if (autoRecognitionIntervalRef.current) {
           clearInterval(autoRecognitionIntervalRef.current);
           autoRecognitionIntervalRef.current = null;
         }
-        
+
         // 얼굴 인식 로그인 API 호출
         try {
           const loginResponse = await faceLogin(matchedEmail);
-          
+
           // Redux에 사용자 정보 저장
           dispatch(setCredentials({ user: loginResponse.user }));
-          
+
           // 사용자 정보 조회
           await dispatch(fetchUserInfoAsync());
-          
+
           setFaceRecognitionMessage('로그인 성공!');
-          
+
           stopCamera();
-          
+
           // 홈으로 이동
           navigate('/');
-          
+
           return true; // 성공
         } catch (loginError) {
           console.error('얼굴 인식 로그인 에러:', loginError);
@@ -360,11 +358,11 @@ const Login = () => {
     } catch (error) {
       console.error('얼굴 인식 에러:', error);
       if (!isAuto) {
-        const errorMessage = error.response?.data?.data?.message || 
-                            error.response?.data?.message ||
-                            error.response?.data?.error || 
-                            error.message || 
-                            '얼굴 인식 중 오류가 발생했습니다.';
+        const errorMessage = error.response?.data?.data?.message ||
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          '얼굴 인식 중 오류가 발생했습니다.';
         setFaceRecognitionMessage(errorMessage);
       }
       return false;
@@ -413,20 +411,20 @@ const Login = () => {
       // 자동 인식 인터벌 시작 (10초마다)
       if (!autoRecognitionIntervalRef.current) {
         setFaceRecognitionMessage('자동 얼굴 인식이 시작되었습니다...');
-        
+
         autoRecognitionIntervalRef.current = setInterval(() => {
           if (isCameraActive && !isRecognizing) {
             performFaceRecognition(true);
           }
         }, 10000); // 10초마다 실행
-        
+
         // 첫 번째 인식은 즉시 실행 (3초 후)
         const firstTimeout = setTimeout(() => {
           if (isCameraActive && !isRecognizing) {
             performFaceRecognition(true);
           }
         }, 3000);
-        
+
         return () => {
           if (autoRecognitionIntervalRef.current) {
             clearInterval(autoRecognitionIntervalRef.current);
@@ -442,7 +440,7 @@ const Login = () => {
         autoRecognitionIntervalRef.current = null;
       }
     }
-    
+
     return () => {
       if (autoRecognitionIntervalRef.current) {
         clearInterval(autoRecognitionIntervalRef.current);

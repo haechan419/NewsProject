@@ -103,7 +103,7 @@ public class CommentService {
      * @param boardId 게시글 ID
      * @return 댓글 응답 목록 (대댓글 포함)
      */
-    public List<CommentResponse> getComments(Long boardId) {
+    public List<CommentResponseDTO> getComments(Long boardId) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + boardId));
 
@@ -125,7 +125,7 @@ public class CommentService {
                             isLiked = false;
                         }
                     }
-                    return CommentResponse.from(comment, isLiked);
+                    return CommentResponseDTO.from(comment, isLiked);
                 })
                 .collect(Collectors.toList());
     }
@@ -136,7 +136,7 @@ public class CommentService {
      * @return 생성된 댓글 ID를 담은 응답 DTO
      */
     @Transactional
-public CommentCreateResponse createComment(CommentCreateRequest request, MultipartFile[] files) {
+public CommentCreateResponseDTO createComment(CommentCreateRequestDTO request, MultipartFile[] files) {
     Board board = boardRepository.findById(request.getBoardId())
             .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + request.getBoardId()));
 
@@ -184,7 +184,7 @@ public CommentCreateResponse createComment(CommentCreateRequest request, Multipa
     board.increaseCommentCount();
     boardRepository.save(board);
 
-    return new CommentCreateResponse(savedComment.getId());
+    return new CommentCreateResponseDTO(savedComment.getId());
 }
 
     /**
@@ -194,7 +194,7 @@ public CommentCreateResponse createComment(CommentCreateRequest request, Multipa
      * @param request 댓글 수정 요청 DTO
      */
     @Transactional
-    public void updateComment(Long commentId, CommentUpdateRequest request) {
+    public void updateComment(Long commentId, CommentUpdateRequestDTO request) {
         BoardComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다: " + commentId));
 
@@ -255,7 +255,7 @@ public CommentCreateResponse createComment(CommentCreateRequest request, Multipa
      * @return 좋아요 상태를 담은 응답 DTO
      */
     @Transactional
-    public LikeResponse toggleLike(Long commentId) {
+    public LikeResponseDTO toggleLike(Long commentId) {
         BoardComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다: " + commentId));
 
@@ -282,7 +282,7 @@ public CommentCreateResponse createComment(CommentCreateRequest request, Multipa
         }
 
         commentRepository.save(comment);
-        return new LikeResponse(!isLiked);
+        return new LikeResponseDTO(!isLiked);
     }
 }
 

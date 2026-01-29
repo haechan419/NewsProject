@@ -68,10 +68,10 @@ public class BoardService {
      * @param size 페이지 크기
      * @return 게시글 목록 응답 페이지
      */
-    public Page<BoardListResponse> getBoards(int page, int size) {
+    public Page<BoardListResponseDTO> getBoards(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return boardRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable)
-                .map(BoardListResponse::from);
+                .map(BoardListResponseDTO::from);
     }
 
     /**
@@ -81,11 +81,11 @@ public class BoardService {
      * @param size 페이지 크기
      * @return 게시글 목록 응답 페이지
      */
-    public Page<BoardListResponse> getBoardsByType(String boardType, int page, int size) {
+    public Page<BoardListResponseDTO> getBoardsByType(String boardType, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Board.BoardType type = Board.BoardType.valueOf(boardType.toUpperCase());
         return boardRepository.findByBoardTypeAndIsDeletedFalseOrderByCreatedAtDesc(type, pageable)
-                .map(BoardListResponse::from);
+                .map(BoardListResponseDTO::from);
     }
 
     /**
@@ -96,10 +96,10 @@ public class BoardService {
      * @param size 페이지 크기
      * @return 검색된 게시글 목록 응답 페이지
      */
-    public Page<BoardListResponse> searchBoards(String keyword, int page, int size) {
+    public Page<BoardListResponseDTO> searchBoards(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return boardRepository.searchByKeyword(keyword, pageable)
-                .map(BoardListResponse::from);
+                .map(BoardListResponseDTO::from);
     }
 
     /**
@@ -109,7 +109,7 @@ public class BoardService {
      * @return 게시글 상세 응답 DTO
      */
     @Transactional
-    public BoardDetailResponse getBoardDetail(Long boardId) {
+    public BoardDetailResponseDTO getBoardDetail(Long boardId) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + boardId));
 
@@ -149,7 +149,7 @@ public class BoardService {
                     .orElse(null);
         }
 
-        return BoardDetailResponse.from(board, isLiked, myVoteType);
+        return BoardDetailResponseDTO.from(board, isLiked, myVoteType);
     }
 
     /**
@@ -160,7 +160,7 @@ public class BoardService {
      * @return 생성된 게시글 ID를 담은 응답 DTO
      */
     @Transactional
-    public BoardCreateResponse createBoard(BoardCreateRequest request, MultipartFile[] files) {
+    public BoardCreateResponseDTO createBoard(BoardCreateRequestDTO request, MultipartFile[] files) {
         // 현재 로그인한 사용자 가져오기
         Member user = getCurrentUser();
 
@@ -190,7 +190,7 @@ public class BoardService {
             }
         }
 
-        return new BoardCreateResponse(savedBoard.getId());
+        return new BoardCreateResponseDTO(savedBoard.getId());
     }
 
     /**
@@ -200,7 +200,7 @@ public class BoardService {
      * @param files 새로 추가할 파일 배열
      */
     @Transactional
-    public void updateBoard(Long boardId, BoardUpdateRequest request, MultipartFile[] files) {
+    public void updateBoard(Long boardId, BoardUpdateRequestDTO request, MultipartFile[] files) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + boardId));
 
@@ -277,7 +277,7 @@ public class BoardService {
      * @return 좋아요 상태를 담은 응답 DTO
      */
     @Transactional
-    public LikeResponse toggleLike(Long boardId) {
+    public LikeResponseDTO toggleLike(Long boardId) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + boardId));
 
@@ -302,7 +302,7 @@ public class BoardService {
         }
 
         boardRepository.save(board);
-        return new LikeResponse(!isLiked);
+        return new LikeResponseDTO(!isLiked);
     }
 
     /**
@@ -313,7 +313,7 @@ public class BoardService {
      * @return 투표 결과를 담은 응답 DTO
      */
     @Transactional
-    public VoteResponse vote(Long boardId, VoteRequest request) {
+    public VoteResponseDTO vote(Long boardId, VoteRequestDTO request) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + boardId));
 
@@ -338,7 +338,7 @@ public class BoardService {
                     board.decreaseDisagreeCount();
                 }
                 boardRepository.save(board);
-                return new VoteResponse(false, null);
+                return new VoteResponseDTO(false, null);
             } else {
                 // 다른 투표로 변경
                 DebateVote.VoteType oldType = existingVote.getVoteType();
@@ -379,6 +379,6 @@ public class BoardService {
         }
 
         boardRepository.save(board);
-        return new VoteResponse(true, voteType.name());
+        return new VoteResponseDTO(true, voteType.name());
     }
 }
