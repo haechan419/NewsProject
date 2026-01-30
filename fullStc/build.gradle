@@ -35,6 +35,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient 사용용
 	implementation 'org.springframework.boot:spring-boot-starter-json'
 
+
 	// 데이터베이스 & 롬복 (공통)
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 	annotationProcessor 'org.projectlombok:lombok'

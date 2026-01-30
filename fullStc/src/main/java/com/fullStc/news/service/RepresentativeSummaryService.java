@@ -15,6 +15,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class RepresentativeSummaryService {
 
     private final NewsRepository newsRepository;
@@ -26,7 +27,8 @@ public class RepresentativeSummaryService {
      */
     @Transactional
     public int generateRepresentativeSummariesForClusterIds(List<Long> clusterIds, int limit) {
-        if (clusterIds == null || clusterIds.isEmpty()) return 0;
+        if (clusterIds == null || clusterIds.isEmpty())
+            return 0;
 
         // 1. 요약 대상 클러스터 조회
         List<NewsCluster> clusters = newsClusterRepository.findAllById(clusterIds);
@@ -42,7 +44,8 @@ public class RepresentativeSummaryService {
             try {
                 // 2. 해당 그룹의 뉴스들 가져오기
                 List<News> newsList = newsRepository.findByDupClusterId(cluster.getId());
-                if (newsList.isEmpty()) return 0;
+                if (newsList.isEmpty())
+                    return 0;
 
                 // -------------------------------------------------------
                 // ★ [Step 1] 신뢰도(Quality Score) 1등 기사 찾기 (대표 링크용)
@@ -58,6 +61,9 @@ public class RepresentativeSummaryService {
                 // -------------------------------------------------------
                 String fullResponse = openAiSummarizer.summarizeCluster(newsList);
 
+                // 👉 [디버깅용 로그 추가
+                log.info("🤖 [AI 응답 원본] Cluster ID={}\n{}", cluster.getId(), fullResponse);
+
                 if (fullResponse != null && !fullResponse.isBlank()) {
                     // 3. 응답 쪼개기
                     String[] parts = parseTitleAndSummary(fullResponse);
@@ -71,8 +77,7 @@ public class RepresentativeSummaryService {
                             cluster.getId(),
                             bestUrl,
                             aiTitle,
-                            aiSummary
-                    );
+                            aiSummary);
 
                     log.info("🎉 [SUMMARY] Cluster ID={} 완료! 제목: '{}'", cluster.getId(), aiTitle);
 
@@ -104,9 +109,9 @@ public class RepresentativeSummaryService {
             title = title.replaceAll("^[\"']|[\"']$", "").replaceAll("^[-*]\\s*", "").trim();
 
             String summary = clean.substring(firstNewLine).trim();
-            return new String[]{title, summary};
+            return new String[] { title, summary };
         } else {
-            return new String[]{"AI 자동 생성 제목", clean};
+            return new String[] { "AI 자동 생성 제목", clean };
         }
     }
 }

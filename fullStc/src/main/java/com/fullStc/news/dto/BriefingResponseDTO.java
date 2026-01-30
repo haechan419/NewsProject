@@ -11,18 +11,26 @@ public class BriefingResponseDTO {
     private String originalUrl;
     private String date;
 
+    // ★ [NEW] 카테고리 필드 추가 (economy, politics, it 등)
+    private String category;
+
     public BriefingResponseDTO(NewsCluster cluster) {
         this.id = cluster.getId();
 
-        // ★ 수정된 부분 1: 엔티티 필드명이 clusterTitle 입니다.
+        // 엔티티의 clusterTitle -> DTO의 title
         this.title = cluster.getClusterTitle();
 
-        // ★ 수정된 부분 2: 엔티티 필드명이 clusterSummary 입니다. (summary -> getClusterSummary)
+        // 엔티티의 clusterSummary -> DTO의 summary ([서론][본론][결론] 포함된 텍스트)
         this.summary = cluster.getClusterSummary();
 
+        // 대표 기사 URL
         this.originalUrl = cluster.getRepresentativeUrl();
 
-        // 날짜 변환 (Null 방지 처리 살짝 추가하면 더 안전합니다)
+        // 날짜 (없으면 빈 문자열)
         this.date = (cluster.getCreatedAt() != null) ? cluster.getCreatedAt().toString() : "";
+
+        // ★ [NEW] 카테고리 정보 매핑
+        this.category = cluster.getCategory();
     }
+
 }
