@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import TopBar from '../layouts/TopBar';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import apiClient from '@/api/axios';
+import { getMyCategories, getCategoryDisplayName } from '@/api/categoryApi';
+import { getNewsByUserCategories, getNewsByCategory } from '@/api/userCategoryNewsApi';
 
 const MainPage = () => {
   // 캐러셀 상태
@@ -11,8 +13,40 @@ const MainPage = () => {
   // 새로운 소식 탭 상태
   const [newsTab, setNewsTab] = useState('전체');
 
-  // 보도자료 탭 상태
-  const [pressTab, setPressTab] = useState('전체');
+  // 보도자료 탭 상태 (사용자 관심 카테고리)
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
+  // 사용자 관심 카테고리 목록
+  const [userCategories, setUserCategories] = useState([]);
+
+  // 사용자 관심 카테고리별 뉴스 데이터 (BriefingResponseDTO)
+  const [briefingNews, setBriefingNews] = useState([]);
+
+  // 로딩 상태
+  const [isLoadingNews, setIsLoadingNews] = useState(false);
+
+  // 특정 카테고리의 뉴스만 가져오는 함수
+  const fetchNewsByCategory = async (category) => {
+    if (!category) return;
+
+    try {
+      setIsLoadingNews(true);
+      console.log(`[DEBUG] 카테고리 조회 시작: category="${category}"`);
+      const newsData = await getNewsByCategory(category, 50);
+      console.log(`[DEBUG] 서버 응답 데이터:`, newsData);
+      if (newsData) {
+        setBriefingNews(newsData || []);
+        console.log(`카테고리 "${category}" (${getCategoryDisplayName(category)}) 뉴스 조회 완료:`, newsData.length, '개');
+        if (newsData.length === 0) {
+          console.warn(`[경고] 카테고리 "${category}"에 대한 뉴스가 없습니다.`);
+        }
+      }
+    } catch (error) {
+      console.error(`카테고리 "${category}" 뉴스 조회 실패:`, error);
+    } finally {
+      setIsLoadingNews(false);
+    }
+  };
 
   // 새로운 소식 페이지네이션
   const [newsPage, setNewsPage] = useState(1);
@@ -21,7 +55,7 @@ const MainPage = () => {
   // 캐러셀 데이터
   const carouselData = [
     {
-      title: '물음표에서 시작된 빛 스스로 만든 느낌표가 되다',
+      title: '물음표에서 시작된 빛 \n 스스로 만든 느낌표가 되다',
       id: 1
     },
     {
@@ -59,27 +93,134 @@ const MainPage = () => {
     }
   ];
 
-  // 보도자료 데이터
-  const pressReleases = [
-    { id: 1, title: '처인구 신규 사업 발표', time: '2시간 전', duration: '00:50', thumbnail: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=100&h=100&fit=crop' },
-    { id: 2, title: '기흥구 문화 행사 개최', time: '3시간 전', duration: '02:27', thumbnail: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop' },
-    { id: 3, title: '수지구 도로 공사 완료', time: '4시간 전', duration: '03:06', thumbnail: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=100&h=100&fit=crop' },
-    { id: 4, title: '처인구 환경 정책 발표', time: '5시간 전', duration: '02:04', thumbnail: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=100&h=100&fit=crop' },
-    { id: 5, title: '기흥구 주민 참여 프로그램', time: '6시간 전', duration: '01:30', thumbnail: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop' },
-    { id: 6, title: '수지구 복지 서비스 확대', time: '7시간 전', duration: '02:15', thumbnail: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=100&h=100&fit=crop' },
-    { id: 7, title: '처인구 교통 개선 계획', time: '8시간 전', duration: '01:45', thumbnail: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=100&h=100&fit=crop' },
-    { id: 8, title: '기흥구 스마트시티 구축', time: '9시간 전', duration: '03:20', thumbnail: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop' },
-    { id: 9, title: '수지구 교육 시설 개선', time: '10시간 전', duration: '02:50', thumbnail: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=100&h=100&fit=crop' }
-  ];
 
-  // 경제 데이터
+  // 시장 데이터 상태
+  const [marketData, setMarketData] = useState({
+    exchangeRates: {},
+    koreanIndices: {},
+    globalIndices: {},
+    updatedAt: null
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 시장 데이터 가져오기
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        const response = await apiClient.get('/api/market/latest');
+        if (response.data) {
+          setMarketData(response.data);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('시장 데이터 조회 실패:', error);
+        setIsLoading(false);
+      }
+    };
+
+    // 초기 데이터 로드
+    fetchMarketData();
+
+    // 5초마다 데이터 갱신
+    const interval = setInterval(fetchMarketData, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 사용자 관심 카테고리 및 뉴스 데이터 가져오기
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoadingNews(true);
+
+        // 사용자 관심 카테고리 조회
+        const categories = await getMyCategories();
+        setUserCategories(categories || []);
+
+        // 사용자 관심 카테고리별 뉴스 조회
+        const newsData = await getNewsByUserCategories(50); // 충분한 개수 조회
+        if (newsData) {
+          setBriefingNews(newsData || []);
+
+          // 디버깅: 받아온 데이터 확인
+          console.log('받아온 뉴스 데이터:', newsData);
+          console.log('뉴스 카테고리 목록:', newsData.map(n => n.category));
+
+          // 첫 번째 카테고리를 기본 선택
+          if (categories && categories.length > 0) {
+            setSelectedCategory(categories[0]);
+            console.log('선택된 카테고리:', categories[0]);
+            console.log('사용자 관심 카테고리:', categories);
+          }
+        }
+      } catch (error) {
+        console.error('사용자 데이터 조회 실패:', error);
+      } finally {
+        setIsLoadingNews(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // 데이터 포맷팅 함수
+  const formatNumber = (num) => {
+    if (num == null) return '0';
+    return typeof num === 'number' ? num.toLocaleString('ko-KR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) : num;
+  };
+
+  const formatChange = (change) => {
+    if (change == null || change === 0) return '';
+    const sign = change > 0 ? '+' : '';
+    return `${sign}${formatNumber(change)}`;
+  };
+
+  const formatChangePercent = (changePercent) => {
+    if (changePercent == null || changePercent === 0) return '';
+    const sign = changePercent > 0 ? '+' : '';
+    return `${sign}${formatNumber(changePercent)}%`;
+  };
+
+  // 환율 데이터 추출
+  const getExchangeRate = (code) => {
+    const rate = marketData.exchangeRates?.[code];
+    if (!rate) return { value: '0', change: '' };
+    return {
+      value: formatNumber(rate.rate),
+      change: formatChange(rate.change)
+    };
+  };
+
+  // 지수 데이터 추출
+  const getIndex = (indices, symbol) => {
+    const index = indices?.[symbol];
+    if (!index) return { value: '0', change: '' };
+    return {
+      value: formatNumber(index.value),
+      change: formatChange(index.change)
+    };
+  };
+
+  // 경제 데이터 추출
   const economicData = {
-    chosun: { value: '936.13', change: '-6.47' },
-    yuan: { value: '205.81', change: '-1.62' },
-    kospi: { value: '5,170.81', change: '+85.96' },
-    kosdaq: { value: '1,133.52', change: '+50.93' },
-    kospi200: { value: '758.72', change: '+13.59' },
-    dollar: { value: '2026.01.28 장마감', change: '' }
+    // 조선경제 (글로벌 지수에서 가져오거나 기본값)
+    chosun: getIndex(marketData.globalIndices, 'SPX'),
+    // 환율 데이터
+    dollar: getExchangeRate('USD'),      // 달러
+    yuan: getExchangeRate('CNY'),        // 위안
+    euro: getExchangeRate('EUR'),        // 유로
+    pound: getExchangeRate('GBP'),       // 파운드
+    yen: getExchangeRate('JPY'),         // 원(엔)
+    // 한국 지수
+    kospi: getIndex(marketData.koreanIndices, 'KS11'),
+    kosdaq: getIndex(marketData.koreanIndices, 'KQ11'),
+    kospi200: marketData.koreanIndices?.KS11 ? {
+      value: formatNumber((marketData.koreanIndices.KS11.value * 0.3).toFixed(2)),
+      change: formatChange(marketData.koreanIndices.KS11.change * 0.3)
+    } : { value: '0', change: '' }
   };
 
   const handlePrevSlide = () => {
@@ -100,11 +241,10 @@ const MainPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <TopBar />
 
       {/* 메인 배너/캐러셀 */}
-      <section className="bg-gray-800 text-white py-12 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section className="bg-gray-800 text-white py-12 px-4 md:px-8 h-[1100px] relative flex items-start">
+        <div className="max-w-7xl mx-auto w-full pt-20 mt-[300px]">
           <div className="flex items-center gap-2 mb-6">
             <span className="text-sm text-gray-300">그룹소개</span>
             <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,12 +253,12 @@ const MainPage = () => {
           </div>
 
           <div className="relative">
-            <h1 className="text-3xl md:text-5xl font-bold mb-8 leading-tight">
+            <h1 className="text-3xl md:text-5xl font-bold mb-8 leading-tight whitespace-pre-line">
               {carouselData[currentSlide].title}
             </h1>
 
             {/* 캐러셀 네비게이션 */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mt-[60px]">
               <span className={`text-lg ${currentSlide === 0 ? 'font-bold' : 'text-gray-400'}`}>
                 {String(currentSlide + 1).padStart(2, '0')}
               </span>
@@ -223,37 +363,108 @@ const MainPage = () => {
       {/* 경제 데이터 */}
       <section className="bg-white border-y border-gray-200 py-4 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap items-center gap-6 text-sm">
-            <span className="font-semibold text-gray-900">조선경제 &gt;</span>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-900">{economicData.chosun.value}</span>
-              <span className="text-red-600">{economicData.chosun.change}</span>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>시장 데이터를 불러오는 중...</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">위안(CNY)</span>
-              <span className="text-gray-900">{economicData.yuan.value}</span>
-              <span className="text-red-600">{economicData.yuan.change}</span>
+          ) : (
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <span className="font-semibold text-gray-900">조선경제 &gt;</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-900">{economicData.chosun.value}</span>
+                {economicData.chosun.change && (
+                  <span className={parseFloat(economicData.chosun.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.chosun.change}
+                  </span>
+                )}
+              </div>
+              {/* 환율 데이터 */}
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">달러(USD)</span>
+                <span className="text-gray-900">{economicData.dollar.value}</span>
+                {economicData.dollar.change && (
+                  <span className={parseFloat(economicData.dollar.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.dollar.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">위안(CNY)</span>
+                <span className="text-gray-900">{economicData.yuan.value}</span>
+                {economicData.yuan.change && (
+                  <span className={parseFloat(economicData.yuan.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.yuan.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">유로(EUR)</span>
+                <span className="text-gray-900">{economicData.euro.value}</span>
+                {economicData.euro.change && (
+                  <span className={parseFloat(economicData.euro.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.euro.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">파운드(GBP)</span>
+                <span className="text-gray-900">{economicData.pound.value}</span>
+                {economicData.pound.change && (
+                  <span className={parseFloat(economicData.pound.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.pound.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">엔(JPY)</span>
+                <span className="text-gray-900">{economicData.yen.value}</span>
+                {economicData.yen.change && (
+                  <span className={parseFloat(economicData.yen.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.yen.change}
+                  </span>
+                )}
+              </div>
+              {/* 한국 지수 */}
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">코스피</span>
+                <span className="text-gray-900">{economicData.kospi.value}</span>
+                {economicData.kospi.change && (
+                  <span className={parseFloat(economicData.kospi.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.kospi.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">코스닥</span>
+                <span className="text-gray-900">{economicData.kosdaq.value}</span>
+                {economicData.kosdaq.change && (
+                  <span className={parseFloat(economicData.kosdaq.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.kosdaq.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">코스피200</span>
+                <span className="text-gray-900">{economicData.kospi200.value}</span>
+                {economicData.kospi200.change && (
+                  <span className={parseFloat(economicData.kospi200.change.replace(/[+,]/g, '')) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {economicData.kospi200.change}
+                  </span>
+                )}
+              </div>
+              {marketData.updatedAt && (
+                <span className="text-xs text-gray-500 ml-auto">
+                  {new Date(marketData.updatedAt).toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">코스피</span>
-              <span className="text-gray-900">{economicData.kospi.value}</span>
-              <span className="text-green-600">{economicData.kospi.change}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">코스닥</span>
-              <span className="text-gray-900">{economicData.kosdaq.value}</span>
-              <span className="text-green-600">{economicData.kosdaq.change}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">코스피200</span>
-              <span className="text-gray-900">{economicData.kospi200.value}</span>
-              <span className="text-green-600">{economicData.kospi200.change}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">달러</span>
-              <span className="text-gray-900">{economicData.dollar.value}</span>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -264,48 +475,88 @@ const MainPage = () => {
           <div className="lg:col-span-2">
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-2xl font-bold text-gray-900">보도자료</h2>
-              <div className="flex gap-2">
-                {['전체', '처인구', '다'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setPressTab(tab)}
-                    className={`px-4 py-2 rounded transition-colors ${pressTab === tab
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-200'
-                      }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
+              <div className="flex gap-2 flex-wrap">
+                {userCategories.length > 0 ? (
+                  userCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => {
+                        setSelectedCategory(category);
+                        // 카테고리 클릭 시 해당 카테고리 뉴스만 서버에서 가져오기
+                        fetchNewsByCategory(category);
+                      }}
+                      className={`px-4 py-2 rounded transition-colors ${selectedCategory === category
+                        ? 'bg-gray-800 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      {getCategoryDisplayName(category)}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">관심 카테고리를 선택해주세요</span>
+                )}
               </div>
             </div>
 
-            {/* 보도자료 리스트 (3열 그리드) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {pressReleases.map((release) => (
-                <div
-                  key={release.id}
-                  className="bg-white rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                >
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm mb-2 line-clamp-2">{release.title}</h3>
-                      <p className="text-xs text-gray-500">{release.time}</p>
-                    </div>
-                    <div className="relative shrink-0">
-                      <img
-                        src={release.thumbnail}
-                        alt={release.title}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                      <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
-                        {release.duration}
+            {/* 뉴스 리스트 (3x3 그리드) */}
+            {isLoadingNews ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="text-gray-500">뉴스를 불러오는 중...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {selectedCategory ? (
+                  briefingNews.length > 0 ? (
+                    briefingNews.slice(0, 9).map((news) => (
+                      <div
+                        key={news.id}
+                        className="bg-white rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => {
+                          if (news.originalUrl) {
+                            window.open(news.originalUrl, '_blank');
+                          }
+                        }}
+                      >
+                        <div className="flex flex-col gap-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-sm mb-2 line-clamp-2">{news.title}</h3>
+                            {news.summary && (
+                              <p className="text-xs text-gray-600 mb-2 line-clamp-3">{news.summary}</p>
+                            )}
+                            {news.date && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                {(() => {
+                                  try {
+                                    const date = new Date(news.date);
+                                    if (isNaN(date.getTime())) return '';
+                                    return date.toLocaleDateString('ko-KR', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    });
+                                  } catch {
+                                    return news.date;
+                                  }
+                                })()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="col-span-3 text-center py-12 text-gray-500">
+                      해당 카테고리의 뉴스가 없습니다
                     </div>
+                  )
+                ) : (
+                  <div className="col-span-3 text-center py-12 text-gray-500">
+                    카테고리를 선택해주세요
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 사이드바 (오른쪽 1/3) */}
@@ -322,72 +573,6 @@ const MainPage = () => {
           </div>
         </div>
       </section>
-
-      {/* 푸터 */}
-      <footer className="bg-white border-t border-gray-200 py-8 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* 채널 링크 */}
-          <div className="flex flex-wrap gap-4 mb-6 text-sm">
-            {['유튜브 채널', '연합뉴스', 'K-Culture NOW', '통동테크', '더건강', 'KOREA NOW', 'NK NOW', 'K-VIBE'].map((link) => (
-              <a
-                key={link}
-                href="#"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                {link}
-              </a>
-            ))}
-          </div>
-
-          {/* 연합뉴스 정보 */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="text-lg font-bold text-gray-900">연합뉴스</div>
-              <div className="text-xs text-gray-600">
-                주소: 서울특별시 중구 세종대로 124 | 전화: 02-398-3000 | 등록번호: 서울 아 00001 | 사업자등록번호: 000-00-00000 |{' '}
-                <a href="#" className="text-blue-600 hover:underline">개인정보처리방침</a>
-              </div>
-            </div>
-
-            {/* 소셜 미디어 및 패밀리 사이트 */}
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-4">
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors" aria-label="Facebook">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors" aria-label="Twitter">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors" aria-label="Instagram">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors" aria-label="YouTube">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                  </svg>
-                </a>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>Family site</span>
-                <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                  <span>+</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 저작권 */}
-          <div className="text-center text-xs text-gray-500 pt-4 border-t border-gray-200">
-            ©2026 Yonhapnews Agency
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

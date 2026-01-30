@@ -62,6 +62,11 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             return true;
         }
 
+        // 금융 시장 데이터 API는 체크하지 않음 (메인 페이지에서 사용)
+        if (path.startsWith("/api/market/")) {
+            return true;
+        }
+
         // OAuth2 경로는 체크하지 않음 (OAuth2 인증 플로우)
         if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
             return true;

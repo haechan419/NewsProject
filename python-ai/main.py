@@ -701,6 +701,45 @@ async def get_face_info(user_id: str):
         )
 
 
+# ===== 금융 데이터 API 엔드포인트 =====
+from market_data import get_korean_indices, get_global_indices
+
+@app.get("/api/market/korean-indices")
+async def get_korean_indices_api():
+    """
+    한국 지수 데이터 조회 (코스피, 코스닥)
+    Spring Boot에서 호출
+    """
+    try:
+        logger.info("한국 지수 데이터 요청 수신")
+        data = get_korean_indices()
+        return data
+    except Exception as e:
+        logger.error(f"한국 지수 데이터 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"한국 지수 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@app.get("/api/market/global-indices")
+async def get_global_indices_api():
+    """
+    글로벌 지수 데이터 조회 (S&P 500, NASDAQ, Dow Jones)
+    Spring Boot에서 호출
+    """
+    try:
+        logger.info("글로벌 지수 데이터 요청 수신")
+        data = get_global_indices()
+        return data
+    except Exception as e:
+        logger.error(f"글로벌 지수 데이터 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"글로벌 지수 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
 # ===== 서버 실행 =====
 if __name__ == "__main__":
     import uvicorn

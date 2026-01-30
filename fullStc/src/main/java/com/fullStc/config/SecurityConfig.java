@@ -85,6 +85,7 @@ public class SecurityConfig {
                         "/api/inquiry/**",
                         "/api/category/**",
                         "/api/user/**",
+                        "/api/market/**",  // 금융 시장 데이터 API
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/oauth2/**",
@@ -129,6 +130,8 @@ public class SecurityConfig {
             auth.requestMatchers("/api/ai/face/recognize").permitAll();
             // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
             auth.requestMatchers("/api/category/list").permitAll();
+            // 금융 시장 데이터 API는 인증 없이 접근 가능 (메인 페이지에서 사용)
+            auth.requestMatchers("/api/market/**").permitAll();
             // OAuth2 경로 허용
             auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
             // /login 경로 허용 (OAuth2 에러 리다이렉트용)

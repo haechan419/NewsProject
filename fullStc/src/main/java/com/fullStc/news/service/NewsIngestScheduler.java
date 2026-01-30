@@ -20,8 +20,8 @@ public class NewsIngestScheduler {
 
     private int index = 0;
 
-    // 1분마다 실행
-    @Scheduled(fixedDelay = 60000)
+    // 2분마다 실행
+    @Scheduled(fixedDelay = 120000)
     public void ingest() {
         String category = categories.get(index);
 

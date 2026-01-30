@@ -1,12 +1,13 @@
 import {lazy, Suspense} from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
+import Layout from '../layouts/Layout';
 
 // 로딩 컴포넌트
 const LoadingSpinner = () => (
-  <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-    <div>로딩 중...</div>
-  </div>
+    <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+        <div>로딩 중...</div>
+    </div>
 );
 
 // 인증 불필요 페이지들(Lazy 로드)
@@ -26,78 +27,80 @@ const BoardModify = lazy(() => import('../pages/board/BoardModify'));
 const SupportPage = lazy(() => import('../pages/support/SupportPage'));
 
 const AppRouter = () => {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-    <Routes>
-      {/* 로그인 페이지 (인증 불필요) */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<SignUp />} />
-      <Route path="/find-email" element={<FindEmail />} />
-      <Route path="/find-password" element={<FindPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-        {/* 보호된 라우트 - 로그인 필수 */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-              <MainPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile/edit"
-        element={
-          <ProtectedRoute>
-            <ProfileEdit />
-          </ProtectedRoute>
-        }
-      />
-        <Route
-            path="/board"
-            element={
-                <ProtectedRoute>
-                    <BoardPage />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/board/create"
-            element={
-                <ProtectedRoute>
-                    <BoardCreate />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/board/:id"
-            element={
-                <ProtectedRoute>
-                    <BoardDetail />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/board/:id/modify"
-            element={
-                <ProtectedRoute>
-                    <BoardModify />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/support"
-            element={
-                <ProtectedRoute>
-                    <SupportPage />
-                </ProtectedRoute>
-            }
-        />
+    return (
+        <Layout>
+            <Suspense fallback={<LoadingSpinner />}>
+                <Routes>
+                    {/* 로그인 페이지 (인증 불필요) */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<SignUp />} />
+                    <Route path="/find-email" element={<FindEmail />} />
+                    <Route path="/find-password" element={<FindPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    {/* 보호된 라우트 - 로그인 필수 */}
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedRoute>
+                                <MainPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/profile/edit"
+                        element={
+                            <ProtectedRoute>
+                                <ProfileEdit />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/board"
+                        element={
+                            <ProtectedRoute>
+                                <BoardPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/board/create"
+                        element={
+                            <ProtectedRoute>
+                                <BoardCreate />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/board/:id"
+                        element={
+                            <ProtectedRoute>
+                                <BoardDetail />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/board/:id/modify"
+                        element={
+                            <ProtectedRoute>
+                                <BoardModify />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/support"
+                        element={
+                            <ProtectedRoute>
+                                <SupportPage />
+                            </ProtectedRoute>
+                        }
+                    />
 
-        {/* 404 처리 - 로그인 페이지로 리다이렉트 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-    </Suspense>
-  );
+                    {/* 404 처리 - 로그인 페이지로 리다이렉트 */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Suspense>
+        </Layout>
+    );
 };
 
 export default AppRouter;
