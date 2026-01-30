@@ -91,7 +91,7 @@ public class SecurityConfig {
                         "/login/oauth2/**",
                         "/admin/**"));
 
-        
+
 
         // 인가 설정
         http.authorizeHttpRequests(auth -> {

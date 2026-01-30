@@ -47,6 +47,9 @@ public class MemberDTO implements UserDetails, OAuth2User {
     // 관심 카테고리 목록
     private List<String> categories;
 
+    // 프로필 이미지 URL
+    private String profileImageUrl;
+
     // 계정 생성일시
     private LocalDateTime createdAt;
 

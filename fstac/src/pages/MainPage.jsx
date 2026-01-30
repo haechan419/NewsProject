@@ -1,191 +1,322 @@
 import React, { useState } from 'react';
-import TopBar from '../layouts/TopBar';
-import './MainPage.css';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const MainPage = () => {
-  // 히어로 섹션 더미데이터
-  const heroData = {
-    subTitle: '오늘의 인기 영상',
-    title: '이것은\n핫이슈\n영상자리',
-    buttonText: '지금 보기'
-  };
+  // 캐러셀 상태
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const totalSlides = 3;
 
-  // 대시보드 카드 더미데이터
-  const dashboardCards = [
+  // 새로운 소식 탭 상태
+  const [newsTab, setNewsTab] = useState('전체');
+
+  // 보도자료 탭 상태
+  const [pressTab, setPressTab] = useState('전체');
+
+  // 새로운 소식 페이지네이션
+  const [newsPage, setNewsPage] = useState(1);
+  const totalNewsPages = 2;
+
+  // 캐러셀 데이터
+  const carouselData = [
     {
-      id: 1,
-      title: '침대 독차지한 햄스터',
-      views: '2.8만회',
-      imageUrl: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=400&h=200&fit=crop',
-      description: '귀여운 햄스터의 일상'
+      title: '물음표에서 시작된 빛 \n 스스로 만든 느낌표가 되다',
+      id: 1
     },
     {
-      id: 2,
-      title: '산책하는 강아지',
-      views: '5.2만회',
-      imageUrl: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=200&fit=crop',
-      description: '행복한 강아지의 산책'
+      title: '두 번째 슬라이드 제목',
+      id: 2
     },
     {
-      id: 3,
-      title: '창문 너머 강아지',
-      views: '3.6만회',
-      imageUrl: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=200&fit=crop',
-      description: '호기심 가득한 강아지'
+      title: '세 번째 슬라이드 제목',
+      id: 3
     }
   ];
 
-  // 뉴스 섹션 더미데이터
-  const newsCategories = ['정치', '경제', 'IT', '연예'];
-  const [selectedCategory, setSelectedCategory] = useState('정치');
-
-  const newsData = {
-    mainNews: {
-      title: '푸데 푸데',
-      subtitle: '저는 뉴스자리예요',
-      description: '구름처럼 잠을 좀 자보도록 하겠습니다',
-      views: '12.5만회'
+  // 새로운 소식 데이터
+  const newsData = [
+    {
+      id: 1,
+      image: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=400&h=200&fit=crop',
+      title: '2026 군사력 랭킹 나왔다 \'NO 핵\' 한국 세계 5위',
+      subtitle: '[영상] 핵무기 없는 한국 \'군사력 파워\' 3년 연속 세계 5위…북한 31위',
+      duration: '02:47'
     },
-    sideNews: {
-      title: '전에 알던\n문제가 아냐\nBrand New',
-      badge: 'NEW'
+    {
+      id: 2,
+      image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=200&fit=crop',
+      title: '숨진 주인 옆에서 4일 인도가 울었다',
+      subtitle: '[영상] 눈보라에 갇혀 숨진 주인...나흘 동안 곁 지킨 반려견',
+      duration: '01:48'
     },
-    categoryNews: {
-      정치: [
-        { id: 1, title: '국정감사 시작, 주요 이슈 집중', views: '8.2만회' },
-        { id: 2, title: '정부 정책 발표 예정', views: '5.1만회' },
-        { id: 3, title: '국회 본회의 개최', views: '3.9만회' }
-      ],
-      경제: [
-        { id: 1, title: '주식시장 상승세 지속', views: '15.3만회' },
-        { id: 2, title: '환율 변동성 증가', views: '9.7만회' },
-        { id: 3, title: '부동산 시장 동향', views: '7.4만회' }
-      ],
-      IT: [
-        { id: 1, title: '새로운 AI 기술 발표', views: '22.1만회' },
-        { id: 2, title: '스마트폰 신제품 출시', views: '18.5만회' },
-        { id: 3, title: '클라우드 서비스 업데이트', views: '11.2만회' }
-      ],
-      연예: [
-        { id: 1, title: '인기 드라마 최종회 방영', views: '35.8만회' },
-        { id: 2, title: '아이돌 그룹 컴백 소식', views: '28.4만회' },
-        { id: 3, title: '영화 개봉 예정작 화제', views: '19.6만회' }
-      ]
+    {
+      id: 3,
+      image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=200&fit=crop',
+      title: '마트주차장에 \'시민 어벤져스\' 119보다 빨랐다!',
+      subtitle: '[영상] "차 밑에 사람이 깔렸어요"...여기저기서 우르르 달려와 \'번쩍\'',
+      duration: '02:02'
     }
+  ];
+
+  // 보도자료 데이터
+  const pressReleases = [
+    { id: 1, title: '처인구 신규 사업 발표', time: '2시간 전', duration: '00:50', thumbnail: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=100&h=100&fit=crop' },
+    { id: 2, title: '기흥구 문화 행사 개최', time: '3시간 전', duration: '02:27', thumbnail: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop' },
+    { id: 3, title: '수지구 도로 공사 완료', time: '4시간 전', duration: '03:06', thumbnail: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=100&h=100&fit=crop' },
+    { id: 4, title: '처인구 환경 정책 발표', time: '5시간 전', duration: '02:04', thumbnail: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=100&h=100&fit=crop' },
+    { id: 5, title: '기흥구 주민 참여 프로그램', time: '6시간 전', duration: '01:30', thumbnail: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop' },
+    { id: 6, title: '수지구 복지 서비스 확대', time: '7시간 전', duration: '02:15', thumbnail: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=100&h=100&fit=crop' },
+    { id: 7, title: '처인구 교통 개선 계획', time: '8시간 전', duration: '01:45', thumbnail: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=100&h=100&fit=crop' },
+    { id: 8, title: '기흥구 스마트시티 구축', time: '9시간 전', duration: '03:20', thumbnail: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop' },
+    { id: 9, title: '수지구 교육 시설 개선', time: '10시간 전', duration: '02:50', thumbnail: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=100&h=100&fit=crop' }
+  ];
+
+  // 경제 데이터
+  const economicData = {
+    chosun: { value: '936.13', change: '-6.47' },
+    yuan: { value: '205.81', change: '-1.62' },
+    kospi: { value: '5,170.81', change: '+85.96' },
+    kosdaq: { value: '1,133.52', change: '+50.93' },
+    kospi200: { value: '758.72', change: '+13.59' },
+    dollar: { value: '2026.01.28 장마감', change: '' }
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev === totalSlides - 1 ? 0 : prev + 1));
+  };
+
+  const handlePrevNewsPage = () => {
+    setNewsPage((prev) => (prev === 1 ? totalNewsPages : prev - 1));
+  };
+
+  const handleNextNewsPage = () => {
+    setNewsPage((prev) => (prev === totalNewsPages ? 1 : prev + 1));
   };
 
   return (
-    <div className="main-page">
-      <TopBar />
+    <div className="min-h-screen bg-white">
 
-      {/* 1. 히어로 섹션 (강아지 배경) */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <p className="sub-title">{heroData.subTitle}</p>
-          <h1>{heroData.title.split('\n').map((line, idx) => (
-            <React.Fragment key={idx}>
-              {line}
-              {idx < heroData.title.split('\n').length - 1 && <br />}
-            </React.Fragment>
-          ))}</h1>
-          <button className="cta-button">{heroData.buttonText}</button>
-        </div>
-      </section>
+      {/* 메인 배너/캐러셀 */}
+      <section className="bg-gray-800 text-white py-12 px-4 md:px-8 h-[1100px] relative flex items-start">
+        <div className="max-w-7xl mx-auto w-full pt-20 mt-[300px]">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-sm text-gray-300">그룹소개</span>
+            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
 
-      {/* 2. 대시보드 섹션 (민트색 배경) */}
-      <section className="dashboard-section">
-        <div className="dashboard-header">
-          <h2>인기 동영상</h2>
-          <p>
-            지금 가장 많이 본 영상을 확인해보세요<br/>
-            매일 업데이트되는<br/>
-            실시간 인기 콘텐츠를 만나보세요
-          </p>
-        </div>
+          <div className="relative">
+            <h1 className="text-3xl md:text-5xl font-bold mb-8 leading-tight whitespace-pre-line">
+              {carouselData[currentSlide].title}
+            </h1>
 
-        <div className="card-grid">
-          {dashboardCards.map((card) => (
-            <div key={card.id} className="card-item">
-              <div 
-                className="card-image-placeholder"
-                style={{
-                  backgroundImage: `url(${card.imageUrl})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
+            {/* 캐러셀 네비게이션 */}
+            <div className="flex items-center gap-4 mt-[60px]">
+              <span className={`text-lg ${currentSlide === 0 ? 'font-bold' : 'text-gray-400'}`}>
+                {String(currentSlide + 1).padStart(2, '0')}
+              </span>
+              <div className="h-px w-8 bg-gray-600"></div>
+              <span className={`text-lg ${currentSlide === 2 ? 'font-bold' : 'text-gray-400'}`}>
+                {String(totalSlides).padStart(2, '0')}
+              </span>
+              <button
+                onClick={handlePrevSlide}
+                className="ml-4 p-2 hover:bg-gray-700 rounded transition-colors"
+                aria-label="이전 슬라이드"
               >
-                <span className="overlay-text">
-                  {card.title}<br/>조회수 {card.views}
-                </span>
-              </div>
-              <div className="card-desc-box">{card.description}</div>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={handleNextSlide}
+                className="p-2 hover:bg-gray-700 rounded transition-colors"
+                aria-label="다음 슬라이드"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      {/* 3. 하단 뉴스 섹션 */}
-      <section className="news-section">
-        <h2 className="section-title">오늘의 뉴스</h2>
-        
-        <div className="category-tabs">
-          {newsCategories.map((category) => (
-            <span 
-              key={category}
-              className={selectedCategory === category ? 'active' : ''}
-              onClick={() => setSelectedCategory(category)}
-              style={{ cursor: 'pointer' }}
-            >
-              {category}
-            </span>
-          ))}
-        </div>
-        <hr className="divider"/>
-
-        <div className="news-content">
-          {/* 왼쪽 큰 비디오 영역 */}
-          <div className="news-large">
-            <div className="video-placeholder">
-              <p className="video-text">
-                <span className="highlight">{newsData.mainNews.title}</span><br/>
-                {newsData.mainNews.subtitle}<br/>
-                <span className="sub">{newsData.mainNews.description}</span><br/>
-                <span className="sub" style={{ marginTop: '10px', display: 'block' }}>
-                  조회수 {newsData.mainNews.views}
-                </span>
-              </p>
+      {/* 새로운 소식 섹션 */}
+      <section className="bg-gray-100 py-8 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">새로운 소식</h2>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">{newsPage}/{totalNewsPages}</span>
+              <button
+                onClick={handlePrevNewsPage}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                aria-label="이전 페이지"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={handleNextNewsPage}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                aria-label="다음 페이지"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
           </div>
 
-          {/* 오른쪽 사이드 영역 */}
-          <div className="news-side">
-            <div className="side-card">
-              <h3>{newsData.sideNews.title.split('\n').map((line, idx) => (
-                <React.Fragment key={idx}>
-                  {line}
-                  {idx < newsData.sideNews.title.split('\n').length - 1 && <br />}
-                </React.Fragment>
-              ))}</h3>
-              <div className="circle-badge">{newsData.sideNews.badge}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* 카테고리별 뉴스 리스트 */}
-        <div className="news-list">
-          <h3 style={{ textAlign: 'left', marginBottom: '20px', fontSize: '20px' }}>
-            {selectedCategory} 카테고리 인기 뉴스
-          </h3>
-          <div className="news-items">
-            {newsData.categoryNews[selectedCategory].map((news) => (
-              <div key={news.id} className="news-item">
-                <div className="news-item-number">{news.id}</div>
-                <div className="news-item-content">
-                  <h4>{news.title}</h4>
-                  <span className="news-views">조회수 {news.views}</span>
-                </div>
-              </div>
+          {/* 탭 */}
+          <div className="flex gap-4 mb-6">
+            {['전체', '처인구', '기흥구', '수지구'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setNewsTab(tab)}
+                className={`px-4 py-2 rounded transition-colors ${newsTab === tab
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                {tab}
+              </button>
             ))}
+          </div>
+
+          {/* 뉴스 카드 그리드 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {newsData.map((news) => (
+              <Card key={news.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="relative">
+                  <img
+                    src={news.image}
+                    alt={news.title}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    연합뉴스
+                  </div>
+                  <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {news.duration}
+                  </div>
+                </div>
+                <CardContent className="p-4">
+                  <h3 className="font-bold text-lg mb-2 line-clamp-2">{news.title}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2">{news.subtitle}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 경제 데이터 */}
+      <section className="bg-white border-y border-gray-200 py-4 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-center gap-6 text-sm">
+            <span className="font-semibold text-gray-900">조선경제 &gt;</span>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-900">{economicData.chosun.value}</span>
+              <span className="text-red-600">{economicData.chosun.change}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-700">위안(CNY)</span>
+              <span className="text-gray-900">{economicData.yuan.value}</span>
+              <span className="text-red-600">{economicData.yuan.change}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-700">코스피</span>
+              <span className="text-gray-900">{economicData.kospi.value}</span>
+              <span className="text-green-600">{economicData.kospi.change}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-700">코스닥</span>
+              <span className="text-gray-900">{economicData.kosdaq.value}</span>
+              <span className="text-green-600">{economicData.kosdaq.change}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-700">코스피200</span>
+              <span className="text-gray-900">{economicData.kospi200.value}</span>
+              <span className="text-green-600">{economicData.kospi200.change}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-700">달러</span>
+              <span className="text-gray-900">{economicData.dollar.value}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 보도자료 및 사이드바 섹션 */}
+      <section className="bg-gray-100 py-8 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 보도자료 섹션 (왼쪽 2/3) */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-4 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">보도자료</h2>
+              <div className="flex gap-2">
+                {['전체', '처인구', '다'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setPressTab(tab)}
+                    className={`px-4 py-2 rounded transition-colors ${pressTab === tab
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-200'
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 보도자료 리스트 (3열 그리드) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {pressReleases.map((release) => (
+                <div
+                  key={release.id}
+                  className="bg-white rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2">{release.title}</h3>
+                      <p className="text-xs text-gray-500">{release.time}</p>
+                    </div>
+                    <div className="relative shrink-0">
+                      <img
+                        src={release.thumbnail}
+                        alt={release.title}
+                        className="w-20 h-20 object-cover rounded"
+                      />
+                      <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
+                        {release.duration}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 사이드바 (오른쪽 1/3) */}
+          <div className="lg:col-span-1">
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">새로운 소식</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  구독서비스에 대한 설명입니다
+                </p>
+                <Button className="w-full">버튼</Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

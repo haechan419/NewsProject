@@ -13,28 +13,26 @@ const FaceRecognitionLogin = ({
   onAutoRecognitionToggle
 }) => {
   return (
-    <div className="divider-container">
-      <div className="divider">
-        <div className="divider-line"></div>
-        <span className="divider-text">또는</span>
-        <div className="divider-line"></div>
-      </div>
-      
+    <div className="space-y-4">
       {!isCameraActive ? (
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={onCameraToggle}
           disabled={isLoading || isRecognizing}
-          className="face-login-button"
+          className="w-full rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-semibold flex flex-col items-center justify-center gap-2 py-6 transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <span>📷 얼굴 인식 로그인</span>
+          <span className="text-2xl">📷</span>
+          <span className="text-slate-900">얼굴 인식으로 로그인</span>
+          <span className="text-[11px] font-normal text-slate-500">
+            카메라를 켜서 등록된 얼굴로 자동 로그인합니다
+          </span>
         </button>
       ) : (
-        <div className="camera-container">
-          <div className="camera-video-wrapper">
+        <div className="space-y-3">
+          <div className="relative aspect-[4/3] w-3/4 mx-auto rounded-2xl overflow-hidden border border-slate-200 bg-slate-900/60">
             {!isVideoReady && !cameraError && (
-              <div className="camera-loading">
-                <div className="camera-loading-spinner"></div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-slate-100">
+                <div className="h-8 w-8 rounded-full border-2 border-indigo-200 border-t-transparent animate-spin" />
                 <p>카메라를 준비하는 중...</p>
               </div>
             )}
@@ -43,59 +41,49 @@ const FaceRecognitionLogin = ({
               autoPlay
               playsInline
               muted
-              className="camera-video"
+              className="h-full w-full object-cover"
             />
-            {!cameraError && isVideoReady && (
-              <div className="camera-overlay">
-                <div className="face-outline-container">
-                  <svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg" className="face-outline-svg">
-                    <ellipse cx="100" cy="120" rx="70" ry="90" fill="none" stroke="rgba(102, 126, 234, 0.8)" strokeWidth="3" strokeDasharray="5,5"/>
-                    <ellipse cx="80" cy="100" rx="8" ry="6" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
-                    <ellipse cx="120" cy="100" rx="8" ry="6" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
-                    <ellipse cx="100" cy="125" rx="5" ry="8" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
-                    <ellipse cx="100" cy="150" rx="15" ry="8" fill="none" stroke="rgba(102, 126, 234, 0.6)" strokeWidth="2"/>
-                  </svg>
-                </div>
-                <div className="face-guide-text">
-                  얼굴을 프레임 안에 맞춰주세요
-                </div>
-              </div>
-            )}
           </div>
-          
+
           {cameraError ? (
-            <div className="camera-error">
-              {cameraError}
+            <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 flex items-start justify-between gap-2">
+              <span>{cameraError}</span>
               <button
                 type="button"
                 onClick={onStopCamera}
-                className="camera-error-close-button"
+                className="shrink-0 rounded-md border border-red-200 px-2 py-0.5 text-[10px] hover:bg-red-100"
               >
                 닫기
               </button>
             </div>
           ) : (
             <>
-              {/* 자동 인식 토글 */}
-              <div className="auto-recognition-toggle">
-                <span className="auto-recognition-label">
+              <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2">
+                <span className="text-[11px] text-slate-700">
                   자동 얼굴 인식 (10초마다)
                 </span>
                 <button
                   type="button"
                   onClick={onAutoRecognitionToggle}
-                  className={`auto-recognition-button ${!autoRecognitionEnabled ? 'off' : ''}`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full border border-slate-300 transition ${autoRecognitionEnabled ? 'bg-emerald-400' : 'bg-slate-300'
+                    }`}
                 >
-                  {autoRecognitionEnabled ? 'ON' : 'OFF'}
+                  <span
+                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${autoRecognitionEnabled ? 'translate-x-5' : 'translate-x-1'
+                      }`}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-white">
+                    {autoRecognitionEnabled ? 'ON' : 'OFF'}
+                  </span>
                 </button>
               </div>
-              
-              <div className="face-recognition-buttons">
+
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={onFaceRecognition}
                   disabled={!isVideoReady || isRecognizing || isLoading}
-                  className="face-recognition-button"
+                  className="inline-flex items-center justify-center rounded-xl bg-indigo-600 text-xs font-semibold text-white px-3 py-2 shadow-sm hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isRecognizing ? '인식 중...' : '수동 인식'}
                 </button>
@@ -103,16 +91,21 @@ const FaceRecognitionLogin = ({
                   type="button"
                   onClick={onStopCamera}
                   disabled={isRecognizing || isLoading}
-                  className="face-recognition-button face-recognition-button-cancel"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-700 px-3 py-2 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   취소
                 </button>
               </div>
             </>
           )}
-          
+
           {faceRecognitionMessage && (
-            <div className={`face-recognition-message ${faceRecognitionMessage.includes('성공') ? 'success' : 'error'}`}>
+            <div
+              className={`mt-1 rounded-xl px-3 py-2 text-[11px] border ${faceRecognitionMessage.includes('성공')
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                : 'border-red-300 bg-red-50 text-red-700'
+                }`}
+            >
               {faceRecognitionMessage}
             </div>
           )}

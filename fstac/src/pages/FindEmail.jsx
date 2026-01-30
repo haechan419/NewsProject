@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findEmail } from '../api/authApi';
 import FindEmailForm from '../components/auth/FindEmailForm';
-import '../styles/common.css';
-import './FindEmail.css';
 
 const FindEmail = () => {
   const [nickname, setNickname] = useState('');
@@ -48,7 +46,7 @@ const FindEmail = () => {
       // 401 (Unauthorized)는 인증 오류이므로 정상적인 경우가 아님
       const status = err.response?.status;
       const errorMessage = err.response?.data?.message || err.message || '아이디 찾기에 실패했습니다.';
-      
+
       if (status === 400 || status === 404) {
         setError(errorMessage);
       } else if (status === 401) {

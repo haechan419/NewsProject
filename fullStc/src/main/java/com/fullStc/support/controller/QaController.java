@@ -102,13 +102,13 @@ public class QaController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() != null) {
             Object principal = authentication.getPrincipal();
-            
+
             // MemberDTO 타입인 경우 (JwtCheckFilter에서 설정)
             if (principal instanceof com.fullStc.member.dto.MemberDTO) {
                 com.fullStc.member.dto.MemberDTO memberDTO = (com.fullStc.member.dto.MemberDTO) principal;
                 return memberDTO.getId();
             }
-            
+
             // Map 타입인 경우 (OAuth2 등)
             if (principal instanceof Map) {
                 @SuppressWarnings("unchecked")

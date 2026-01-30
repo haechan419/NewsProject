@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/authApi';
 import ResetPasswordForm from '../components/auth/ResetPasswordForm';
-import './ResetPassword.css';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
