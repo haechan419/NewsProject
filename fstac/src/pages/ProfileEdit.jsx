@@ -6,7 +6,6 @@ import { updateProfile, getCategories, getMyCategories, updateCategories, upload
 import { convertDisplayNamesToCategories, convertCategoriesToDisplayNames } from '../api/categoryApi';
 import { registerFace } from '../api/faceApi';
 import ProfileEditForm from '../components/auth/ProfileEditForm';
-import TopBar from '../layouts/TopBar';
 
 const ProfileEdit = () => {
   const [nickname, setNickname] = useState('');
@@ -230,9 +229,10 @@ const ProfileEdit = () => {
     setValidationErrors(prev => ({ ...prev, categories: '' }));
     setSuccessMessage('');
 
-    if (!validateCategories()) {
-      return;
-    }
+    // 관심 카테고리가 비어있어도 허용하도록 유효성 검사 제거 또는 수정
+    // if (!validateCategories()) {
+    //   return;
+    // }
 
     // 변경 사항 확인 (서버의 영문 카테고리와 비교)
     const currentEnglishCategories = user?.categories || [];
@@ -247,14 +247,16 @@ const ProfileEdit = () => {
     setIsSubmitting(true);
 
     try {
-      // 한글 카테고리를 영문으로 변환하여 서버에 전송
+      // 한글 카테고리를 영문으로 변환하여 서버에 전송 (비어있으면 빈 배열 전송)
       const englishCategories = convertDisplayNamesToCategories(selectedCategories);
       await updateCategories(englishCategories);
 
       // Redux 상태 업데이트
       dispatch(fetchUserInfoAsync());
 
-      setSuccessMessage('관심 카테고리가 성공적으로 수정되었습니다!');
+      setSuccessMessage(selectedCategories.length === 0
+        ? '관심 카테고리가 모두 해제되었습니다.'
+        : '관심 카테고리가 성공적으로 수정되었습니다!');
     } catch (error) {
       // 에러를 조용히 처리 (콘솔에 로그하지 않음)
       const errorMessage = error.response?.data?.message || error.message || '카테고리 수정에 실패했습니다.';
@@ -764,9 +766,10 @@ const ProfileEdit = () => {
     if (nicknameChanged && !validateNickname()) {
       return;
     }
-    if (categoriesChanged && !validateCategories()) {
-      return;
-    }
+    // 카테고리 변경 시 유효성 검사 (0개여도 허용하므로 validateCategories 호출 대신 직접 체크하거나 생략)
+    // if (categoriesChanged && !validateCategories()) {
+    //   return;
+    // }
 
     // 변경된 항목 목록 생성
     const changedItems = [];
@@ -857,7 +860,6 @@ const ProfileEdit = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar />
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* 좌측 사이드바 영역 */}

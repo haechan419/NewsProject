@@ -33,8 +33,11 @@ public class UserCategoryNewsService {
         log.info("사용자 관심 카테고리별 뉴스 조회: categories={}, limit={}", categories, limit);
 
         if (categories == null || categories.isEmpty()) {
-            log.warn("관심 카테고리가 없습니다.");
-            return List.of();
+            log.info("관심 카테고리가 없어 전체 최신 뉴스를 조회합니다.");
+            List<NewsCluster> latestClusters = newsClusterRepository.findLatestClusters(limit);
+            return latestClusters.stream()
+                    .map(BriefingResponseDTO::new)
+                    .collect(Collectors.toList());
         }
 
         // 카테고리를 소문자로 정규화 (대소문자 구분 없이 검색)

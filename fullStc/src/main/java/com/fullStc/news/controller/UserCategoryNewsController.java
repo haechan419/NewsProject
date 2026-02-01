@@ -48,12 +48,7 @@ public class UserCategoryNewsController {
             // 사용자 관심 카테고리 조회
             List<String> userCategories = categoryService.getUserCategories(userId);
 
-            if (userCategories.isEmpty()) {
-                log.info("사용자 관심 카테고리가 없습니다: userId={}", userId);
-                return ResponseEntity.ok(List.of());
-            }
-
-            // 관심 카테고리별 뉴스 조회
+            // 관심 카테고리별 뉴스 조회 (비어있어도 Service에서 Fallback 처리됨)
             List<BriefingResponseDTO> news = userCategoryNewsService.getNewsByUserCategories(
                     userCategories,
                     limit);
