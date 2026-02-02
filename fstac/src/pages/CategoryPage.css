@@ -1,0 +1,323 @@
+.catPage {
+    background: #fff;
+    color: #111;
+    min-height: 100vh;
+}
+
+/* 히어로 배너 */
+.category-hero {
+    width: 100%;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    background:
+            radial-gradient(900px 260px at 70% 30%, rgba(65, 132, 255, 0.35), transparent 60%),
+            radial-gradient(700px 240px at 20% 70%, rgba(140, 65, 255, 0.28), transparent 60%),
+            linear-gradient(180deg, #0b1b3a 0%, #0b1230 55%, #070d24 100%);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.category-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    opacity: 0.18;
+    pointer-events: none;
+}
+
+.hero-inner {
+    position: relative;
+    z-index: 1;
+    padding: 20px 16px;
+}
+
+.hero-chip {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #e5e7eb;
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.hero-title {
+    margin: 14px 0 6px;
+    color: #fff;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+
+.hero-sub {
+    color: rgba(255,255,255,0.85);
+    font-weight: 700;
+}
+
+/* 컨테이너 */
+.category-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 22px 18px 80px;
+}
+
+/* 로딩/빈 상태 */
+.loading-box, .empty-message {
+    text-align: center;
+    padding: 90px 0;
+    font-size: 1.1rem;
+    color: #666;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #eee;
+}
+
+/* 헤드라인 2컬럼 */
+.headlineGrid{
+    display:grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 22px;
+    align-items: stretch;
+
+}
+
+/* 왼쪽 이미지 */
+.headlineMedia{
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f2f3f5;
+    border: 1px solid #e8eaee;
+    min-height: 240px;
+}
+
+.headlineMedia img{
+    width:100%;
+    height:100%;
+    object-fit: cover;
+    display:block;
+}
+
+.mediaPlaceholder{
+    width:100%;
+    height:100%;
+    min-height:240px;
+    background:#dcdcdc;
+}
+
+/* 오른쪽 네이버형 카드 */
+.headlineNaverCard{
+    background:#fff;
+    border-radius: 12px;
+    border: 1px solid #eef0f3;
+    padding: 18px 20px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.headlineLabel{
+    font-size: 12px;
+    font-weight: 800;
+    color: #1d4ed8;
+    margin-bottom: 10px;
+}
+
+.headlineNaverTitle{
+    margin: 0 0 10px;
+    font-size: 26px;
+    line-height: 1.25;
+    font-weight: 900;
+    letter-spacing: -0.6px;
+    word-break: keep-all;
+}
+
+.headlineNaverDesc{
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #6b7280;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.headlineBottom{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.headlineNaverLink{
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    width: fit-content;
+
+    font-size: 13px;
+    font-weight: 800;
+    color: #2563eb;
+}
+
+.headlineNaverLink:hover{
+    text-decoration: underline;
+}
+
+.headlineDate{
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 700;
+}
+
+/* 리스트 */
+.news-list.naverList {
+    margin-top: 22px;
+    border-top: 1px solid #eee;
+}
+
+.naverItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+
+    padding: 16px 0;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.naverItem:hover {
+    background: #fafafa;
+}
+
+.naverLeft {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    min-width: 0;
+}
+
+.naverThumb {
+    width: 120px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f3f4f6;
+    border: 1px solid #eee;
+    flex: 0 0 auto;
+}
+
+.naverThumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.thumbPlaceholder {
+    width: 100%;
+    height: 100%;
+    background: #e5e7eb;
+}
+
+.naverInfo {
+    min-width: 0;
+}
+
+.naverTitle {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 900;
+    color: #111827;
+    line-height: 1.35;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.naverDesc {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.55;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.naverMeta {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 700;
+    display:flex;
+    align-items:center;
+    gap: 8px;
+}
+
+.metaSep{
+    color:#d1d5db;
+}
+
+.naverRank {
+    width: 30px;
+    height: 22px;
+    border-radius: 5px;
+    background: #eaf2ff;
+    border: 1px solid #cfe0ff;
+    color: #2563eb;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+/* 더보기 버튼 */
+.more-row {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+}
+
+.more-btn {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-weight: 900;
+    color: #374151;
+    cursor: pointer;
+}
+
+.more-btn:hover {
+    background: #f9fafb;
+}
+
+/* 반응형 */
+@media (max-width: 900px){
+    .headlineGrid{
+        grid-template-columns: 1fr;
+        margin-top: -40px;
+    }
+    .headlineMedia{ min-height: 200px; }
+    .mediaPlaceholder{ min-height: 200px; }
+    .headlineNaverTitle{ font-size: 22px; }
+    .naverThumb { width: 110px; height: 74px; }
+}
