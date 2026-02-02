@@ -52,6 +52,9 @@ dependencies {
 	// 이미지 썸네일 (Thumbnailator)
 	implementation 'net.coobird:thumbnailator:0.4.20'
 	
+	// Drive Mode
+	implementation 'org.modelmapper:modelmapper:3.1.1'
+	
 	// JSON 직렬화 (Gson)
 	implementation 'com.google.code.gson:gson:2.10.1'
 	
