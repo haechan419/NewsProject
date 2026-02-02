@@ -1,0 +1,270 @@
+/* 1. 상단 파란색 그래픽 헤더 */
+.category-header {
+    /* 네이버 웨일 느낌의 짙은 네이비/청록 그라데이션 */
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    width: 100%;
+    margin-top: 60px; /* TopBar 높이만큼 띄워줌 (TopBar CSS에 따라 조절 필요) */
+}
+
+.header-content h1 {
+    font-size: 3.5rem;
+    margin: 10px 0;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.issue-tag {
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    color: #4facfe;
+    font-weight: bold;
+}
+
+/* 2. 전체 컨테이너 */
+.category-container {
+    max-width: 1000px;
+    margin: -60px auto 100px; /* 헤더 위로 살짝 겹쳐 올라오게 (-60px) */
+    padding: 0 20px;
+    position: relative;
+    z-index: 10;
+}
+
+/* 3. 헤드라인 섹션 (흰색 큰 박스) */
+.headline-section {
+    background: white;
+    padding: 50px;
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    margin-bottom: 50px;
+}
+
+.headline-badge {
+    color: #3498db;
+    font-weight: 800;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.headline-title {
+    font-size: 2.2rem;
+    margin: 0 0 20px 0;
+    line-height: 1.3;
+    color: #222;
+}
+
+.headline-summary {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #555;
+    white-space: pre-wrap; /* ★ 줄바꿈 처리 핵심 ★ */
+    margin-bottom: 30px;
+}
+
+.headline-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    color: #888;
+}
+
+.read-more-btn {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.read-more-btn:hover {
+    border-color: #333;
+    color: #333;
+}
+
+/* 4. 일반 뉴스 리스트 */
+.news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.news-item {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.news-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border-color: #3498db;
+}
+
+.news-title {
+    font-size: 1.4rem;
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.news-desc {
+    color: #666;
+    line-height: 1.6;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    white-space: pre-wrap; /* 여기서도 줄바꿈 적용 */
+
+    /* 3줄 넘어가면 ... 처리 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.news-source {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.news-date {
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid #ddd;
+}
+
+/* 로딩 및 에러 메시지 */
+.loading-box, .empty-message {
+    text-align: center;
+    padding: 100px 0;
+    font-size: 1.2rem;
+    color: #666;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* ... 기존 CSS 아래에 추가 ... */
+
+/* 뉴스 썸네일 (이미지) 스타일 */
+.news-thumb {
+    width: 200px; /* 사진 너비 고정 */
+    height: 140px;
+    flex-shrink: 0; /* 찌그러짐 방지 */
+    margin-right: 25px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.news-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 사진 꽉 차게 */
+    transition: transform 0.3s;
+}
+
+.news-item:hover .news-thumb img {
+    transform: scale(1.05); /* 마우스 올리면 살짝 확대 */
+}
+
+/* 모바일 대응 (화면 작으면 사진 숨기기 or 위로 보내기) */
+@media (max-width: 768px) {
+    .news-item {
+        flex-direction: column;
+    }
+    .news-thumb {
+        width: 100%;
+        height: 200px;
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+
+/* --- 뉴스 카드 디자인 (React용) --- */
+
+/* 헤드라인 카드 컨테이너 */
+.news-card {
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 50px;
+    margin-bottom: 60px; /* 리스트와 간격 */
+    border: 1px solid #e2e8f0;
+}
+
+/* 상단 메타 정보 */
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #64748b; /* 회색 */
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.article-title {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.4;
+    color: #111827;
+    margin-bottom: 30px;
+    word-break: keep-all;
+}
+
+.divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin-bottom: 30px;
+}
+
+/* 본문 섹션 박스들 */
+.section-box {
+    padding: 24px 30px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    transition: transform 0.2s ease;
+}
+
+.section-box:hover {
+    transform: translateY(-2px);
+}
+
+/* 색상 테마 */
+.style-intro { background-color: #eff6ff; border-left: 5px solid #2563eb; }
+.style-body  { background-color: #f8fafc; border-left: 5px solid #94a3b8; }
+.style-conc  { background-color: #fef2f2; border-left: 5px solid #dc2626; }
+
+/* 배지 스타일 */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.badge-intro { background: #dbeafe; color: #1e40af; }
+.badge-body  { background: #e2e8f0; color: #475569; }
+.badge-conc  { background: #fee2e2; color: #991b1b; }
+
+.text-content {
+    font-size: 17px;
+    color: #334155;
+    line-height: 1.75;
+    white-space: pre-line; /* 줄바꿈 적용 */
+    text-align: justify;
+}
