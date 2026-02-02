@@ -1,12 +1,11 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import TopBar from './TopBar';
-import BottomBar from './BottomBar';
 
 const Layout = ({ children }) => {
   const location = useLocation();
   
-  // 로그인 및 인증 관련 페이지에서는 TopBar와 BottomBar를 표시하지 않음
+  // 로그인 및 인증 관련 페이지에서는 TopBar를 표시하지 않음
   const authPages = ['/login', '/signup', '/find-email', '/find-password', '/reset-password'];
   const isAuthPage = authPages.includes(location.pathname);
 
@@ -20,7 +19,6 @@ const Layout = ({ children }) => {
       <main className="flex-1">
         {children}
       </main>
-      <BottomBar />
     </div>
   );
 };

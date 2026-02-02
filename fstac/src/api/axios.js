@@ -55,7 +55,7 @@ apiClient.interceptors.response.use(
     );
 
     // 401 에러이고, 아직 재시도하지 않은 경우
-    if (status === 401 && !originalRequest._retry && !isPublicEndpoint) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint) {
       originalRequest._retry = true;
 
       try {

@@ -837,6 +837,11 @@ const ProfileEdit = () => {
 
       const successMessage = `${successItems.join(', ')}이(가) 성공적으로 저장되었습니다!`;
       setSuccessMessage(successMessage);
+
+      // 성공 시 이전 화면으로 돌아가기
+      setTimeout(() => {
+        navigate(-1);
+      }, 500);
     } catch (error) {
       const msg =
         error.response?.data?.message ||

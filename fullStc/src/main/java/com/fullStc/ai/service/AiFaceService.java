@@ -9,7 +9,7 @@ import com.fullStc.ai.dto.FaceRecognitionResponseDTO;
  * AI 얼굴 인식 서비스 인터페이스
  */
 public interface AiFaceService {
-    
+
     /**
      * 얼굴 등록
      * 
@@ -17,7 +17,7 @@ public interface AiFaceService {
      * @return 얼굴 등록 응답 DTO
      */
     FaceRegisterResponseDTO registerFace(FaceRegisterRequestDTO requestDTO);
-    
+
     /**
      * 얼굴 인식
      * 
@@ -25,4 +25,11 @@ public interface AiFaceService {
      * @return 얼굴 인식 응답 DTO
      */
     FaceRecognitionResponseDTO recognizeFace(FaceRecognitionRequestDTO requestDTO);
+
+    /**
+     * 얼굴 데이터 삭제
+     * 
+     * @param userId 사용자 이메일 (user_id)
+     */
+    void deleteFaceData(String userId);
 }
