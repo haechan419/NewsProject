@@ -51,12 +51,12 @@ const TopBar = () => {
       {/* 2. 중앙: 메뉴 리스트 */}
       <nav className="nav-bar">
         <ul>
-          <li onClick={() => navigate('/politics')}>정치</li>
-          <li onClick={() => navigate('/economy')}>경제</li>
-          <li onClick={() => navigate('/entertainment')}>문화</li>
-          <li onClick={() => navigate('/it')}>IT/과학</li>
-          <li onClick={() => navigate('/sports')}>사회</li>
-          <li onClick={() => navigate('/international')}>국제</li>
+          <li onClick={() => navigate('/category/politics')}>정치</li>
+          <li onClick={() => navigate('/category/economy')}>경제</li>
+          <li onClick={() => navigate('/category/culture')}>문화</li>
+          <li onClick={() => navigate('/category/it')}>IT/과학</li>
+          <li onClick={() => navigate('/category/society')}>사회</li>
+          <li onClick={() => navigate('/category/world')}>국제</li>
           <li onClick={() => navigate('/board')}>게시판</li>
         </ul>
       </nav>
@@ -103,7 +103,11 @@ const TopBar = () => {
                   <div className="dropdown-item" style={{ cursor: 'default', fontWeight: 500 }}>
                     {user?.nickname || '사용자'}님
                   </div>
+                  <Link to="/mypage" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>
+                    마이페이지
+                  </Link>
                   <Link to="/profile/edit" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>프로필 수정</Link>
+
                   <button className="dropdown-item" style={{ color: '#e74c3c' }} onClick={handleLogout}>로그아웃</button>
                 </>
               ) : (

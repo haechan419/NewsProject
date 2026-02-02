@@ -22,6 +22,7 @@ scipy==1.16.3
 
 # Database
 PyMySQL==1.1.0
+mysql-connector-python
 
 # HTTP / Web Scraping
 requests==2.31.0
@@ -42,7 +43,11 @@ pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2
 
-# Drive Mode
+# Drive Mode / AI
 langchain>=0.1.0
 langchain-openai>=0.0.5
 python-multipart>=0.0.6
+
+# Media / TTS
+moviepy==1.0.3
+edge-tts

@@ -1,11 +1,19 @@
-import {lazy, Suspense} from 'react';
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useSelector } from "react-redux"; //추가
 import ProtectedRoute from '../components/ProtectedRoute';
 import Layout from '../layouts/Layout';
 
 // 로딩 컴포넌트
 const LoadingSpinner = () => (
-    <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+    <div
+        style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+        }}
+    >
         <div>로딩 중...</div>
     </div>
 );
@@ -19,6 +27,7 @@ const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 
 // 보호된 페이지들 (lazy 로드)
 const MainPage = lazy(() => import('../pages/MainPage'));
+const MyPage = lazy(() => import("../pages/mypage/MyPage")); // 마이페이지 추가
 const ProfileEdit = lazy(() => import('../pages/ProfileEdit'));
 const BoardPage = lazy(() => import('../pages/board/BoardPage'));
 const BoardDetail = lazy(() => import('../pages/board/BoardDetail'));
@@ -32,6 +41,9 @@ const NewsDetailPage = lazy(() => import('../pages/NewsDetailPage'));
 
 
 const AppRouter = () => {
+    // Redux에서 user 정보 가져오기
+    const { user } = useSelector((state) => state.auth);
+
     return (
         <Layout>
             <Suspense fallback={<LoadingSpinner />}>
@@ -51,6 +63,18 @@ const AppRouter = () => {
                             </ProtectedRoute>
                         }
                     />
+
+
+                    {/* 3. MyPage 라우트 장착 */}
+                    <Route
+                        path="/mypage"
+                        element={
+                            <ProtectedRoute>
+                                <MyPage memberId={user?.id || user?.memberId} />
+                            </ProtectedRoute>
+                        }
+                    />
+
                     <Route
                         path="/profile/edit"
                         element={
@@ -98,6 +122,16 @@ const AppRouter = () => {
                         element={
                             <ProtectedRoute>
                                 <SupportPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    {/* 카테고리 페이지 라우트 */}
+                    <Route
+                        path="/category/:category"
+                        element={
+                            <ProtectedRoute>
+                                <CategoryPage />
                             </ProtectedRoute>
                         }
                     />

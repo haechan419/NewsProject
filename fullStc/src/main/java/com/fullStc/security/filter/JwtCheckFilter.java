@@ -39,13 +39,30 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         log.info("check uri.......................{}", path);
 
+    // 1. 기존에 추가했던 AI 관련 경로
+    if (path.startsWith("/api/ai/mypage/") || path.startsWith("/api/ai/video/")) {
+        return true;
+    }
+
+    // ★ 2. 추가: 영상 및 업로드 파일 경로 필터 제외
+    if (path.startsWith("/upload/")) {
+        log.info("정적 리소스(/upload/) 경로이므로 JwtCheckFilter를 통과시킵니다.");
+        return true;
+    }
+
         // 예외 경로 설정 (토큰 검사 건너뛰기)
 
         // 관리자 관련 API (테스트용)
         if (path.startsWith("/admin/")) {
             return true;
         }
-
+        if (path.contains("/api/ai/mypage")) { // startsWith 대신 contains 사용
+    log.info("마이페이지 경로이므로 필터를 통과시킵니다!");
+    return true;
+        }
+        if (path.startsWith("/api/ai/video/")) {
+    return true;
+        }
         // /api/auth/ 경로의 호출은 체크하지 않음 (로그인, 회원가입 등)
         // 단, 로그아웃(/api/auth/logout)은 인증이 필요하므로 필터링함
         if (path.startsWith("/api/auth/") && !path.equals("/api/auth/logout")) {
