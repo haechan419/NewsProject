@@ -41,14 +41,17 @@ public class BriefingController {
                                         ? content.substring(0, 150) + "..."
                                         : content);
 
-                        // ★ [수정] DTO 생성자 순서에 맞춰서 쏙쏙 넣어줍니다.
+// ★ [수정] 7번째 인자(이미지)를 추가합니다.
                         return new BriefingResponseDTO(
-                                news.getId(),          // id
-                                news.getTitle(),       // title
-                                fakeSummary,           // summary
-                                news.getCategory(),    // category
-                                news.getUrl(),         // originalUrl (뉴스 원본 링크)
-                                news.getPublishedAt().toString() // date
+                                news.getId(),                     // 1. id
+                                news.getTitle(),                  // 2. title
+                                fakeSummary,                      // 3. summary
+                                news.getCategory(),               // 4. category
+                                news.getUrl(),                    // 5. originalUrl
+                                news.getPublishedAt().toString(), // 6. date
+
+                                // ★ [NEW] 7. image (클러스터에서 가져오기)
+                                (news.getNewsCluster() != null) ? news.getNewsCluster().getImageUrl() : null
                         );
                     })
                     .collect(Collectors.toList());

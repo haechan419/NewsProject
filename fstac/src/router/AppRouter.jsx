@@ -28,6 +28,8 @@ const SupportPage = lazy(() => import('../pages/support/SupportPage'));
 
 // ★ [추가] 뉴스 카테고리 페이지 Lazy Load
 const CategoryPage = lazy(() => import('../pages/CategoryPage'));
+const NewsDetailPage = lazy(() => import('../pages/NewsDetailPage'));
+
 
 const AppRouter = () => {
     return (
@@ -53,6 +55,17 @@ const AppRouter = () => {
                     <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
 
                     {/* ★ [핵심] 뉴스 카테고리 페이지도 로그인해야 볼 수 있음 */}
+                    {/* ✅ 상세 먼저 */}
+                    <Route
+                        path="/news/:id"
+                        element={
+                            <ProtectedRoute>
+                                <NewsDetailPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    {/* ✅ 카테고리 */}
                     <Route
                         path="/:category"
                         element={
@@ -61,6 +74,7 @@ const AppRouter = () => {
                             </ProtectedRoute>
                         }
                     />
+
 
                     {/* 3. 404 처리 (메인으로 리다이렉트) */}
                     <Route path="*" element={<Navigate to="/" replace />} />

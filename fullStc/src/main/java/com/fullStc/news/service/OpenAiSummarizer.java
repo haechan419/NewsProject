@@ -137,4 +137,23 @@ public class OpenAiSummarizer {
             return null;
         }
     }
+
+    /**
+     * ★ [NEW] 한글 요약문을 받아서 -> 고퀄리티 영어 그림 프롬프트로 변환
+     */
+    public String createEnglishPrompt(String koreanSummary) {
+        // [수정] 오직 프롬프트 내용만 출력하도록 강제합니다.
+        String system = "너는 AI 이미지 프롬프트 엔지니어다. 불필요한 서론(Here is...)이나 제목(Image Prompt:)은 절대 빼고, 오직 영문 프롬프트 내용만 한 줄로 출력해라.";
+
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "messages", List.of(
+                        Map.of("role", "system", "content", system),
+                        Map.of("role", "user", "content", "아래 내용을 4K 뉴스 사진 스타일의 영문 프롬프트로 바꿔: " + koreanSummary)
+                ),
+                "temperature", 0.5 // 일관성을 위해 온도를 조금 낮춤
+        );
+
+        return callGpt(body);
+    }
 }

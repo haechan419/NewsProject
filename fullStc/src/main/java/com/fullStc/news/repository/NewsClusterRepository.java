@@ -80,12 +80,19 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
         // ★ [핵심 수정] 여기도 마찬가지입니다!
         @Transactional
         @Modifying
-        @Query("UPDATE NewsCluster n SET n.representativeUrl = :url, n.clusterTitle = :title, n.clusterSummary = :summary WHERE n.id = :id")
+        @Query("UPDATE NewsCluster c SET " +
+                "c.representativeUrl = :repUrl, " +
+                "c.clusterTitle = :title, " +
+                "c.clusterSummary = :summary, " +
+                "c.imageUrl = :imageUrl " +  // ★ [추가] 이미지 URL 업데이트
+                "WHERE c.id = :id")
         void updateClusterSummaryInfo(
-                        @Param("id") Long id,
-                        @Param("url") String url,
-                        @Param("title") String title,
-                        @Param("summary") String summary);
+                @Param("id") Long id,
+                @Param("repUrl") String repUrl,
+                @Param("title") String title,
+                @Param("summary") String summary,
+                @Param("imageUrl") String imageUrl // ★ [추가] 파라미터 받기
+        );
 
         // ✅ [추가] BriefingController에서 사용하는 "카테고리별 요약본 조회" (이게 빠져 있었습니다!)
         @Query(value = "SELECT * FROM news_cluster WHERE category = :category ORDER BY id DESC LIMIT 20", nativeQuery = true)
