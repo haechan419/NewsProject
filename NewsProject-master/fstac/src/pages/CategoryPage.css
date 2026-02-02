@@ -1,270 +1,323 @@
-/* 1. 상단 파란색 그래픽 헤더 */
-.category-header {
-    /* 네이버 웨일 느낌의 짙은 네이비/청록 그라데이션 */
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    height: 280px;
+.catPage {
+    background: #fff;
+    color: #111;
+    min-height: 100vh;
+}
+
+/* 히어로 배너 */
+.category-hero {
+    width: 100%;
+    height: 260px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    color: white;
-    width: 100%;
-    margin-top: 60px; /* TopBar 높이만큼 띄워줌 (TopBar CSS에 따라 조절 필요) */
+
+    background:
+            radial-gradient(900px 260px at 70% 30%, rgba(65, 132, 255, 0.35), transparent 60%),
+            radial-gradient(700px 240px at 20% 70%, rgba(140, 65, 255, 0.28), transparent 60%),
+            linear-gradient(180deg, #0b1b3a 0%, #0b1230 55%, #070d24 100%);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-.header-content h1 {
-    font-size: 3.5rem;
-    margin: 10px 0;
+.category-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    opacity: 0.18;
+    pointer-events: none;
+}
+
+.hero-inner {
+    position: relative;
+    z-index: 1;
+    padding: 20px 16px;
+}
+
+.hero-chip {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #e5e7eb;
     font-weight: 800;
+    font-size: 12px;
+}
+
+.hero-title {
+    margin: 14px 0 6px;
+    color: #fff;
+    font-size: 42px;
+    font-weight: 900;
     letter-spacing: -1px;
 }
 
-.issue-tag {
-    font-size: 0.9rem;
-    letter-spacing: 3px;
-    color: #4facfe;
-    font-weight: bold;
+.hero-sub {
+    color: rgba(255,255,255,0.85);
+    font-weight: 700;
 }
 
-/* 2. 전체 컨테이너 */
+/* 컨테이너 */
 .category-container {
-    max-width: 1000px;
-    margin: -60px auto 100px; /* 헤더 위로 살짝 겹쳐 올라오게 (-60px) */
-    padding: 0 20px;
-    position: relative;
-    z-index: 10;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 22px 18px 80px;
 }
 
-/* 3. 헤드라인 섹션 (흰색 큰 박스) */
-.headline-section {
-    background: white;
-    padding: 50px;
-    border-radius: 16px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    margin-bottom: 50px;
-}
-
-.headline-badge {
-    color: #3498db;
-    font-weight: 800;
-    margin-bottom: 15px;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-}
-
-.headline-title {
-    font-size: 2.2rem;
-    margin: 0 0 20px 0;
-    line-height: 1.3;
-    color: #222;
-}
-
-.headline-summary {
+/* 로딩/빈 상태 */
+.loading-box, .empty-message {
+    text-align: center;
+    padding: 90px 0;
     font-size: 1.1rem;
-    line-height: 1.8;
-    color: #555;
-    white-space: pre-wrap; /* ★ 줄바꿈 처리 핵심 ★ */
-    margin-bottom: 30px;
-}
-
-.headline-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid #eee;
-    padding-top: 20px;
-    color: #888;
-}
-
-.read-more-btn {
-    background: none;
-    border: 1px solid #ddd;
-    padding: 8px 20px;
-    border-radius: 20px;
-    cursor: pointer;
     color: #666;
-    transition: all 0.2s;
-}
-
-.read-more-btn:hover {
-    border-color: #333;
-    color: #333;
-}
-
-/* 4. 일반 뉴스 리스트 */
-.news-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.news-item {
-    background: white;
-    padding: 30px;
+    background: #fff;
     border-radius: 12px;
     border: 1px solid #eee;
-    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.news-item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    border-color: #3498db;
+/* 헤드라인 2컬럼 */
+.headlineGrid{
+    display:grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 22px;
+    align-items: stretch;
+
 }
 
-.news-title {
-    font-size: 1.4rem;
-    margin: 0 0 10px 0;
-    color: #333;
+/* 왼쪽 이미지 */
+.headlineMedia{
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f2f3f5;
+    border: 1px solid #e8eaee;
+    min-height: 240px;
 }
 
-.news-desc {
-    color: #666;
+.headlineMedia img{
+    width:100%;
+    height:100%;
+    object-fit: cover;
+    display:block;
+}
+
+.mediaPlaceholder{
+    width:100%;
+    height:100%;
+    min-height:240px;
+    background:#dcdcdc;
+}
+
+/* 오른쪽 네이버형 카드 */
+.headlineNaverCard{
+    background:#fff;
+    border-radius: 12px;
+    border: 1px solid #eef0f3;
+    padding: 18px 20px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.headlineLabel{
+    font-size: 12px;
+    font-weight: 800;
+    color: #1d4ed8;
+    margin-bottom: 10px;
+}
+
+.headlineNaverTitle{
+    margin: 0 0 10px;
+    font-size: 26px;
+    line-height: 1.25;
+    font-weight: 900;
+    letter-spacing: -0.6px;
+    word-break: keep-all;
+}
+
+.headlineNaverDesc{
+    margin: 0 0 14px;
+    font-size: 13px;
     line-height: 1.6;
-    font-size: 1rem;
-    margin-bottom: 15px;
-    white-space: pre-wrap; /* 여기서도 줄바꿈 적용 */
+    color: #6b7280;
 
-    /* 3줄 넘어가면 ... 처리 */
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.news-source {
-    font-size: 0.85rem;
-    color: #999;
+.headlineBottom{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.news-date {
-    margin-left: 10px;
-    padding-left: 10px;
-    border-left: 1px solid #ddd;
+.headlineNaverLink{
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    width: fit-content;
+
+    font-size: 13px;
+    font-weight: 800;
+    color: #2563eb;
 }
 
-/* 로딩 및 에러 메시지 */
-.loading-box, .empty-message {
-    text-align: center;
-    padding: 100px 0;
-    font-size: 1.2rem;
-    color: #666;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+.headlineNaverLink:hover{
+    text-decoration: underline;
 }
 
-/* ... 기존 CSS 아래에 추가 ... */
-
-/* 뉴스 썸네일 (이미지) 스타일 */
-.news-thumb {
-    width: 200px; /* 사진 너비 고정 */
-    height: 140px;
-    flex-shrink: 0; /* 찌그러짐 방지 */
-    margin-right: 25px;
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: #f0f0f0;
+.headlineDate{
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 700;
 }
 
-.news-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* 사진 꽉 차게 */
-    transition: transform 0.3s;
+/* 리스트 */
+.news-list.naverList {
+    margin-top: 22px;
+    border-top: 1px solid #eee;
 }
 
-.news-item:hover .news-thumb img {
-    transform: scale(1.05); /* 마우스 올리면 살짝 확대 */
-}
-
-/* 모바일 대응 (화면 작으면 사진 숨기기 or 위로 보내기) */
-@media (max-width: 768px) {
-    .news-item {
-        flex-direction: column;
-    }
-    .news-thumb {
-        width: 100%;
-        height: 200px;
-        margin-right: 0;
-        margin-bottom: 15px;
-    }
-}
-
-/* --- 뉴스 카드 디자인 (React용) --- */
-
-/* 헤드라인 카드 컨테이너 */
-.news-card {
-    background: white;
-    border-radius: 24px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    padding: 50px;
-    margin-bottom: 60px; /* 리스트와 간격 */
-    border: 1px solid #e2e8f0;
-}
-
-/* 상단 메타 정보 */
-.article-meta {
+.naverItem {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #64748b; /* 회색 */
-    font-weight: 600;
-    margin-bottom: 20px;
+    justify-content: space-between;
+    gap: 14px;
+
+    padding: 16px 0;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
 }
 
-.article-title {
-    font-size: 32px;
-    font-weight: 800;
-    line-height: 1.4;
-    color: #111827;
-    margin-bottom: 30px;
-    word-break: keep-all;
+.naverItem:hover {
+    background: #fafafa;
 }
 
-.divider {
-    height: 1px;
-    background: #e2e8f0;
-    margin-bottom: 30px;
-}
-
-/* 본문 섹션 박스들 */
-.section-box {
-    padding: 24px 30px;
-    border-radius: 16px;
-    margin-bottom: 20px;
-    transition: transform 0.2s ease;
-}
-
-.section-box:hover {
-    transform: translateY(-2px);
-}
-
-/* 색상 테마 */
-.style-intro { background-color: #eff6ff; border-left: 5px solid #2563eb; }
-.style-body  { background-color: #f8fafc; border-left: 5px solid #94a3b8; }
-.style-conc  { background-color: #fef2f2; border-left: 5px solid #dc2626; }
-
-/* 배지 스타일 */
-.badge {
-    display: inline-flex;
+.naverLeft {
+    display: flex;
+    gap: 14px;
     align-items: center;
-    font-size: 14px;
-    font-weight: 800;
-    padding: 6px 12px;
-    border-radius: 8px;
-    margin-bottom: 12px;
+    min-width: 0;
 }
 
-.badge-intro { background: #dbeafe; color: #1e40af; }
-.badge-body  { background: #e2e8f0; color: #475569; }
-.badge-conc  { background: #fee2e2; color: #991b1b; }
+.naverThumb {
+    width: 120px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f3f4f6;
+    border: 1px solid #eee;
+    flex: 0 0 auto;
+}
 
-.text-content {
-    font-size: 17px;
-    color: #334155;
-    line-height: 1.75;
-    white-space: pre-line; /* 줄바꿈 적용 */
-    text-align: justify;
+.naverThumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.thumbPlaceholder {
+    width: 100%;
+    height: 100%;
+    background: #e5e7eb;
+}
+
+.naverInfo {
+    min-width: 0;
+}
+
+.naverTitle {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 900;
+    color: #111827;
+    line-height: 1.35;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.naverDesc {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.55;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.naverMeta {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 700;
+    display:flex;
+    align-items:center;
+    gap: 8px;
+}
+
+.metaSep{
+    color:#d1d5db;
+}
+
+.naverRank {
+    width: 30px;
+    height: 22px;
+    border-radius: 5px;
+    background: #eaf2ff;
+    border: 1px solid #cfe0ff;
+    color: #2563eb;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+/* 더보기 버튼 */
+.more-row {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+}
+
+.more-btn {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-weight: 900;
+    color: #374151;
+    cursor: pointer;
+}
+
+.more-btn:hover {
+    background: #f9fafb;
+}
+
+/* 반응형 */
+@media (max-width: 900px){
+    .headlineGrid{
+        grid-template-columns: 1fr;
+        margin-top: -40px;
+    }
+    .headlineMedia{ min-height: 200px; }
+    .mediaPlaceholder{ min-height: 200px; }
+    .headlineNaverTitle{ font-size: 22px; }
+    .naverThumb { width: 110px; height: 74px; }
 }
