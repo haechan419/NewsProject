@@ -291,10 +291,11 @@ const MainPage = () => {
   // 지수 데이터 추출
   const getIndex = (indices, symbol) => {
     const index = indices?.[symbol];
-    if (!index) return { value: '0', change: '' };
+    if (!index) return { value: '0', change: '', changeValue: 0 };
     return {
       value: formatNumber(index.value),
-      change: formatChange(index.change)
+      change: formatChange(index.change),
+      changeValue: index.change || 0
     };
   };
 
@@ -313,17 +314,26 @@ const MainPage = () => {
     kosdaq: getIndex(marketData.koreanIndices, 'KQ11'),
     kospi200: marketData.koreanIndices?.KS11 ? {
       value: formatNumber((marketData.koreanIndices.KS11.value * 0.3).toFixed(2)),
-      change: formatChange(marketData.koreanIndices.KS11.change * 0.3)
-    } : { value: '0', change: '' }
+      change: formatChange(marketData.koreanIndices.KS11.change * 0.3),
+      changeValue: (marketData.koreanIndices.KS11.change || 0) * 0.3
+    } : { value: '0', change: '', changeValue: 0 }
   };
 
-  // 경제 지표 색상 결정 함수
+  // 경제 지표 색상 결정 함수 (문자열용)
   const getEconomyColor = (changeStr) => {
     if (!changeStr) return 'text-gray-900';
     const value = parseFloat(changeStr.replace(/[+,]/g, ''));
     if (value > 0) return 'text-green-600';
     if (value < 0) return 'text-red-600';
     return 'text-gray-900';
+  };
+
+  // 경제 지표 색상 결정 함수 (숫자용)
+  const getEconomyColorByValue = (changeValue) => {
+    if (changeValue == null || changeValue === 0) return '';
+    if (changeValue > 0) return 'text-green-600';
+    if (changeValue < 0) return 'text-red-600';
+    return '';
   };
 
   const handlePrevVideoSlide = () => {
@@ -657,18 +667,18 @@ const MainPage = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-gray-700">코스피</span>
-                      <span className={`${getEconomyColor(economicData.kospi.change)} font-medium`}>{economicData.kospi.value}</span>
+                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium`}>{economicData.kospi.value}</span>
                       {economicData.kospi.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.kospi.change)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
                           {economicData.kospi.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-gray-700">코스닥</span>
-                      <span className={`${getEconomyColor(economicData.kosdaq.change)} font-medium`}>{economicData.kosdaq.value}</span>
+                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium`}>{economicData.kosdaq.value}</span>
                       {economicData.kosdaq.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.kosdaq.change)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
                           {economicData.kosdaq.change}
                         </span>
                       )}
@@ -742,18 +752,18 @@ const MainPage = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-gray-700">코스피</span>
-                      <span className={`${getEconomyColor(economicData.kospi.change)} font-medium`}>{economicData.kospi.value}</span>
+                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium`}>{economicData.kospi.value}</span>
                       {economicData.kospi.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.kospi.change)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
                           {economicData.kospi.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-gray-700">코스닥</span>
-                      <span className={`${getEconomyColor(economicData.kosdaq.change)} font-medium`}>{economicData.kosdaq.value}</span>
+                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium`}>{economicData.kosdaq.value}</span>
                       {economicData.kosdaq.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.kosdaq.change)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
                           {economicData.kosdaq.change}
                         </span>
                       )}
