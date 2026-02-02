@@ -28,7 +28,7 @@ public class NewsIngestScheduler {
         try {
             log.info("🎬 [AUTO] 스케줄러 가동! 이번 타자: '{}'", category);
 
-            // ★ [수정] processKeyword -> processNewNews (이름 통일!)
+            // processNewNews로 통일
             pipeline.processNewNews(category);
 
             log.info("✅ [AUTO] '{}' 처리 완료.", category);

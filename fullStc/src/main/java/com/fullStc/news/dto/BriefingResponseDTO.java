@@ -1,36 +1,45 @@
-package com.fullStc.news.dto; // 패키지명 확인
+package com.fullStc.news.dto;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import com.fullStc.news.domain.NewsCluster;
 
 @Getter
+@NoArgsConstructor
 public class BriefingResponseDTO {
     private Long id;
     private String title;
     private String summary;
     private String originalUrl;
     private String date;
-
-    // ★ [NEW] 카테고리 필드 추가 (economy, politics, it 등)
     private String category;
+    private String image; // ★ 이미지가 담길 필드
 
+    // 1. [정석] NewsCluster(요약본) -> DTO 변환
     public BriefingResponseDTO(NewsCluster cluster) {
         this.id = cluster.getId();
-
-        // 엔티티의 clusterTitle -> DTO의 title
         this.title = cluster.getClusterTitle();
-
-        // 엔티티의 clusterSummary -> DTO의 summary ([서론][본론][결론] 포함된 텍스트)
         this.summary = cluster.getClusterSummary();
-
-        // 대표 기사 URL
         this.originalUrl = cluster.getRepresentativeUrl();
-
-        // 날짜 (없으면 빈 문자열)
         this.date = (cluster.getCreatedAt() != null) ? cluster.getCreatedAt().toString() : "";
-
-        // ★ [NEW] 카테고리 정보 매핑
         this.category = cluster.getCategory();
+
+        // ★ [수정] null 대신 DB에 저장된 URL을 꺼내서 넣습니다!
+        // (NewsCluster 엔티티에 getImageUrl() 메소드가 있어야 합니다)
+        this.image = cluster.getImageUrl();
     }
 
+    // 2. [비상 대책] 낱개 데이터 -> DTO 변환
+    // ★ 파라미터 맨 뒤에 String image를 추가했습니다.
+    public BriefingResponseDTO(Long id, String title, String summary, String category, String originalUrl, String date, String image) {
+        this.id = id;
+        this.title = title;
+        this.summary = summary;
+        this.category = category;
+        this.originalUrl = originalUrl;
+        this.date = date;
+
+        // ★ [수정] 받아온 이미지 URL을 넣습니다.
+        this.image = image;
+    }
 }

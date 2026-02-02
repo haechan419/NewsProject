@@ -1,5 +1,6 @@
 package com.fullStc.news.repository;
 
+import com.fullStc.news.domain.News;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,8 +28,8 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
                             LIMIT :limit
                         """, nativeQuery = true)
         List<NewsCluster> findByCategoriesOrderByUpdatedAtDesc(
-                        @Param("categories") List<String> categories,
-                        @Param("limit") int limit);
+                @Param("categories") List<String> categories,
+                @Param("limit") int limit);
 
         // 디버깅용: cluster_summary 조건 없이 조회
         @Query(value = """
@@ -38,8 +39,8 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
                             LIMIT :limit
                         """, nativeQuery = true)
         List<NewsCluster> findByCategoriesWithoutSummaryCheck(
-                        @Param("categories") List<String> categories,
-                        @Param("limit") int limit);
+                @Param("categories") List<String> categories,
+                @Param("limit") int limit);
 
         // 카테고리 상관없이 최신 클러스터 조회 (관심사 미설정 시 Fallback용)
         @Query(value = """
@@ -68,21 +69,32 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
                             WHERE cluster_key = :clusterKey
                         """, nativeQuery = true)
         void updateClusterMetadata(
-                        @Param("clusterKey") String clusterKey,
-                        @Param("category") String category,
-                        @Param("representativeNewsId") Long representativeNewsId,
-                        @Param("clusterTitle") String clusterTitle,
-                        @Param("qualityScore") Integer qualityScore,
-                        @Param("riskFlags") String riskFlags,
-                        @Param("badge") String badge);
+                @Param("clusterKey") String clusterKey,
+                @Param("category") String category,
+                @Param("representativeNewsId") Long representativeNewsId,
+                @Param("clusterTitle") String clusterTitle,
+                @Param("qualityScore") Integer qualityScore,
+                @Param("riskFlags") String riskFlags,
+                @Param("badge") String badge);
 
         // ★ [핵심 수정] 여기도 마찬가지입니다!
         @Transactional
         @Modifying
-        @Query("UPDATE NewsCluster n SET n.representativeUrl = :url, n.clusterTitle = :title, n.clusterSummary = :summary WHERE n.id = :id")
+        @Query("UPDATE NewsCluster c SET " +
+                "c.representativeUrl = :repUrl, " +
+                "c.clusterTitle = :title, " +
+                "c.clusterSummary = :summary, " +
+                "c.imageUrl = :imageUrl " +  // ★ [추가] 이미지 URL 업데이트
+                "WHERE c.id = :id")
         void updateClusterSummaryInfo(
-                        @Param("id") Long id,
-                        @Param("url") String url,
-                        @Param("title") String title,
-                        @Param("summary") String summary);
+                @Param("id") Long id,
+                @Param("repUrl") String repUrl,
+                @Param("title") String title,
+                @Param("summary") String summary,
+                @Param("imageUrl") String imageUrl // ★ [추가] 파라미터 받기
+        );
+
+        // ✅ [추가] BriefingController에서 사용하는 "카테고리별 요약본 조회" (이게 빠져 있었습니다!)
+        @Query(value = "SELECT * FROM news_cluster WHERE category = :category ORDER BY id DESC LIMIT 20", nativeQuery = true)
+        List<NewsCluster> findByCategoryNative(@Param("category") String category);
 }

@@ -26,6 +26,11 @@ const BoardCreate = lazy(() => import('../pages/board/BoardCreate'));
 const BoardModify = lazy(() => import('../pages/board/BoardModify'));
 const SupportPage = lazy(() => import('../pages/support/SupportPage'));
 
+// ★ [추가] 뉴스 카테고리 페이지 Lazy Load
+const CategoryPage = lazy(() => import('../pages/CategoryPage'));
+const NewsDetailPage = lazy(() => import('../pages/NewsDetailPage'));
+
+
 const AppRouter = () => {
     return (
         <Layout>
@@ -78,6 +83,8 @@ const AppRouter = () => {
                             </ProtectedRoute>
                         }
                     />
+
+                    {/* ✅ 카테고리 */}
                     <Route
                         path="/board/:id/modify"
                         element={

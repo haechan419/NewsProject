@@ -62,8 +62,8 @@ public class NewsAggregatorService {
     public List<UnifiedArticle> getNews(String category, String query, int size) {
         // ... (기존 로직 유지: 캐시 조회, 병합, 정렬 등) ...
         String cacheKey = category + "|" + query + "|" + size;
-        List<UnifiedArticle> cached = cache.getIfPresent(cacheKey);
-        if (cached != null) return cached;
+//        List<UnifiedArticle> cached = cache.getIfPresent(cacheKey);
+//        if (cached != null) return cached;
 
         Map<String, NewsProvider> map = providers.stream()
                 .collect(Collectors.toMap(NewsProvider::name, p -> p, (a, b) -> a));
@@ -77,8 +77,19 @@ public class NewsAggregatorService {
             merged.addAll(safeFetch(naver, category, query, size));
         }
 
+// ★ [여기 수정] RSS Provider를 부를 때 쿼리를 조작합니다.
         if (merged.size() < size && rss != null) {
-            merged.addAll(safeFetch(rss, category, query, size - merged.size()));
+
+            // [수정 전]
+            // merged.addAll(safeFetch(rss, category, query, size - merged.size()));
+
+            // [수정 후] 검색어 앞에 'when:1h '를 붙여서 1시간 이내 기사만 강제합니다.
+            String timeBoxedQuery = "when:24h " + query;
+
+            // 로그로 확인 (나중에 지우세요)
+            log.info("🔥 [RSS FORCE] Query modified: '{}' -> '{}'", query, timeBoxedQuery);
+
+            merged.addAll(safeFetch(rss, category, timeBoxedQuery, size - merged.size()));
         }
 
         List<UnifiedArticle> result = mergeDedupeSort(merged, size);
