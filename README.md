@@ -84,43 +84,10 @@ gradlew.bat bootRun
 
 프론트엔드와 백엔드 모두 환경 변수 설정이 필요할 수 있습니다. 각 프로젝트의 README를 참고하세요.
 
-## 🧪 테스트
-
-### 테스트 실행
-
-```bash
-# Spring Boot 백엔드 테스트
-cd fullStc
-./gradlew test
-
-# React 프론트엔드 테스트
-cd fstac
-npm test
-
-# Python AI 서버 테스트
-cd python-ai
-pytest
-```
-
-상세한 테스트 가이드는 [TEST_GUIDE.md](./TEST_GUIDE.md)를 참고하세요.
-
-### 테스트 커버리지
-
-- **Spring Boot**: 로그인, 얼굴 인식 API 테스트 (70% 목표)
-- **React**: 로그인 컴포넌트, 얼굴 인식 컴포넌트 테스트 (60% 목표)
-- **Python AI**: 얼굴 등록/인식 API 테스트 (70% 목표)
-
 ## 📝 API 문서
 
 백엔드 서버 실행 후 다음 URL에서 API 문서를 확인할 수 있습니다:
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
-
-## 📚 추가 문서
-
-- [테스트 실행 가이드](./TEST_GUIDE.md)
-- [개인정보 처리방침](./fullStc/PRIVACY_POLICY.md)
-- [데이터 보관 정책](./fullStc/DATA_RETENTION_POLICY.md)
-- [적용된 개선사항](./fullStc/IMPROVEMENTS_APPLIED.md)
 
 ## 📄 라이선스
 

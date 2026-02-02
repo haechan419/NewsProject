@@ -7,21 +7,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    open: true,
-    proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/static': { target: 'http://localhost:8000', changeOrigin: true },
-    },
+    open: true
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
-    css: true,
   },
 })

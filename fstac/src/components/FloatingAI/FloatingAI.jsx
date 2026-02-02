@@ -71,13 +71,11 @@ const FloatingAI = () => {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('채팅 에러:', error);
-      console.error('에러 상세:', error.originalError);
-      console.error('에러 메시지:', error.message);
       
-      // 에러 메시지 추가 (서버에서 받은 에러 메시지 사용)
+      // 에러 메시지 추가
       const errorMessage = {
         role: 'assistant',
-        content: error.message || '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        content: '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
         timestamp: new Date().toISOString(),
         isError: true
       };

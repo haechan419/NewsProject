@@ -1,9 +1,103 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import apiClient from '@/api/axios';
 import { getMyCategories, getCategoryDisplayName } from '@/api/categoryApi';
 import { getNewsByUserCategories, getNewsByCategory } from '@/api/userCategoryNewsApi';
 
 const MainPage = () => {
+  // 뉴스 요약 영상 더미 데이터 (6개 카테고리)
+  const videoData = [
+    {
+      id: 1,
+      category: '정치',
+      title: '정치 주요 이슈 요약',
+      thumbnail: 'https://via.placeholder.com/800x450/1e40af/ffffff?text=%EC%A0%95%EC%B9%98+%EB%89%B4%EC%8A%A4',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      description: '이번 주 정치 분야 주요 뉴스를 요약한 영상입니다.'
+    },
+    {
+      id: 2,
+      category: '경제',
+      title: '경제 동향 분석',
+      thumbnail: 'https://via.placeholder.com/800x450/059669/ffffff?text=%EA%B2%BD%EC%A0%9C+%EB%89%B4%EC%8A%A4',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      description: '최신 경제 동향과 시장 분석을 담은 영상입니다.'
+    },
+    {
+      id: 3,
+      category: '엔터테인먼트',
+      title: '엔터 이슈 모음',
+      thumbnail: 'https://via.placeholder.com/800x450/dc2626/ffffff?text=%EC%97%94%ED%84%B0%ED%85%8C%EC%9D%B8%EB%A8%BC%ED%8A%B8',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      description: '연예계 주요 이슈와 소식을 정리한 영상입니다.'
+    },
+    {
+      id: 4,
+      category: 'IT/과학',
+      title: 'IT/과학 최신 소식',
+      thumbnail: 'https://via.placeholder.com/800x450/7c3aed/ffffff?text=IT%2F%EA%B3%BC%ED%95%99',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      description: '최신 기술 동향과 과학 뉴스를 다룬 영상입니다.'
+    },
+    {
+      id: 5,
+      category: '스포츠',
+      title: '스포츠 하이라이트',
+      thumbnail: 'https://via.placeholder.com/800x450/ea580c/ffffff?text=%EC%8A%A4%ED%8F%AC%EC%B8%A0',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+      description: '주요 스포츠 경기 결과와 이슈를 모은 영상입니다.'
+    },
+    {
+      id: 6,
+      category: '국제',
+      title: '국제 뉴스 브리핑',
+      thumbnail: 'https://via.placeholder.com/800x450/0891b2/ffffff?text=%EA%B5%AD%EC%A0%9C+%EB%89%B4%EC%8A%A4',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+      description: '글로벌 주요 뉴스를 정리한 영상입니다.'
+    }
+  ];
+
+  // 영상 슬라이드 상태
+  const [currentVideoSlide, setCurrentVideoSlide] = useState(0);
+  const totalVideoSlides = 6;
+
+  // 영상 재생 상태 관리 (각 영상 ID별로 재생 여부)
+  const [playingVideos, setPlayingVideos] = useState({});
+
+  // 영상 재생 토글 함수
+  const handleVideoPlay = (videoId) => {
+    setPlayingVideos((prev) => ({
+      ...prev,
+      [videoId]: !prev[videoId]
+    }));
+  };
+
+  // 영상 자동 슬라이드 (10초마다, 단 영상 재생 중이면 건너뜀)
+  useEffect(() => {
+    const videoTimer = setInterval(() => {
+      setCurrentVideoSlide((prev) => {
+        // 현재 슬라이드의 영상이 재생 중인지 확인
+        const currentVideoId = videoData[prev].id;
+        const isCurrentVideoPlaying = playingVideos[currentVideoId];
+
+        // 영상이 재생 중이면 자동 슬라이드 건너뛰기
+        if (isCurrentVideoPlaying) {
+          return prev;
+        }
+
+        // 영상이 재생 중이 아니면 다음 슬라이드로 이동
+        const nextSlide = prev === totalVideoSlides - 1 ? 0 : prev + 1;
+        return nextSlide;
+      });
+    }, 10000);
+    return () => clearInterval(videoTimer);
+  }, [playingVideos]);
+
+  // 새로운 소식 탭 상태
+  const [newsTab, setNewsTab] = useState('전체');
+  const [newsList, setNewsList] = useState([]);
+  const [isLoadingNewsSection, setIsLoadingNewsSection] = useState(false);
 
   // 보도자료 탭 상태 (사용자 관심 카테고리)
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -17,235 +111,82 @@ const MainPage = () => {
   // 로딩 상태
   const [isLoadingNews, setIsLoadingNews] = useState(false);
 
-  // 무한 스크롤 관련 상태
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const newsContainerRef = useRef(null);
-  const videoAreaRef = useRef(null);
-  const sidebarRef = useRef(null);
-  const [sidebarHeight, setSidebarHeight] = useState('auto');
-  const pageSize = 10; // 한 번에 가져올 뉴스 개수 (카테고리별 최대 10개)
-
-  // 비디오 캐러셀 관련 상태
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const videoCarouselRef = useRef(null);
-  const autoPlayIntervalRef = useRef(null);
-  const [videoLoadErrors, setVideoLoadErrors] = useState({});
-  const [videoLoaded, setVideoLoaded] = useState({});
-
-  // 카테고리별 비디오 데이터 (더미)
-  const videoCategories = ['politics', 'economy', 'culture', 'it', 'society', 'world'];
-  const videoData = {
-    politics: {
-      title: '정치 뉴스',
-      content: '최신 정치 동향과 정책 변화를 확인하세요',
-      color: '#1e40af', // 파란색
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' // 더미 비디오 URL
-    },
-    economy: {
-      title: '경제 뉴스',
-      content: '시장 동향과 경제 지표를 실시간으로 확인하세요',
-      color: '#059669', // 초록색
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'
-    },
-    culture: {
-      title: '문화 뉴스',
-      content: '다양한 문화 소식과 이벤트를 만나보세요',
-      color: '#7c3aed', // 보라색
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
-    },
-    it: {
-      title: 'IT/과학 뉴스',
-      content: '최신 기술 트렌드와 과학 뉴스를 확인하세요',
-      color: '#dc2626', // 빨간색
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
-    },
-    society: {
-      title: '사회 뉴스',
-      content: '사회 이슈와 사람들의 이야기를 전합니다',
-      color: '#ea580c', // 주황색
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
-    },
-    world: {
-      title: '국제 뉴스',
-      content: '전 세계 주요 뉴스와 국제 정세를 파악하세요',
-      color: '#0891b2', // 청록색
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
-    }
-  };
-
-  // 특정 카테고리의 뉴스만 가져오는 함수 (초기 로드) - 최대 10개만
-  const fetchNewsByCategory = useCallback(async (category, reset = true, currentCount = 0) => {
+  // 특정 카테고리의 뉴스만 가져오는 함수
+  const fetchNewsByCategory = async (category) => {
     if (!category) return;
 
     try {
-      if (reset) {
-        setIsLoadingNews(true);
-        setHasMore(false); // 10개 제한이므로 더 이상 로드하지 않음
-      } else {
-        setIsLoadingMore(true);
-      }
-
-      // 카테고리별 최대 10개만 가져오기
-      const limit = 10;
-
-      console.log(`[DEBUG] 카테고리 조회 시작: category="${category}", limit=${limit}`);
-      const newsData = await getNewsByCategory(category, limit);
+      setIsLoadingNews(true);
+      console.log(`[DEBUG] 카테고리 조회 시작: category="${category}"`);
+      const newsData = await getNewsByCategory(category, 50);
       console.log(`[DEBUG] 서버 응답 데이터:`, newsData);
-
       if (newsData) {
-        // 최대 10개만 표시
-        const limitedNews = (newsData || []).slice(0, 10);
-
-        if (reset) {
-          setBriefingNews(limitedNews);
-        } else {
-          // 추가 로드는 비활성화 (10개 제한)
-          setBriefingNews(prevNews => prevNews);
-        }
-
-        // 항상 더 이상 데이터가 없음 (10개 제한)
-        setHasMore(false);
-
-        console.log(`카테고리 "${category}" (${getCategoryDisplayName(category)}) 뉴스 조회 완료:`, limitedNews.length, '개');
-        if (limitedNews.length === 0 && reset) {
+        setBriefingNews(newsData || []);
+        console.log(`카테고리 "${category}" (${getCategoryDisplayName(category)}) 뉴스 조회 완료:`, newsData.length, '개');
+        if (newsData.length === 0) {
           console.warn(`[경고] 카테고리 "${category}"에 대한 뉴스가 없습니다.`);
         }
       }
     } catch (error) {
       console.error(`카테고리 "${category}" 뉴스 조회 실패:`, error);
-      setHasMore(false);
     } finally {
       setIsLoadingNews(false);
-      setIsLoadingMore(false);
     }
-  }, []);
+  };
 
-  // 추가 뉴스 로드 함수
-  const loadMoreNews = useCallback(() => {
-    if (!selectedCategory || isLoadingMore || !hasMore) return;
-    fetchNewsByCategory(selectedCategory, false, briefingNews.length);
-  }, [selectedCategory, isLoadingMore, hasMore, fetchNewsByCategory, briefingNews.length]);
+  // 새로운 소식 페이지네이션
+  const [newsPage, setNewsPage] = useState(1);
+  const totalNewsPages = 2;
 
-  // 스크롤 이벤트 핸들러 (10개 제한으로 인해 비활성화)
+  // 새로운 소식 데이터 가져오기 (카테고리별)
   useEffect(() => {
-    // 카테고리별 10개 제한이므로 무한 스크롤 비활성화
-    // const container = newsContainerRef.current;
-    // if (!container) return;
-
-    // const handleScroll = () => {
-    //   const { scrollTop, scrollHeight, clientHeight } = container;
-    //   // 스크롤이 하단 100px 이내에 도달하면 다음 데이터 로드
-    //   if (scrollHeight - scrollTop - clientHeight < 100) {
-    //     loadMoreNews();
-    //   }
-    // };
-
-    // container.addEventListener('scroll', handleScroll);
-    // return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // 비디오 영역 높이에 맞춰 관심 보도자료 영역 높이 조정
-  useEffect(() => {
-    const updateSidebarHeight = () => {
-      if (videoAreaRef.current && sidebarRef.current) {
-        // 데스크톱에서만 높이 고정
-        if (window.innerWidth >= 1024) {
-          const videoHeight = videoAreaRef.current.offsetHeight;
-          setSidebarHeight(`${videoHeight}px`);
+    const fetchNewsForSection = async () => {
+      try {
+        setIsLoadingNewsSection(true);
+        let data = [];
+        if (newsTab === '전체') {
+          // '전체'일 경우 사용자 관심 카테고리 전체 뉴스 가져오기
+          data = await getNewsByUserCategories(6);
         } else {
-          setSidebarHeight('auto');
+          // 특정 구 카테고리 뉴스 가져오기
+          data = await getNewsByCategory(newsTab, 6);
         }
+        setNewsList(data || []);
+      } catch (error) {
+        console.error('새로운 소식 조회 실패:', error);
+      } finally {
+        setIsLoadingNewsSection(false);
       }
     };
 
-    // 초기 높이 설정
-    updateSidebarHeight();
+    fetchNewsForSection();
+  }, [newsTab]);
 
-    // 리사이즈 이벤트 리스너 추가
-    window.addEventListener('resize', updateSidebarHeight);
-
-    // 짧은 지연 후 다시 확인 (레이아웃 완료 후)
-    const timer = setTimeout(updateSidebarHeight, 100);
-
-    return () => {
-      window.removeEventListener('resize', updateSidebarHeight);
-      clearTimeout(timer);
-    };
-  }, []);
-
-  // 비디오 자동 재생 및 자동 스크롤
-  useEffect(() => {
-    // 10초마다 다음 비디오로 자동 전환
-    autoPlayIntervalRef.current = setInterval(() => {
-      setCurrentVideoIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % videoCategories.length;
-        return nextIndex;
-      });
-    }, 10000); // 10초
-
-    return () => {
-      if (autoPlayIntervalRef.current) {
-        clearInterval(autoPlayIntervalRef.current);
-      }
-    };
-  }, [videoCategories.length]);
-
-  // 활성화된 비디오 재생
-  useEffect(() => {
-    const videoElements = document.querySelectorAll('.video-carousel-item');
-    videoElements.forEach((video, index) => {
-      if (index === currentVideoIndex) {
-        const videoEl = video.querySelector('video');
-        if (videoEl) {
-          videoEl.play().catch(err => {
-            console.log('비디오 자동 재생 실패:', err);
-          });
-        }
-      } else {
-        const videoEl = video.querySelector('video');
-        if (videoEl) {
-          videoEl.pause();
-        }
-      }
-    });
-  }, [currentVideoIndex]);
-
-  // 비디오 인덱스 변경 시 스크롤 애니메이션
-  useEffect(() => {
-    if (videoCarouselRef.current) {
-      const scrollPosition = currentVideoIndex * videoCarouselRef.current.offsetWidth;
-      videoCarouselRef.current.scrollTo({
-        left: scrollPosition,
-        behavior: 'smooth'
-      });
+  // 새로운 소식 데이터
+  const newsData = [
+    {
+      id: 1,
+      image: 'https://images.unsplash.com/photo-1517849845537-4d58f0e71329?w=400&h=200&fit=crop',
+      title: '2026 군사력 랭킹 나왔다 \'NO 핵\' 한국 세계 5위',
+      subtitle: '[영상] 핵무기 없는 한국 \'군사력 파워\' 3년 연속 세계 5위…북한 31위',
+      duration: '02:47'
+    },
+    {
+      id: 2,
+      image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=200&fit=crop',
+      title: '숨진 주인 옆에서 4일 인도가 울었다',
+      subtitle: '[영상] 눈보라에 갇혀 숨진 주인...나흘 동안 곁 지킨 반려견',
+      duration: '01:48'
+    },
+    {
+      id: 3,
+      image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=200&fit=crop',
+      title: '마트주차장에 \'시민 어벤져스\' 119보다 빨랐다!',
+      subtitle: '[영상] "차 밑에 사람이 깔렸어요"...여기저기서 우르르 달려와 \'번쩍\'',
+      duration: '02:02'
     }
-  }, [currentVideoIndex]);
+  ];
 
-  // 비디오 네비게이션 함수
-  const goToVideo = (index) => {
-    setCurrentVideoIndex(index);
-    // 자동 재생 타이머 리셋
-    if (autoPlayIntervalRef.current) {
-      clearInterval(autoPlayIntervalRef.current);
-    }
-    autoPlayIntervalRef.current = setInterval(() => {
-      setCurrentVideoIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % videoCategories.length;
-        return nextIndex;
-      });
-    }, 10000); // 10초
-  };
-
-  const goToPreviousVideo = () => {
-    const prevIndex = (currentVideoIndex - 1 + videoCategories.length) % videoCategories.length;
-    goToVideo(prevIndex);
-  };
-
-  const goToNextVideo = () => {
-    const nextIndex = (currentVideoIndex + 1) % videoCategories.length;
-    goToVideo(nextIndex);
-  };
 
   // 시장 데이터 상태
   const [marketData, setMarketData] = useState({
@@ -290,19 +231,20 @@ const MainPage = () => {
         const categories = await getMyCategories();
         setUserCategories(categories || []);
 
-        // 첫 번째 카테고리를 기본 선택하고 10개 제한으로 데이터 가져오기
-        if (categories && categories.length > 0) {
-          const firstCategory = categories[0];
-          setSelectedCategory(firstCategory);
-          console.log('선택된 카테고리:', firstCategory);
-          console.log('사용자 관심 카테고리:', categories);
+        // 사용자 관심 카테고리별 뉴스 조회
+        const newsData = await getNewsByUserCategories(50); // 충분한 개수 조회
+        if (newsData) {
+          setBriefingNews(newsData || []);
 
-          // 첫 번째 카테고리의 뉴스 10개만 가져오기
-          const newsData = await getNewsByCategory(firstCategory, 10);
-          if (newsData) {
-            const limitedNews = (newsData || []).slice(0, 10);
-            setBriefingNews(limitedNews);
-            console.log('받아온 뉴스 데이터:', limitedNews);
+          // 디버깅: 받아온 데이터 확인
+          console.log('받아온 뉴스 데이터:', newsData);
+          console.log('뉴스 카테고리 목록:', newsData.map(n => n.category));
+
+          // 첫 번째 카테고리를 기본 선택
+          if (categories && categories.length > 0) {
+            setSelectedCategory(categories[0]);
+            console.log('선택된 카테고리:', categories[0]);
+            console.log('사용자 관심 카테고리:', categories);
           }
         }
       } catch (error) {
@@ -394,102 +336,358 @@ const MainPage = () => {
     return '';
   };
 
+  const handlePrevVideoSlide = () => {
+    setCurrentVideoSlide((prev) => {
+      const currentVideoId = videoData[prev].id;
+      // 현재 영상 재생 중지
+      setPlayingVideos((prevVideos) => ({
+        ...prevVideos,
+        [currentVideoId]: false
+      }));
+      return prev === 0 ? totalVideoSlides - 1 : prev - 1;
+    });
+  };
 
+  const handleNextVideoSlide = () => {
+    setCurrentVideoSlide((prev) => {
+      const currentVideoId = videoData[prev].id;
+      // 현재 영상 재생 중지
+      setPlayingVideos((prevVideos) => ({
+        ...prevVideos,
+        [currentVideoId]: false
+      }));
+      return prev === totalVideoSlides - 1 ? 0 : prev + 1;
+    });
+  };
+
+  const handlePrevNewsPage = () => {
+    setNewsPage((prev) => (prev === 1 ? totalNewsPages : prev - 1));
+  };
+
+  const handleNextNewsPage = () => {
+    setNewsPage((prev) => (prev === totalNewsPages ? 1 : prev + 1));
+  };
 
   return (
     <div className="min-h-screen bg-white">
 
+      {/* 메인 배너/영상 섹션 */}
+      <section className="bg-gray-800 text-white py-6 px-4 md:px-8 min-h-[600px] relative flex items-start">
+        <div className="max-w-7xl mx-auto w-full pt-8 mt-[50px]">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm text-gray-300">그룹소개</span>
+            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+
+          <div className="relative">
+            {/* 뉴스 요약 영상 섹션 - 가로 슬라이드 */}
+            <div>
+              <div className="relative overflow-hidden">
+                {/* 영상 카드 컨테이너 */}
+                <div
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${currentVideoSlide * 100}%)` }}
+                >
+                  {videoData.map((video) => (
+                    <div
+                      key={video.id}
+                      className="min-w-full shrink-0"
+                    >
+                      <div className="relative bg-gray-700 rounded-lg overflow-hidden">
+                        {/* 영상 플레이어 또는 썸네일 */}
+                        <div className="relative aspect-video bg-black">
+                          {playingVideos[video.id] ? (
+                            <video
+                              src={video.videoUrl}
+                              className="w-full h-full object-contain"
+                              controls
+                              autoPlay
+                              preload="metadata"
+                            >
+                              브라우저가 비디오 태그를 지원하지 않습니다.
+                            </video>
+                          ) : (
+                            <div
+                              className="relative w-full h-full cursor-pointer group"
+                              onClick={() => handleVideoPlay(video.id)}
+                            >
+                              <img
+                                src={video.thumbnail}
+                                alt={video.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                                <div className="text-center">
+                                  <div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:bg-opacity-100 transition-all">
+                                    <svg className="w-8 h-8 text-gray-800 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                  </div>
+                                  <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold mb-2">
+                                    {video.category}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* 카테고리 배지 (비디오 재생 중일 때만) */}
+                          {playingVideos[video.id] && (
+                            <div className="absolute top-4 left-4 z-10">
+                              <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                {video.category}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 영상 정보 */}
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold mb-2">{video.title}</h3>
+                          <p className="text-gray-300 text-sm">{video.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 좌우 네비게이션 버튼 */}
+                <button
+                  onClick={handlePrevVideoSlide}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full transition-all z-10"
+                  aria-label="이전 영상"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleNextVideoSlide}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full transition-all z-10"
+                  aria-label="다음 영상"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* 영상 인디케이터 */}
+              <div className="flex items-center justify-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold">
+                    {String(currentVideoSlide + 1).padStart(2, '0')}
+                  </span>
+                  <span className="text-gray-400">/</span>
+                  <span className="text-lg text-gray-400">
+                    {String(totalVideoSlides).padStart(2, '0')}
+                  </span>
+                </div>
+              </div>
+
+              {/* 카테고리 인디케이터 */}
+              <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                {videoData.map((video, index) => (
+                  <button
+                    key={video.id}
+                    onClick={() => {
+                      // 현재 영상 재생 중지
+                      const currentVideoId = videoData[currentVideoSlide].id;
+                      setPlayingVideos((prevVideos) => ({
+                        ...prevVideos,
+                        [currentVideoId]: false
+                      }));
+                      setCurrentVideoSlide(index);
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm transition-colors ${currentVideoSlide === index
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                      }`}
+                  >
+                    {video.category}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 새로운 소식 섹션 */}
+      <section className="bg-gray-100 py-8 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">새로운 소식</h2>
+          </div>
+
+          {/* 탭 */}
+          <div className="flex gap-4 mb-6 flex-wrap">
+            <button
+              onClick={() => setNewsTab('전체')}
+              className={`px-4 py-2 rounded transition-colors ${newsTab === '전체'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-200'
+                }`}
+            >
+              전체
+            </button>
+            {userCategories.length > 0 ? (
+              userCategories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setNewsTab(category)}
+                  className={`px-4 py-2 rounded transition-colors ${newsTab === category
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  {getCategoryDisplayName(category)}
+                </button>
+              ))
+            ) : (
+              <span className="text-sm text-gray-400 italic">관심 카테고리를 설정하면 맞춤 뉴스를 볼 수 있습니다.</span>
+            )}
+          </div>
+
+          {/* 뉴스 카드 그리드 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {isLoadingNewsSection ? (
+              <div className="col-span-3 text-center py-12 text-gray-500">
+                뉴스를 불러오는 중...
+              </div>
+            ) : newsList.length > 0 ? (
+              newsList.slice(0, 3).map((news) => (
+                <Card
+                  key={news.id}
+                  className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => {
+                    if (news.originalUrl) {
+                      window.open(news.originalUrl, '_blank');
+                    }
+                  }}
+                >
+                  <div className="relative">
+                    <img
+                      src={news.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=200&fit=crop'}
+                      alt={news.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                      {getCategoryDisplayName(news.category)}
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-bold text-lg mb-2 line-clamp-2">{news.title}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-2">{news.summary}</p>
+                    <div className="mt-4 flex justify-between items-center">
+                      <span className="text-xs text-gray-400">
+                        {news.date ? new Date(news.date).toLocaleDateString() : ''}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12 text-gray-500">
+                해당 카테고리의 뉴스가 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* 경제 데이터 */}
-      <section className="bg-white border-y border-gray-200 py-3 sm:py-4 px-2 sm:px-4 md:px-8 overflow-hidden mt-16 sm:mt-20">
+      <section className="bg-white border-y border-gray-200 py-4 px-4 md:px-8 overflow-hidden">
         <div className="max-w-7xl mx-auto relative">
           {isLoading ? (
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
               <span>시장 데이터를 불러오는 중...</span>
             </div>
           ) : (
             <div className="flex items-center">
-              <span className="font-semibold text-gray-900 bg-white z-10 pr-2 sm:pr-4 whitespace-nowrap text-[10px] sm:text-xs">경제 &gt;</span>
-              <div className="flex-1 overflow-hidden relative h-5 sm:h-6">
-                <div className="flex items-center gap-4 sm:gap-6 md:gap-8 animate-marquee whitespace-nowrap absolute">
+              <span className="font-semibold text-gray-900 bg-white z-10 pr-4 whitespace-nowrap">경제 &gt;</span>
+              <div className="flex-1 overflow-hidden relative h-6">
+                <div className="flex items-center gap-8 animate-marquee whitespace-nowrap absolute">
                   {/* 첫 번째 세트 */}
-                  <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
+                  <div className="flex items-center gap-8">
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">S&P 500</span>
-                      <span className={`${getEconomyColor(economicData.chosun.change)} font-medium text-[10px] sm:text-xs`}>{economicData.chosun.value}</span>
+                      <span className="text-gray-700">S&P 500</span>
+                      <span className={`${getEconomyColor(economicData.chosun.change)} font-medium`}>{economicData.chosun.value}</span>
                       {economicData.chosun.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.chosun.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.chosun.change)}`}>
                           {economicData.chosun.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">달러(USD)</span>
-                      <span className={`${getEconomyColor(economicData.dollar.change)} font-medium text-[10px] sm:text-xs`}>{economicData.dollar.value}</span>
+                      <span className="text-gray-700">달러(USD)</span>
+                      <span className={`${getEconomyColor(economicData.dollar.change)} font-medium`}>{economicData.dollar.value}</span>
                       {economicData.dollar.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.dollar.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.dollar.change)}`}>
                           {economicData.dollar.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">위안(CNY)</span>
-                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yuan.value}</span>
+                      <span className="text-gray-700">위안(CNY)</span>
+                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium`}>{economicData.yuan.value}</span>
                       {economicData.yuan.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yuan.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.yuan.change)}`}>
                           {economicData.yuan.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">유로(EUR)</span>
-                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium text-[10px] sm:text-xs`}>{economicData.euro.value}</span>
+                      <span className="text-gray-700">유로(EUR)</span>
+                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium`}>{economicData.euro.value}</span>
                       {economicData.euro.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.euro.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.euro.change)}`}>
                           {economicData.euro.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">파운드(GBP)</span>
-                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium text-[10px] sm:text-xs`}>{economicData.pound.value}</span>
+                      <span className="text-gray-700">파운드(GBP)</span>
+                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium`}>{economicData.pound.value}</span>
                       {economicData.pound.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.pound.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.pound.change)}`}>
                           {economicData.pound.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">엔(JPY)</span>
-                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yen.value}</span>
+                      <span className="text-gray-700">엔(JPY)</span>
+                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium`}>{economicData.yen.value}</span>
                       {economicData.yen.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yen.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.yen.change)}`}>
                           {economicData.yen.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피</span>
-                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi.value}</span>
+                      <span className="text-gray-700">코스피</span>
+                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium`}>{economicData.kospi.value}</span>
                       {economicData.kospi.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
                           {economicData.kospi.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">코스닥</span>
-                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kosdaq.value}</span>
+                      <span className="text-gray-700">코스닥</span>
+                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium`}>{economicData.kosdaq.value}</span>
                       {economicData.kosdaq.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
                           {economicData.kosdaq.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피200</span>
-                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi200.value}</span>
+                      <span className="text-gray-700">코스피200</span>
+                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium`}>{economicData.kospi200.value}</span>
                       {economicData.kospi200.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
                           {economicData.kospi200.change}
                         </span>
                       )}
@@ -497,84 +695,84 @@ const MainPage = () => {
                   </div>
 
                   {/* 무한 루프를 위한 두 번째 동일 세트 */}
-                  <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
+                  <div className="flex items-center gap-8">
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">S&P 500</span>
-                      <span className={`${getEconomyColor(economicData.chosun.change)} font-medium text-[10px] sm:text-xs`}>{economicData.chosun.value}</span>
+                      <span className="text-gray-700">S&P 500</span>
+                      <span className={`${getEconomyColor(economicData.chosun.change)} font-medium`}>{economicData.chosun.value}</span>
                       {economicData.chosun.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.chosun.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.chosun.change)}`}>
                           {economicData.chosun.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">달러(USD)</span>
-                      <span className={`${getEconomyColor(economicData.dollar.change)} font-medium text-[10px] sm:text-xs`}>{economicData.dollar.value}</span>
+                      <span className="text-gray-700">달러(USD)</span>
+                      <span className={`${getEconomyColor(economicData.dollar.change)} font-medium`}>{economicData.dollar.value}</span>
                       {economicData.dollar.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.dollar.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.dollar.change)}`}>
                           {economicData.dollar.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">위안(CNY)</span>
-                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yuan.value}</span>
+                      <span className="text-gray-700">위안(CNY)</span>
+                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium`}>{economicData.yuan.value}</span>
                       {economicData.yuan.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yuan.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.yuan.change)}`}>
                           {economicData.yuan.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">유로(EUR)</span>
-                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium text-[10px] sm:text-xs`}>{economicData.euro.value}</span>
+                      <span className="text-gray-700">유로(EUR)</span>
+                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium`}>{economicData.euro.value}</span>
                       {economicData.euro.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.euro.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.euro.change)}`}>
                           {economicData.euro.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">파운드(GBP)</span>
-                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium text-[10px] sm:text-xs`}>{economicData.pound.value}</span>
+                      <span className="text-gray-700">파운드(GBP)</span>
+                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium`}>{economicData.pound.value}</span>
                       {economicData.pound.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.pound.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.pound.change)}`}>
                           {economicData.pound.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">엔(JPY)</span>
-                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yen.value}</span>
+                      <span className="text-gray-700">엔(JPY)</span>
+                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium`}>{economicData.yen.value}</span>
                       {economicData.yen.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yen.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.yen.change)}`}>
                           {economicData.yen.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피</span>
-                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi.value}</span>
+                      <span className="text-gray-700">코스피</span>
+                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium`}>{economicData.kospi.value}</span>
                       {economicData.kospi.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
                           {economicData.kospi.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">코스닥</span>
-                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kosdaq.value}</span>
+                      <span className="text-gray-700">코스닥</span>
+                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium`}>{economicData.kosdaq.value}</span>
                       {economicData.kosdaq.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
+                        <span className={`text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
                           {economicData.kosdaq.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피200</span>
-                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi200.value}</span>
+                      <span className="text-gray-700">코스피200</span>
+                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium`}>{economicData.kospi200.value}</span>
                       {economicData.kospi200.change && (
-                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
+                        <span className={`text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
                           {economicData.kospi200.change}
                         </span>
                       )}
@@ -583,7 +781,7 @@ const MainPage = () => {
                 </div>
               </div>
               {marketData.updatedAt && (
-                <span className="text-[9px] sm:text-[10px] text-gray-400 bg-white z-10 pl-2 sm:pl-4 whitespace-nowrap">
+                <span className="text-[10px] text-gray-400 bg-white z-10 pl-4 whitespace-nowrap">
                   {new Date(marketData.updatedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -605,267 +803,108 @@ const MainPage = () => {
         `}</style>
       </section>
 
-      {/* 그룹소개 & 관심 보도자료 섹션 */}
-      <section className="bg-white py-4 sm:py-6 md:py-8 px-2 sm:px-4 md:px-8">
-        <div className="max-w-full mx-auto grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 sm:gap-6 lg:items-start">
-          {/* 왼쪽: 비디오 영역 */}
-          <div ref={videoAreaRef} className="relative w-full">
-            {/* 카테고리 필터 버튼 */}
-            <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 scrollbar-hide">
-              {videoCategories.map((category, index) => (
-                <button
-                  key={category}
-                  onClick={() => goToVideo(index)}
-                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${currentVideoIndex === index
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                >
-                  {getCategoryDisplayName(category)}
-                </button>
-              ))}
-            </div>
-
-            {/* 비디오 캐러셀 */}
-            <div className="relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
-              <div
-                ref={videoCarouselRef}
-                className="flex overflow-x-hidden scroll-smooth"
-                style={{ scrollBehavior: 'smooth' }}
-              >
-                {videoCategories.map((category, index) => {
-                  const video = videoData[category];
-                  const isActive = currentVideoIndex === index;
-                  const hasError = videoLoadErrors[category];
-                  const isLoaded = videoLoaded[category];
-
-                  return (
-                    <div
-                      key={category}
-                      className="video-carousel-item relative w-full flex-shrink-0 aspect-video sm:aspect-[21/9]"
-                      style={{ backgroundColor: video.color }}
-                    >
-                      {/* 비디오 플레이어 - 항상 렌더링하되 활성화된 경우만 표시 */}
-                      <video
-                        className="w-full h-full object-cover"
-                        muted
-                        loop
-                        playsInline
-                        preload="auto"
-                        style={{
-                          display: isActive ? 'block' : 'none',
-                          zIndex: 1,
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%'
-                        }}
-                        onLoadedData={() => {
-                          setVideoLoaded(prev => ({ ...prev, [category]: true }));
-                        }}
-                        onCanPlay={() => {
-                          setVideoLoaded(prev => ({ ...prev, [category]: true }));
-                        }}
-                        onError={(e) => {
-                          console.error('비디오 로드 실패:', category, e);
-                          setVideoLoadErrors(prev => ({ ...prev, [category]: true }));
-                        }}
-                      >
-                        <source src={video.videoUrl} type="video/mp4" />
-                        Your browser does not support the video tag.
-                      </video>
-
-                      {/* 비디오 플레이스홀더 (비디오 로드 실패 시에만 표시) */}
-                      {hasError && (
-                        <div
-                          className="absolute inset-0 flex items-center justify-center"
-                          style={{
-                            backgroundColor: video.color,
-                            zIndex: 2
-                          }}
-                        >
-                          <div className="text-center text-white px-2">
-                            <p className="text-sm sm:text-lg md:text-xl font-medium mb-1 sm:mb-2">
-                              {getCategoryDisplayName(category)} 영상 미리보기
-                            </p>
-                            <p className="text-xs sm:text-sm opacity-80">10초</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 로딩 중 표시 */}
-                      {isActive && !isLoaded && !hasError && (
-                        <div
-                          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30"
-                          style={{ zIndex: 3 }}
-                        >
-                          <div className="text-white text-center px-2">
-                            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white mx-auto mb-1 sm:mb-2"></div>
-                            <p className="text-xs sm:text-sm">영상 로딩 중...</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 좌우 화살표 버튼 */}
-              <button
-                onClick={goToPreviousVideo}
-                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-all z-10"
-                aria-label="이전 비디오"
-              >
-                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={goToNextVideo}
-                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-all z-10"
-                aria-label="다음 비디오"
-              >
-                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-
-            {/* 비디오 정보 (Title & Contents) */}
-            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">
-                {videoData[videoCategories[currentVideoIndex]]?.title || 'Title'}
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-600">
-                {videoData[videoCategories[currentVideoIndex]]?.content || 'Contents'}
-              </p>
-            </div>
-          </div>
-
-          {/* 오른쪽: 관심 보도자료 사이드바 */}
-          <div ref={sidebarRef} className="bg-white rounded-lg flex flex-col min-h-0 lg:sticky lg:top-4" style={{ height: sidebarHeight }}>
-            <div className="flex flex-col h-full min-h-0">
-              <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">관심 보도자료</h2>
-              </div>
-
-              {/* 카테고리 탭 */}
-              <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 scrollbar-hide flex-shrink-0">
+      {/* 보도자료 및 사이드바 섹션 */}
+      <section className="bg-gray-100 py-8 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 보도자료 섹션 (왼쪽 2/3) */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-4 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">관심 보도자료</h2>
+              <div className="flex gap-2 flex-wrap">
                 {userCategories.length > 0 ? (
                   userCategories.map((category) => (
                     <button
                       key={category}
                       onClick={() => {
                         setSelectedCategory(category);
-                        fetchNewsByCategory(category, true);
+                        // 카테고리 클릭 시 해당 카테고리 뉴스만 서버에서 가져오기
+                        fetchNewsByCategory(category);
                       }}
-                      className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category
+                      className={`px-4 py-2 rounded transition-colors ${selectedCategory === category
                         ? 'bg-gray-800 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       {getCategoryDisplayName(category)}
                     </button>
                   ))
                 ) : (
-                  <span className="text-xs sm:text-sm text-gray-500">관심 카테고리를 선택해주세요</span>
+                  <span className="text-sm text-gray-500">관심 카테고리를 선택해주세요</span>
                 )}
               </div>
-
-              {/* 뉴스 리스트 - 무한 스크롤 적용 */}
-              {isLoadingNews ? (
-                <div className="flex items-center justify-center py-12 flex-1">
-                  <span className="text-gray-500 text-sm">뉴스를 불러오는 중...</span>
-                </div>
-              ) : (
-                <div
-                  ref={newsContainerRef}
-                  className="space-y-2 sm:space-y-3 overflow-y-auto flex-1 min-h-0 pr-2"
-                >
-                  {selectedCategory ? (
-                    briefingNews.length > 0 ? (
-                      <>
-                        {briefingNews.map((news) => {
-                          // 더미 이미지 URL (이미지가 없을 경우 사용)
-                          const dummyImageUrl = `https://via.placeholder.com/120x80/4B5563/FFFFFF?text=${encodeURIComponent(news.category || 'News')}`;
-                          const imageUrl = news.imageUrl || news.thumbnailUrl || dummyImageUrl;
-
-                          return (
-                            <div
-                              key={news.id}
-                              className="flex gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer group bg-white"
-                              onClick={() => {
-                                if (news.originalUrl) {
-                                  window.open(news.originalUrl, '_blank');
-                                }
-                              }}
-                            >
-                              {/* 이미지 영역 */}
-                              <div className="flex-shrink-0 w-24 h-20 sm:w-28 sm:h-24 rounded overflow-hidden bg-gray-100">
-                                <img
-                                  src={imageUrl}
-                                  alt={news.title || '뉴스 이미지'}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                  onError={(e) => {
-                                    // 이미지 로드 실패 시 더미 이미지로 대체
-                                    e.target.src = dummyImageUrl;
-                                  }}
-                                />
-                              </div>
-
-                              {/* 텍스트 영역 */}
-                              <div className="flex-1 min-w-0 flex flex-col justify-between">
-                                <div>
-                                  <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
-                                    {news.title}
-                                  </h3>
-                                  {news.summary && (
-                                    <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2 leading-relaxed">
-                                      {news.summary.replace(/\[서론\]|\[본론\]|\[결론\]/g, '').trim()}
-                                    </p>
-                                  )}
-                                </div>
-                                {news.date && (
-                                  <p className="text-[10px] sm:text-xs text-gray-400 mt-auto">
-                                    {(() => {
-                                      try {
-                                        const date = new Date(news.date);
-                                        if (isNaN(date.getTime())) return '';
-                                        return date.toLocaleDateString('ko-KR', {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric'
-                                        });
-                                      } catch {
-                                        return news.date;
-                                      }
-                                    })()}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {briefingNews.length >= 10 && (
-                          <div className="flex items-center justify-center py-4">
-                            <span className="text-gray-400 text-xs sm:text-sm">카테고리별 최대 10개까지 표시됩니다</span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-12 text-gray-500 text-sm">
-                        해당 카테고리의 뉴스가 없습니다
-                      </div>
-                    )
-                  ) : (
-                    <div className="text-center py-12 text-gray-500 text-sm">
-                      카테고리를 선택해주세요
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
+
+            {/* 뉴스 리스트 (3x3 그리드) */}
+            {isLoadingNews ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="text-gray-500">뉴스를 불러오는 중...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {selectedCategory ? (
+                  briefingNews.length > 0 ? (
+                    briefingNews.slice(0, 9).map((news) => (
+                      <div
+                        key={news.id}
+                        className="bg-white rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => {
+                          if (news.originalUrl) {
+                            window.open(news.originalUrl, '_blank');
+                          }
+                        }}
+                      >
+                        <div className="flex flex-col gap-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-sm mb-2 line-clamp-2">{news.title}</h3>
+                            {news.summary && (
+                              <p className="text-xs text-gray-600 mb-2 line-clamp-3">{news.summary}</p>
+                            )}
+                            {news.date && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                {(() => {
+                                  try {
+                                    const date = new Date(news.date);
+                                    if (isNaN(date.getTime())) return '';
+                                    return date.toLocaleDateString('ko-KR', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    });
+                                  } catch {
+                                    return news.date;
+                                  }
+                                })()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-3 text-center py-12 text-gray-500">
+                      해당 카테고리의 뉴스가 없습니다
+                    </div>
+                  )
+                ) : (
+                  <div className="col-span-3 text-center py-12 text-gray-500">
+                    카테고리를 선택해주세요
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 사이드바 (오른쪽 1/3) */}
+          <div className="lg:col-span-1">
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">새로운 소식</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  구독서비스에 대한 설명입니다
+                </p>
+                <Button className="w-full">버튼</Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

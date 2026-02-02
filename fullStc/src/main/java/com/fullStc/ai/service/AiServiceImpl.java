@@ -26,92 +26,71 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AiServiceImpl implements AiService {
-
+    
     private final RestTemplate restTemplate;
-
+    
     /** Python FastAPI 서버 URL */
     @Value("${ai.python.server.url:http://localhost:8000}")
     private String pythonServerUrl;
-
+    
     @Override
     public ChatResponseDTO chat(ChatRequestDTO requestDTO) {
-        log.info("AI 채팅 요청: {}", requestDTO != null ? requestDTO.getMessage() : "null");
-
-        // 요청 데이터 검증
-        if (requestDTO == null || requestDTO.getMessage() == null || requestDTO.getMessage().trim().isEmpty()) {
-            log.error("AI 채팅 요청 데이터가 유효하지 않습니다: {}", requestDTO);
-            throw new IllegalArgumentException("메시지를 입력해주세요.");
-        }
-
+        log.info("AI 채팅 요청: {}", requestDTO.getMessage());
+        
         try {
             // Python 서버로 전송할 요청 생성
             PythonChatRequestDTO pythonRequest = convertToPhythonRequest(requestDTO);
-            log.debug("Python 요청 데이터: message={}, history size={}",
-                    pythonRequest.getMessage(),
-                    pythonRequest.getConversationHistory() != null ? pythonRequest.getConversationHistory().size() : 0);
-
+            
             // HTTP 헤더 설정
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
+            
             // HTTP 요청 생성
             HttpEntity<PythonChatRequestDTO> httpEntity = new HttpEntity<>(pythonRequest, headers);
-
+            
             // Python 서버에 POST 요청
             String url = pythonServerUrl + "/chat";
-            log.info("Python 서버 요청 URL: {}", url);
-
+            log.debug("Python 서버 요청 URL: {}", url);
+            
             PythonChatResponseDTO pythonResponse = restTemplate.postForObject(
-                    url,
-                    httpEntity,
-                    PythonChatResponseDTO.class);
-
-            if (pythonResponse == null) {
-                log.error("Python 서버로부터 null 응답 수신");
-                throw new RuntimeException("AI 서버로부터 응답을 받지 못했습니다. 서버가 실행 중인지 확인해주세요.");
+                url,
+                httpEntity,
+                PythonChatResponseDTO.class
+            );
+            
+            if (pythonResponse == null || pythonResponse.getReply() == null) {
+                log.error("Python 서버로부터 빈 응답 수신");
+                throw new RuntimeException("AI 응답을 받지 못했습니다.");
             }
-
-            if (pythonResponse.getReply() == null || pythonResponse.getReply().trim().isEmpty()) {
-                log.error("Python 서버로부터 빈 응답 수신: {}", pythonResponse);
-                throw new RuntimeException("AI 응답이 비어있습니다.");
-            }
-
-            log.info("AI 채팅 응답 수신 완료: reply length={}", pythonResponse.getReply().length());
-
+            
+            log.info("AI 채팅 응답 수신 완료");
+            
             return ChatResponseDTO.builder()
                     .reply(pythonResponse.getReply())
                     .timestamp(LocalDateTime.now())
                     .build();
-
+                    
         } catch (RestClientException e) {
-            log.error("Python 서버 통신 에러: {}", e.getMessage(), e);
-            String errorMessage = "AI 서버와 통신 중 오류가 발생했습니다.";
-            if (e.getMessage() != null && e.getMessage().contains("Connection refused")) {
-                errorMessage = "AI 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.";
-            } else if (e.getMessage() != null && e.getMessage().contains("timeout")) {
-                errorMessage = "AI 서버 응답 시간이 초과되었습니다.";
-            }
-            throw new RuntimeException(errorMessage, e);
-        } catch (Exception e) {
-            log.error("AI 채팅 처리 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
-            throw new RuntimeException("AI 채팅 처리 중 오류가 발생했습니다: " + e.getMessage(), e);
+            log.error("Python 서버 통신 에러: {}", e.getMessage());
+            throw new RuntimeException("AI 서버와 통신 중 오류가 발생했습니다.", e);
         }
     }
-
+    
     /**
      * DTO 변환: 클라이언트 요청 → Python 요청
      */
     private PythonChatRequestDTO convertToPhythonRequest(ChatRequestDTO requestDTO) {
         List<PythonChatRequestDTO.ConversationMessage> history = null;
-
+        
         if (requestDTO.getConversationHistory() != null) {
             history = requestDTO.getConversationHistory().stream()
                     .map(msg -> new PythonChatRequestDTO.ConversationMessage(
                             msg.getRole(),
-                            msg.getContent()))
+                            msg.getContent()
+                    ))
                     .collect(Collectors.toList());
         }
-
+        
         return PythonChatRequestDTO.builder()
                 .message(requestDTO.getMessage())
                 .conversationHistory(history)
