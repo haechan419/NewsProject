@@ -16,7 +16,8 @@ public class NewsIngestScheduler {
 
     // 카테고리 목록
     private final List<String> categories = List.of(
-            "it", "economy", "society", "politics", "world", "culture");
+            "it", "economy", "society", "politics", "world", "culture"
+    );
 
     private int index = 0;
 

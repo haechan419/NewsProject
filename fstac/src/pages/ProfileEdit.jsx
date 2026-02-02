@@ -3,9 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserInfoAsync, logoutAsync } from '../slices/authSlice';
 import { updateProfile, getCategories, getMyCategories, updateCategories, uploadProfileImage, deleteProfileImage, deactivateAccount } from '../api/authApi';
-import { convertDisplayNamesToCategories, convertCategoriesToDisplayNames } from '../api/categoryApi';
 import { registerFace } from '../api/faceApi';
 import ProfileEditForm from '../components/auth/ProfileEditForm';
+import TopBar from '../layouts/TopBar';
 
 const ProfileEdit = () => {
   const [nickname, setNickname] = useState('');
@@ -46,10 +46,9 @@ const ProfileEdit = () => {
   useEffect(() => {
     if (user) {
       setNickname(user.nickname || '');
-      // 사용자 카테고리 로드 (서버에서 받은 영문 카테고리를 한글로 변환)
+      // 사용자 카테고리 로드
       if (user.categories) {
-        const koreanCategories = convertCategoriesToDisplayNames(user.categories);
-        setSelectedCategories(koreanCategories);
+        setSelectedCategories(user.categories);
       }
       // 프로필 이미지 즉시 설정 (페이지 진입 시 또는 user 업데이트 시)
       if (!profileImageFile) {
@@ -105,13 +104,11 @@ const ProfileEdit = () => {
     const loadCategories = async () => {
       try {
         const categories = await getCategories();
-        // 서버에서 받은 영문 카테고리를 한글로 변환
-        const koreanCategories = convertCategoriesToDisplayNames(categories);
-        setAvailableCategories(koreanCategories);
+        setAvailableCategories(categories);
       } catch (err) {
         console.error('카테고리 목록 로드 실패:', err);
         // 기본 카테고리 목록 설정
-        setAvailableCategories(['정치', '경제', '문화', 'IT/과학', '사회', '국제']);
+        setAvailableCategories(['정치', '경제', '엔터', 'IT/과학', '스포츠', '국제']);
       }
     };
     loadCategories();
@@ -123,9 +120,7 @@ const ProfileEdit = () => {
       if (user && (!user.categories || user.categories.length === 0)) {
         try {
           const categories = await getMyCategories();
-          // 서버에서 받은 영문 카테고리를 한글로 변환
-          const koreanCategories = convertCategoriesToDisplayNames(categories);
-          setSelectedCategories(koreanCategories);
+          setSelectedCategories(categories);
         } catch (err) {
           console.error('사용자 카테고리 로드 실패:', err);
         }
@@ -229,15 +224,12 @@ const ProfileEdit = () => {
     setValidationErrors(prev => ({ ...prev, categories: '' }));
     setSuccessMessage('');
 
-    // 관심 카테고리가 비어있어도 허용하도록 유효성 검사 제거 또는 수정
-    // if (!validateCategories()) {
-    //   return;
-    // }
+    if (!validateCategories()) {
+      return;
+    }
 
-    // 변경 사항 확인 (서버의 영문 카테고리와 비교)
-    const currentEnglishCategories = user?.categories || [];
-    const newEnglishCategories = convertDisplayNamesToCategories(selectedCategories);
-    const categoriesChanged = JSON.stringify([...newEnglishCategories].sort()) !== JSON.stringify([...currentEnglishCategories].sort());
+    // 변경 사항 확인 (배열 복사 후 정렬하여 원본 배열 변경 방지)
+    const categoriesChanged = JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...(user?.categories || [])].sort());
 
     if (!categoriesChanged) {
       setSuccessMessage('변경 사항이 없습니다.');
@@ -247,16 +239,12 @@ const ProfileEdit = () => {
     setIsSubmitting(true);
 
     try {
-      // 한글 카테고리를 영문으로 변환하여 서버에 전송 (비어있으면 빈 배열 전송)
-      const englishCategories = convertDisplayNamesToCategories(selectedCategories);
-      await updateCategories(englishCategories);
+      await updateCategories(selectedCategories);
 
       // Redux 상태 업데이트
       dispatch(fetchUserInfoAsync());
 
-      setSuccessMessage(selectedCategories.length === 0
-        ? '관심 카테고리가 모두 해제되었습니다.'
-        : '관심 카테고리가 성공적으로 수정되었습니다!');
+      setSuccessMessage('관심 카테고리가 성공적으로 수정되었습니다!');
     } catch (error) {
       // 에러를 조용히 처리 (콘솔에 로그하지 않음)
       const errorMessage = error.response?.data?.message || error.message || '카테고리 수정에 실패했습니다.';
@@ -745,15 +733,13 @@ const ProfileEdit = () => {
     setProfileImageMessage('');
 
     const baseNickname = user?.nickname || '';
-    const baseCategories = user?.categories || []; // 서버에서 받은 영문 카테고리
+    const baseCategories = user?.categories || [];
 
     const nicknameTrimmed = nickname.trim();
     const nicknameChanged = !!user && nicknameTrimmed !== baseNickname;
-    // 한글 카테고리를 영문으로 변환하여 서버의 영문 카테고리와 비교
-    const newEnglishCategories = convertDisplayNamesToCategories(selectedCategories);
     const categoriesChanged =
       !!user &&
-      JSON.stringify([...newEnglishCategories].sort()) !==
+      JSON.stringify([...selectedCategories].sort()) !==
       JSON.stringify([...baseCategories].sort());
     const imageChanged = !!profileImageFile;
 
@@ -766,10 +752,9 @@ const ProfileEdit = () => {
     if (nicknameChanged && !validateNickname()) {
       return;
     }
-    // 카테고리 변경 시 유효성 검사 (0개여도 허용하므로 validateCategories 호출 대신 직접 체크하거나 생략)
-    // if (categoriesChanged && !validateCategories()) {
-    //   return;
-    // }
+    if (categoriesChanged && !validateCategories()) {
+      return;
+    }
 
     // 변경된 항목 목록 생성
     const changedItems = [];
@@ -797,9 +782,7 @@ const ProfileEdit = () => {
 
       // 카테고리 변경
       if (categoriesChanged) {
-        // 한글 카테고리를 영문으로 변환하여 서버에 전송
-        const englishCategories = convertDisplayNamesToCategories(selectedCategories);
-        await updateCategories(englishCategories);
+        await updateCategories(selectedCategories);
       }
 
       // 프로필 이미지 변경
@@ -860,6 +843,7 @@ const ProfileEdit = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <TopBar />
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* 좌측 사이드바 영역 */}

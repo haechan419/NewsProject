@@ -34,9 +34,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient 사용용
 	implementation 'org.springframework.boot:spring-boot-starter-json'
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis' // Redis 캐시
-	
-
 
 	// 데이터베이스 & 롬복 (공통)
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'

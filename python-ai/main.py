@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from openai import OpenAI
 import os
+import threading # 추가: 스레딩 지원
 from dotenv import load_dotenv
 import logging
 import base64
@@ -14,7 +15,17 @@ import json
 from pathlib import Path
 import shutil
 
-# 환경 변수 로드
+# 사용자 정의 모듈 임포트
+try:
+    from video_worker import run_engine
+    print("🎬 [Success] 영상 엔진 로드 완료")
+except Exception as e:
+    run_engine = None
+    print(f"❌ [Error] 영상 엔진 로드 실패: {e}")
+except ImportError:
+    run_engine = None
+
+# 환경 변수 로드 (.env 파일 읽기)
 load_dotenv()
 
 # 로깅 설정
@@ -22,27 +33,37 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # FastAPI 앱 생성
-app = FastAPI(
-    title="AI Chat API",
-    description="GPT-4o-mini 기반 AI 챗봇 API",
-    version="1.0.0"
-)
+app = FastAPI(title="AI Chat & Video API", version="1.0.0")
 
-# CORS 설정 (Spring Boot에서 호출 허용)
+# CORS 설정 (Spring Boot 및 React 연동 허용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",  # Spring Boot
-        "http://localhost:3000",  # React (CRA)
-        "http://localhost:5173",  # React (Vite)
-    ],
+    allow_origins=["http://localhost:8080", "http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# OpenAI 클라이언트 초기화
+# OpenAI 클라이언트 초기화 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# 서버 시작 시 영상 엔진 자동 가동
+@app.on_event("startup")
+async def startup_event():
+    if run_engine:
+        # 영상 제작은 시간이 걸리므로 별도 스레드(Thread)에서 실행
+        video_thread = threading.Thread(target=run_engine, daemon=True)
+        video_thread.start()
+        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+
+# 생존 확인 엔드포인트
+@app.get("/")
+async def root():
+    return {
+        "status": "ok", 
+        "message": "AI Chat & Video API is running",
+        "video_engine": "Active" if run_engine else "Missing"
+    }
 
 # 얼굴 데이터 저장 디렉토리
 FACE_DATA_DIR = Path("face_data")
@@ -55,6 +76,12 @@ class ConversationMessage(BaseModel):
     role: str  # "user" 또는 "assistant"
     content: str
 
+# 기존 ChatResponse 클래스 아래에 추가
+class VideoGenerationRequest(BaseModel):
+    """자바에서 보낸 영상 제작 요청 데이터 규격"""
+    vno: int
+    rawText: str
+    videoMode: str
 
 class ChatRequest(BaseModel):
     """채팅 요청"""
@@ -379,9 +406,40 @@ def find_matching_user(face_description: str) -> Optional[dict]:
 # ===== API 엔드포인트 =====
 @app.get("/")
 async def root():
-    """헬스 체크"""
-    return {"status": "ok", "message": "AI Chat API is running"}
+    """서버 상태 확인"""
+    return {
+        "status": "ok", 
+        "message": "AI Chat & Video API is running",
+        "video_engine": "Active" if run_engine else "Missing"
+    }
 
+@app.post("/generate_video")
+async def generate_video(request: VideoGenerationRequest):
+    """
+    자바 Spring Boot로부터 영상 제작 요청을 수신하여 엔진 가동
+    """
+    logger.info(f"🚀 [영상 요청 수신] vno: {request.vno}, 모드: {request.videoMode}")
+    logger.info(f"📝 [본문 내용]: {request.rawText[:50]}...")
+    
+    try:
+        # ★ 핵심: 실제 영상 제작 엔진(video_worker)을 백그라운드 스레드에서 실행
+        if run_engine:
+            # 제작 로직이 끝날 때까지 기다리지 않고 즉시 응답을 주기 위해 Thread 사용
+            task_thread = threading.Thread(target=run_engine)
+            task_thread.start()
+            logger.info(f"🎬 [엔진 가동] vno {request.vno} 제작을 위해 백그라운드 엔진을 실행했습니다.")
+        else:
+            logger.error("❌ 영상 엔진(run_engine)이 로드되지 않았습니다.")
+            raise HTTPException(status_code=500, detail="Video engine not found")
+
+        return {
+            "status": "success",
+            "message": f"Task {request.vno} received and processing started",
+            "vno": request.vno
+        }
+    except Exception as e:
+        logger.error(f"❌ [영상 요청 에러]: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():
@@ -390,7 +448,6 @@ async def health_check():
         "status": "healthy",
         "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
     }
-
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -698,45 +755,6 @@ async def get_face_info(user_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"얼굴 정보 조회 중 오류가 발생했습니다: {str(e)}"
-        )
-
-
-# ===== 금융 데이터 API 엔드포인트 =====
-from market_data import get_korean_indices, get_global_indices
-
-@app.get("/api/market/korean-indices")
-async def get_korean_indices_api():
-    """
-    한국 지수 데이터 조회 (코스피, 코스닥)
-    Spring Boot에서 호출
-    """
-    try:
-        logger.info("한국 지수 데이터 요청 수신")
-        data = get_korean_indices()
-        return data
-    except Exception as e:
-        logger.error(f"한국 지수 데이터 조회 실패: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"한국 지수 데이터 조회 중 오류가 발생했습니다: {str(e)}"
-        )
-
-
-@app.get("/api/market/global-indices")
-async def get_global_indices_api():
-    """
-    글로벌 지수 데이터 조회 (S&P 500, NASDAQ, Dow Jones)
-    Spring Boot에서 호출
-    """
-    try:
-        logger.info("글로벌 지수 데이터 요청 수신")
-        data = get_global_indices()
-        return data
-    except Exception as e:
-        logger.error(f"글로벌 지수 데이터 조회 실패: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"글로벌 지수 데이터 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
 

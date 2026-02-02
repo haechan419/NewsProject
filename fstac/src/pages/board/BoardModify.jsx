@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import TopBar from '../../layouts/TopBar';
 import { boardApi, fileApi } from '../../api/boardApi';
+import './BoardPage.css';
 
 function BoardModify() {
   const navigate = useNavigate();
@@ -99,121 +101,109 @@ const handleUpdateBoard = async (e) => {
 };
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans pb-20">
+    <div className="board-page-wrapper">
+      <TopBar />
       
-      {/* 헤더 섹션 */}
-      <div className="bg-gray-200 py-12 px-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-4xl font-bold text-black">게시글 수정</h1>
-          <button 
-            className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 rounded-full border border-gray-300 transition-colors"
-            onClick={() => navigate(`/board/${id}`)}
-          >
-            취소
-          </button>
+      <section className="board-hero-section">
+        <div className="board-hero-title">
+          <h1>게시글 수정</h1>
         </div>
-      </div>
+        <div className="board-top-actions">
+          <button className="btn-secondary" onClick={() => navigate(`/board/${id}`)}>취소</button>
+        </div>
+      </section>
 
-      {/* 컨텐츠 섹션 */}
-      <div className="max-w-7xl mx-auto px-4 mt-8">
-        <div className="bg-white rounded-2xl border border-gray-300 p-8 shadow-sm">
-          <form onSubmit={handleUpdateBoard} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">제목</label>
+      <section className="board-content-section">
+        <div className="board-detail-container">
+          <form onSubmit={handleUpdateBoard}>
+            <div className="form-group">
+              <label>제목</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">내용</label>
+            <div className="form-group">
+              <label>내용</label>
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows="15"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              
               {/* 기존 파일 목록 */}
-              {existingFiles.length > 0 && (
-                <div className="mt-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">기존 첨부파일</label>
-                  <div className="space-y-2">
-                    {existingFiles.map((file, index) => (
-                      <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        {isImageFile(file.originalFileName) ? (
-                          <img 
-                            src={fileApi.getDownloadUrl(file.storedFileName)} 
-                            alt={file.originalFileName}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        ) : (
-                          <span className="text-2xl">📎</span>
-                        )}
-                        <span className="flex-1 text-sm">
-                          {index === 0 && isImageFile(file.originalFileName) && (
-                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs mr-2">썸네일</span>
-                          )}
-                          {file.originalFileName}
-                        </span>
-                        <button 
-                          type="button" 
-                          className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded text-sm transition-colors"
-                          onClick={() => handleDeleteExistingFile(file.id)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+{existingFiles.length > 0 && (
+  <div className="form-group">
+    <label>기존 첨부파일</label>
+    <div className="existing-files-list">
+      {existingFiles.map((file, index) => (
+        <div key={file.id} className="existing-file-item">
+          {isImageFile(file.originalFileName) ? (
+            <img 
+              src={fileApi.getDownloadUrl(file.storedFileName)} 
+              alt={file.originalFileName}
+              className="file-thumbnail"
+            />
+          ) : (
+            <span className="file-icon">📎</span>
+          )}
+          <span className="file-name">
+            {index === 0 && isImageFile(file.originalFileName) && (
+              <span className="thumbnail-badge">썸네일</span>
+            )}
+            {file.originalFileName}
+          </span>
+          <button 
+            type="button" 
+            className="btn-delete-file"
+            onClick={() => handleDeleteExistingFile(file.id)}
+          >
+            삭제
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
-              {/* 새 파일 추가 */}
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">파일 추가</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleAddFiles}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                />
-                {newFiles.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    {newFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{file.name}</span>
-                        <button 
-                          type="button"
-                          className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded text-sm transition-colors"
-                          onClick={() => handleDeleteNewFile(index)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+{/* 새 파일 추가 */}
+<div className="form-group">
+  <label>파일 추가</label>
+  <input
+    type="file"
+    multiple
+    onChange={handleAddFiles}
+  />
+  {newFiles.length > 0 && (
+    <div className="new-files-list">
+      {newFiles.map((file, index) => (
+        <div key={index} className="new-file-item">
+          <span>{file.name}</span>
+          <button 
+            type="button"
+            className="btn-delete-file"
+            onClick={() => handleDeleteNewFile(index)}
+          >
+            삭제
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors disabled:opacity-50"
-              >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
+              <button type="submit" className="btn-primary" disabled={loading}>
                 수정 완료
               </button>
             </div>
           </form>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

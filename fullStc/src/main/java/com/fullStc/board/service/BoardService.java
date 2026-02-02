@@ -1,6 +1,9 @@
 package com.fullStc.board.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,7 +20,6 @@ import com.fullStc.member.repository.MemberRepository;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 /**
@@ -62,44 +64,42 @@ public class BoardService {
 
     /**
      * 게시글 목록 조회 (전체)
-     * @param offset 시작 위치
-     * @param limit 조회할 개수
-     * @return 게시글 목록
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 게시글 목록 응답 페이지
      */
-    public List<BoardListResponseDTO> getBoards(int offset, int limit) {
-        List<Board> boards = boardRepository.findByIsDeletedFalseOrderByCreatedAtDesc(offset, limit);
-        return boards.stream()
-                .map(BoardListResponseDTO::from)
-                .collect(Collectors.toList());
+    public Page<BoardListResponseDTO> getBoards(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return boardRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable)
+                .map(BoardListResponseDTO::from);
     }
 
     /**
      * 게시글 목록 조회 (타입별)
      * @param boardType 게시판 타입 (NORMAL 또는 DEBATE)
-     * @param offset 시작 위치
-     * @param limit 조회할 개수
-     * @return 게시글 목록
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 게시글 목록 응답 페이지
      */
-    public List<BoardListResponseDTO> getBoardsByType(String boardType, int offset, int limit) {
-        List<Board> boards = boardRepository.findByBoardTypeAndIsDeletedFalseOrderByCreatedAtDesc(boardType, offset, limit);
-        return boards.stream()
-                .map(BoardListResponseDTO::from)
-                .collect(Collectors.toList());
+    public Page<BoardListResponseDTO> getBoardsByType(String boardType, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Board.BoardType type = Board.BoardType.valueOf(boardType.toUpperCase());
+        return boardRepository.findByBoardTypeAndIsDeletedFalseOrderByCreatedAtDesc(type, pageable)
+                .map(BoardListResponseDTO::from);
     }
 
     /**
      * 게시글 검색
      * 제목 또는 내용에 키워드가 포함된 게시글을 검색합니다.
      * @param keyword 검색 키워드
-     * @param offset 시작 위치
-     * @param limit 조회할 개수
-     * @return 검색된 게시글 목록
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 검색된 게시글 목록 응답 페이지
      */
-    public List<BoardListResponseDTO> searchBoards(String keyword, int offset, int limit) {
-        List<Board> boards = boardRepository.searchByKeyword(keyword, offset, limit);
-        return boards.stream()
-                .map(BoardListResponseDTO::from)
-                .collect(Collectors.toList());
+    public Page<BoardListResponseDTO> searchBoards(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return boardRepository.searchByKeyword(keyword, pageable)
+                .map(BoardListResponseDTO::from);
     }
 
     /**

@@ -88,17 +88,13 @@ public class UserServiceImpl implements UserService {
         // 기존 카테고리 삭제
         memberCategoryRepository.deleteByMemberId(userId);
 
-        // 새로운 카테고리 추가 (비어있지 않은 경우에만)
-        if (categoryUpdateDTO.getCategories() != null) {
-            for (String category : categoryUpdateDTO.getCategories()) {
-                if (category != null && !category.trim().isEmpty()) {
-                    MemberCategory memberCategory = MemberCategory.builder()
-                            .member(member)
-                            .category(category.trim())
-                            .build();
-                    memberCategoryRepository.save(memberCategory);
-                }
-            }
+        // 새로운 카테고리 추가
+        for (String category : categoryUpdateDTO.getCategories()) {
+            MemberCategory memberCategory = MemberCategory.builder()
+                    .member(member)
+                    .category(category)
+                    .build();
+            memberCategoryRepository.save(memberCategory);
         }
 
         log.info("관심 카테고리 업데이트 완료: userId={}, categories={}", userId, categoryUpdateDTO.getCategories());

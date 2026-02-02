@@ -55,16 +55,16 @@ const fetchWithAuth = async (url, options = {}) => {
  */
 export const boardApi = {
   // 게시글 목록 조회
-  getBoards: (offset = 0, limit = 10) =>
-    fetchWithAuth(`${API_BASE_URL}/boards?offset=${offset}&limit=${limit}`),
+  getBoards: (page = 0, size = 10) => 
+    fetchWithAuth(`${API_BASE_URL}/boards?page=${page}&size=${size}`),
 
   // 타입별 게시글 목록
-  getBoardsByType: (boardType, offset = 0, limit = 10) =>
-    fetchWithAuth(`${API_BASE_URL}/boards/type/${boardType}?offset=${offset}&limit=${limit}`),
+  getBoardsByType: (boardType, page = 0, size = 10) => 
+    fetchWithAuth(`${API_BASE_URL}/boards/type/${boardType}?page=${page}&size=${size}`),
 
   // 게시글 검색
-  searchBoards: (keyword, offset = 0, limit = 10) =>
-    fetchWithAuth(`${API_BASE_URL}/boards/search?keyword=${encodeURIComponent(keyword)}&offset=${offset}&limit=${limit}`),
+  searchBoards: (keyword, page = 0, size = 10) => 
+    fetchWithAuth(`${API_BASE_URL}/boards/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`),
 
   // 게시글 상세 조회
   getBoardDetail: (boardId) => 

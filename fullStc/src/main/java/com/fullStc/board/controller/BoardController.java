@@ -1,6 +1,7 @@
 package com.fullStc.board.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,8 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fullStc.board.dto.*;
 import com.fullStc.board.service.BoardService;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/boards")
 @RequiredArgsConstructor
@@ -20,26 +19,26 @@ public class BoardController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    public ResponseEntity<List<BoardListResponseDTO>> getBoards(
-            @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(boardService.getBoards(offset, limit));
+    public ResponseEntity<Page<BoardListResponseDTO>> getBoards(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(boardService.getBoards(page, size));
     }
 
     @GetMapping("/type/{boardType}")
-    public ResponseEntity<List<BoardListResponseDTO>> getBoardsByType(
+    public ResponseEntity<Page<BoardListResponseDTO>> getBoardsByType(
             @PathVariable String boardType,
-            @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(boardService.getBoardsByType(boardType, offset, limit));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(boardService.getBoardsByType(boardType, page, size));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<BoardListResponseDTO>> searchBoards(
+    public ResponseEntity<Page<BoardListResponseDTO>> searchBoards(
             @RequestParam String keyword,
-            @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(boardService.searchBoards(keyword, offset, limit));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(boardService.searchBoards(keyword, page, size));
     }
 
     @GetMapping("/{boardId}")

@@ -11,28 +11,17 @@ python-dotenv==1.0.0
 # Data Validation
 pydantic==2.5.3
 
-# Image Processing
+# Image / Math
 pillow==10.2.0
-
-# Data Science & Math
 numpy==1.26.3
+
+# Data Science
 pandas==2.2.0
 scikit-learn==1.4.0
-scipy==1.16.3
 
-# Database
-PyMySQL==1.1.0
+# DB
+pymysql==1.1.0
 
-# HTTP / Web Scraping
+# HTTP / Scheduler
 requests==2.31.0
-beautifulsoup4==4.14.3
-
-# Scheduler
 schedule==1.2.1
-
-# Financial Data
-yfinance==1.1.0
-finance-datareader==0.9.101
-
-# Visualization (optional, used by FinanceDataReader)
-plotly==6.5.2
