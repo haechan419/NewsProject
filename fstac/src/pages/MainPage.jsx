@@ -24,7 +24,7 @@ const MainPage = () => {
   const videoAreaRef = useRef(null);
   const sidebarRef = useRef(null);
   const [sidebarHeight, setSidebarHeight] = useState('auto');
-  const pageSize = 20; // 한 번에 가져올 뉴스 개수
+  const pageSize = 10; // 한 번에 가져올 뉴스 개수 (카테고리별 최대 10개)
 
   // 비디오 캐러셀 관련 상태
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
@@ -74,50 +74,41 @@ const MainPage = () => {
     }
   };
 
-  // 특정 카테고리의 뉴스만 가져오는 함수 (초기 로드)
+  // 특정 카테고리의 뉴스만 가져오는 함수 (초기 로드) - 최대 10개만
   const fetchNewsByCategory = useCallback(async (category, reset = true, currentCount = 0) => {
     if (!category) return;
 
     try {
       if (reset) {
         setIsLoadingNews(true);
-        setHasMore(true);
+        setHasMore(false); // 10개 제한이므로 더 이상 로드하지 않음
       } else {
         setIsLoadingMore(true);
       }
 
-      // 현재 뉴스 개수를 기반으로 limit 계산
-      const limit = currentCount + pageSize;
+      // 카테고리별 최대 10개만 가져오기
+      const limit = 10;
 
       console.log(`[DEBUG] 카테고리 조회 시작: category="${category}", limit=${limit}`);
       const newsData = await getNewsByCategory(category, limit);
       console.log(`[DEBUG] 서버 응답 데이터:`, newsData);
 
       if (newsData) {
+        // 최대 10개만 표시
+        const limitedNews = (newsData || []).slice(0, 10);
+
         if (reset) {
-          setBriefingNews(newsData || []);
+          setBriefingNews(limitedNews);
         } else {
-          // 중복 제거를 위해 기존 데이터와 병합
-          setBriefingNews(prevNews => {
-            const existingIds = new Set(prevNews.map(n => n.id));
-            const newNews = (newsData || []).filter(n => !existingIds.has(n.id));
-
-            if (newNews.length === 0) {
-              setHasMore(false);
-              return prevNews;
-            } else {
-              return [...prevNews, ...newNews];
-            }
-          });
+          // 추가 로드는 비활성화 (10개 제한)
+          setBriefingNews(prevNews => prevNews);
         }
 
-        // 가져온 데이터가 limit보다 적으면 더 이상 데이터가 없음
-        if (newsData.length < limit) {
-          setHasMore(false);
-        }
+        // 항상 더 이상 데이터가 없음 (10개 제한)
+        setHasMore(false);
 
-        console.log(`카테고리 "${category}" (${getCategoryDisplayName(category)}) 뉴스 조회 완료:`, newsData.length, '개');
-        if (newsData.length === 0 && reset) {
+        console.log(`카테고리 "${category}" (${getCategoryDisplayName(category)}) 뉴스 조회 완료:`, limitedNews.length, '개');
+        if (limitedNews.length === 0 && reset) {
           console.warn(`[경고] 카테고리 "${category}"에 대한 뉴스가 없습니다.`);
         }
       }
@@ -136,29 +127,35 @@ const MainPage = () => {
     fetchNewsByCategory(selectedCategory, false, briefingNews.length);
   }, [selectedCategory, isLoadingMore, hasMore, fetchNewsByCategory, briefingNews.length]);
 
-  // 스크롤 이벤트 핸들러
+  // 스크롤 이벤트 핸들러 (10개 제한으로 인해 비활성화)
   useEffect(() => {
-    const container = newsContainerRef.current;
-    if (!container) return;
+    // 카테고리별 10개 제한이므로 무한 스크롤 비활성화
+    // const container = newsContainerRef.current;
+    // if (!container) return;
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // 스크롤이 하단 100px 이내에 도달하면 다음 데이터 로드
-      if (scrollHeight - scrollTop - clientHeight < 100) {
-        loadMoreNews();
-      }
-    };
+    // const handleScroll = () => {
+    //   const { scrollTop, scrollHeight, clientHeight } = container;
+    //   // 스크롤이 하단 100px 이내에 도달하면 다음 데이터 로드
+    //   if (scrollHeight - scrollTop - clientHeight < 100) {
+    //     loadMoreNews();
+    //   }
+    // };
 
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [loadMoreNews]);
+    // container.addEventListener('scroll', handleScroll);
+    // return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // 비디오 영역 높이에 맞춰 관심 보도자료 영역 높이 조정
   useEffect(() => {
     const updateSidebarHeight = () => {
       if (videoAreaRef.current && sidebarRef.current) {
-        const videoHeight = videoAreaRef.current.offsetHeight;
-        setSidebarHeight(`${videoHeight}px`);
+        // 데스크톱에서만 높이 고정
+        if (window.innerWidth >= 1024) {
+          const videoHeight = videoAreaRef.current.offsetHeight;
+          setSidebarHeight(`${videoHeight}px`);
+        } else {
+          setSidebarHeight('auto');
+        }
       }
     };
 
@@ -293,20 +290,19 @@ const MainPage = () => {
         const categories = await getMyCategories();
         setUserCategories(categories || []);
 
-        // 사용자 관심 카테고리별 뉴스 조회
-        const newsData = await getNewsByUserCategories(50); // 충분한 개수 조회
-        if (newsData) {
-          setBriefingNews(newsData || []);
+        // 첫 번째 카테고리를 기본 선택하고 10개 제한으로 데이터 가져오기
+        if (categories && categories.length > 0) {
+          const firstCategory = categories[0];
+          setSelectedCategory(firstCategory);
+          console.log('선택된 카테고리:', firstCategory);
+          console.log('사용자 관심 카테고리:', categories);
 
-          // 디버깅: 받아온 데이터 확인
-          console.log('받아온 뉴스 데이터:', newsData);
-          console.log('뉴스 카테고리 목록:', newsData.map(n => n.category));
-
-          // 첫 번째 카테고리를 기본 선택
-          if (categories && categories.length > 0) {
-            setSelectedCategory(categories[0]);
-            console.log('선택된 카테고리:', categories[0]);
-            console.log('사용자 관심 카테고리:', categories);
+          // 첫 번째 카테고리의 뉴스 10개만 가져오기
+          const newsData = await getNewsByCategory(firstCategory, 10);
+          if (newsData) {
+            const limitedNews = (newsData || []).slice(0, 10);
+            setBriefingNews(limitedNews);
+            console.log('받아온 뉴스 데이터:', limitedNews);
           }
         }
       } catch (error) {
@@ -412,7 +408,7 @@ const MainPage = () => {
             </div>
           ) : (
             <div className="flex items-center">
-              <span className="font-semibold text-gray-900 bg-white z-10 pr-2 sm:pr-4 whitespace-nowrap text-xs sm:text-sm">경제 &gt;</span>
+              <span className="font-semibold text-gray-900 bg-white z-10 pr-2 sm:pr-4 whitespace-nowrap text-[10px] sm:text-xs">경제 &gt;</span>
               <div className="flex-1 overflow-hidden relative h-5 sm:h-6">
                 <div className="flex items-center gap-4 sm:gap-6 md:gap-8 animate-marquee whitespace-nowrap absolute">
                   {/* 첫 번째 세트 */}
@@ -436,64 +432,64 @@ const MainPage = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">위안(CNY)</span>
-                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium`}>{economicData.yuan.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">위안(CNY)</span>
+                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yuan.value}</span>
                       {economicData.yuan.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.yuan.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yuan.change)}`}>
                           {economicData.yuan.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">유로(EUR)</span>
-                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium`}>{economicData.euro.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">유로(EUR)</span>
+                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium text-[10px] sm:text-xs`}>{economicData.euro.value}</span>
                       {economicData.euro.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.euro.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.euro.change)}`}>
                           {economicData.euro.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">파운드(GBP)</span>
-                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium`}>{economicData.pound.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">파운드(GBP)</span>
+                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium text-[10px] sm:text-xs`}>{economicData.pound.value}</span>
                       {economicData.pound.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.pound.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.pound.change)}`}>
                           {economicData.pound.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">엔(JPY)</span>
-                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium`}>{economicData.yen.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">엔(JPY)</span>
+                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yen.value}</span>
                       {economicData.yen.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.yen.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yen.change)}`}>
                           {economicData.yen.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">코스피</span>
-                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium`}>{economicData.kospi.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피</span>
+                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi.value}</span>
                       {economicData.kospi.change && (
-                        <span className={`text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
                           {economicData.kospi.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">코스닥</span>
-                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium`}>{economicData.kosdaq.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">코스닥</span>
+                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kosdaq.value}</span>
                       {economicData.kosdaq.change && (
-                        <span className={`text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
                           {economicData.kosdaq.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">코스피200</span>
-                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium`}>{economicData.kospi200.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피200</span>
+                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi200.value}</span>
                       {economicData.kospi200.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
                           {economicData.kospi200.change}
                         </span>
                       )}
@@ -521,64 +517,64 @@ const MainPage = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">위안(CNY)</span>
-                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium`}>{economicData.yuan.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">위안(CNY)</span>
+                      <span className={`${getEconomyColor(economicData.yuan.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yuan.value}</span>
                       {economicData.yuan.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.yuan.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yuan.change)}`}>
                           {economicData.yuan.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">유로(EUR)</span>
-                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium`}>{economicData.euro.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">유로(EUR)</span>
+                      <span className={`${getEconomyColor(economicData.euro.change)} font-medium text-[10px] sm:text-xs`}>{economicData.euro.value}</span>
                       {economicData.euro.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.euro.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.euro.change)}`}>
                           {economicData.euro.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">파운드(GBP)</span>
-                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium`}>{economicData.pound.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">파운드(GBP)</span>
+                      <span className={`${getEconomyColor(economicData.pound.change)} font-medium text-[10px] sm:text-xs`}>{economicData.pound.value}</span>
                       {economicData.pound.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.pound.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.pound.change)}`}>
                           {economicData.pound.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">엔(JPY)</span>
-                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium`}>{economicData.yen.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">엔(JPY)</span>
+                      <span className={`${getEconomyColor(economicData.yen.change)} font-medium text-[10px] sm:text-xs`}>{economicData.yen.value}</span>
                       {economicData.yen.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.yen.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.yen.change)}`}>
                           {economicData.yen.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">코스피</span>
-                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium`}>{economicData.kospi.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피</span>
+                      <span className={`${getEconomyColorByValue(economicData.kospi.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi.value}</span>
                       {economicData.kospi.change && (
-                        <span className={`text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kospi.changeValue)}`}>
                           {economicData.kospi.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">코스닥</span>
-                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium`}>{economicData.kosdaq.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">코스닥</span>
+                      <span className={`${getEconomyColorByValue(economicData.kosdaq.changeValue)} font-medium text-[10px] sm:text-xs`}>{economicData.kosdaq.value}</span>
                       {economicData.kosdaq.change && (
-                        <span className={`text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColorByValue(economicData.kosdaq.changeValue)}`}>
                           {economicData.kosdaq.change}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-700">코스피200</span>
-                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium`}>{economicData.kospi200.value}</span>
+                      <span className="text-gray-700 text-[10px] sm:text-xs">코스피200</span>
+                      <span className={`${getEconomyColor(economicData.kospi200.change)} font-medium text-[10px] sm:text-xs`}>{economicData.kospi200.value}</span>
                       {economicData.kospi200.change && (
-                        <span className={`text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
+                        <span className={`text-[9px] sm:text-xs ${getEconomyColor(economicData.kospi200.change)}`}>
                           {economicData.kospi200.change}
                         </span>
                       )}
@@ -587,7 +583,7 @@ const MainPage = () => {
                 </div>
               </div>
               {marketData.updatedAt && (
-                <span className="text-[10px] text-gray-400 bg-white z-10 pl-4 whitespace-nowrap">
+                <span className="text-[9px] sm:text-[10px] text-gray-400 bg-white z-10 pl-2 sm:pl-4 whitespace-nowrap">
                   {new Date(marketData.updatedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -615,16 +611,15 @@ const MainPage = () => {
           {/* 왼쪽: 비디오 영역 */}
           <div ref={videoAreaRef} className="relative w-full">
             {/* 카테고리 필터 버튼 */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 scrollbar-hide">
               {videoCategories.map((category, index) => (
                 <button
                   key={category}
                   onClick={() => goToVideo(index)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                    currentVideoIndex === index
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${currentVideoIndex === index
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                 >
                   {getCategoryDisplayName(category)}
                 </button>
@@ -633,7 +628,7 @@ const MainPage = () => {
 
             {/* 비디오 캐러셀 */}
             <div className="relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
-              <div 
+              <div
                 ref={videoCarouselRef}
                 className="flex overflow-x-hidden scroll-smooth"
                 style={{ scrollBehavior: 'smooth' }}
@@ -643,7 +638,7 @@ const MainPage = () => {
                   const isActive = currentVideoIndex === index;
                   const hasError = videoLoadErrors[category];
                   const isLoaded = videoLoaded[category];
-                  
+
                   return (
                     <div
                       key={category}
@@ -657,7 +652,7 @@ const MainPage = () => {
                         loop
                         playsInline
                         preload="auto"
-                        style={{ 
+                        style={{
                           display: isActive ? 'block' : 'none',
                           zIndex: 1,
                           position: 'absolute',
@@ -680,34 +675,34 @@ const MainPage = () => {
                         <source src={video.videoUrl} type="video/mp4" />
                         Your browser does not support the video tag.
                       </video>
-                      
+
                       {/* 비디오 플레이스홀더 (비디오 로드 실패 시에만 표시) */}
                       {hasError && (
-                        <div 
+                        <div
                           className="absolute inset-0 flex items-center justify-center"
-                          style={{ 
+                          style={{
                             backgroundColor: video.color,
                             zIndex: 2
                           }}
                         >
-                          <div className="text-center text-white">
-                            <p className="text-lg sm:text-xl font-medium mb-2">
+                          <div className="text-center text-white px-2">
+                            <p className="text-sm sm:text-lg md:text-xl font-medium mb-1 sm:mb-2">
                               {getCategoryDisplayName(category)} 영상 미리보기
                             </p>
-                            <p className="text-sm opacity-80">10초</p>
+                            <p className="text-xs sm:text-sm opacity-80">10초</p>
                           </div>
                         </div>
                       )}
-                      
+
                       {/* 로딩 중 표시 */}
                       {isActive && !isLoaded && !hasError && (
-                        <div 
+                        <div
                           className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30"
                           style={{ zIndex: 3 }}
                         >
-                          <div className="text-white text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                            <p className="text-sm">영상 로딩 중...</p>
+                          <div className="text-white text-center px-2">
+                            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white mx-auto mb-1 sm:mb-2"></div>
+                            <p className="text-xs sm:text-sm">영상 로딩 중...</p>
                           </div>
                         </div>
                       )}
@@ -719,37 +714,37 @@ const MainPage = () => {
               {/* 좌우 화살표 버튼 */}
               <button
                 onClick={goToPreviousVideo}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all z-10"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-all z-10"
                 aria-label="이전 비디오"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <button
                 onClick={goToNextVideo}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all z-10"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-all z-10"
                 aria-label="다음 비디오"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
 
             {/* 비디오 정보 (Title & Contents) */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">
                 {videoData[videoCategories[currentVideoIndex]]?.title || 'Title'}
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs sm:text-sm text-gray-600">
                 {videoData[videoCategories[currentVideoIndex]]?.content || 'Contents'}
               </p>
             </div>
           </div>
 
           {/* 오른쪽: 관심 보도자료 사이드바 */}
-          <div ref={sidebarRef} className="bg-white rounded-lg flex flex-col min-h-0" style={{ height: sidebarHeight }}>
+          <div ref={sidebarRef} className="bg-white rounded-lg flex flex-col min-h-0 lg:sticky lg:top-4" style={{ height: sidebarHeight }}>
             <div className="flex flex-col h-full min-h-0">
               <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-base sm:text-lg font-bold text-gray-900">관심 보도자료</h2>
@@ -852,14 +847,9 @@ const MainPage = () => {
                             </div>
                           );
                         })}
-                        {isLoadingMore && (
+                        {briefingNews.length >= 10 && (
                           <div className="flex items-center justify-center py-4">
-                            <span className="text-gray-500 text-xs sm:text-sm">더 많은 뉴스를 불러오는 중...</span>
-                          </div>
-                        )}
-                        {!hasMore && briefingNews.length > 0 && (
-                          <div className="flex items-center justify-center py-4">
-                            <span className="text-gray-400 text-xs sm:text-sm">모든 뉴스를 불러왔습니다</span>
+                            <span className="text-gray-400 text-xs sm:text-sm">카테고리별 최대 10개까지 표시됩니다</span>
                           </div>
                         )}
                       </>

@@ -1,10 +1,13 @@
 # main.py - AI 챗봇 FastAPI 서버
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 from openai import OpenAI
 import os
+import asyncio
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import logging
 import base64
@@ -21,11 +24,28 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """서버 시작/종료 시 실행 (드라이브 모드 고정 멘트 생성 등)"""
+    async def generate_fixed_audio_background():
+        try:
+            if not os.getenv("OPENAI_API_KEY"):
+                return
+            from drive.generate_fixed_audio import generate_all_fixed_audio
+            await generate_all_fixed_audio()
+        except Exception as e:
+            logger.warning("드라이브 고정 멘트 생성 중 오류 (무시): %s", e)
+    asyncio.create_task(generate_fixed_audio_background())
+    yield
+
+
 # FastAPI 앱 생성
 app = FastAPI(
     title="AI Chat API",
     description="GPT-4o-mini 기반 AI 챗봇 API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS 설정 (Spring Boot에서 호출 허용)
@@ -40,6 +60,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 드라이브 모드 라우터 및 정적 파일
+from drive.router import router as drive_router
+app.include_router(drive_router)
+_DRIVE_STATIC = Path(__file__).resolve().parent / "drive" / "static"
+if _DRIVE_STATIC.exists():
+    app.mount("/static", StaticFiles(directory=str(_DRIVE_STATIC)), name="drive_static")
 
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))

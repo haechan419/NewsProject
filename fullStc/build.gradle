@@ -31,6 +31,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -52,8 +54,14 @@ dependencies {
 	// 이미지 썸네일 (Thumbnailator)
 	implementation 'net.coobird:thumbnailator:0.4.20'
 	
+	// Drive Mode
+	implementation 'org.modelmapper:modelmapper:3.1.1'
+
 	// JSON 직렬화 (Gson)
 	implementation 'com.google.code.gson:gson:2.10.1'
+
+	// Jackson
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -63,6 +71,9 @@ dependencies {
 	// 테스트용 Lombok 설정
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
+
+	// JDBC
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'

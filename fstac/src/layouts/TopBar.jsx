@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutAsync } from '../slices/authSlice';
+import { DriveModeContext } from '../App';
 import './TopBar.css';
 
 const TopBar = () => {
@@ -9,6 +10,7 @@ const TopBar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const driveMode = useContext(DriveModeContext);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -67,7 +69,7 @@ const TopBar = () => {
         </button>
 
         {/* [요청사항] 예쁜 운전대 아이콘 (3-Spoke Wheel Style) */}
-        <button className="icon-btn" aria-label="Drive Mode">
+        <button className="icon-btn" aria-label="Drive Mode" onClick={driveMode.openDriveMode}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             {/* 중앙 허브 */}
