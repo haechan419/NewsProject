@@ -83,5 +83,15 @@ public class NewsCluster {
     void preUpdate() {
         updatedAt = Instant.now();
     }
+
+    @Column(name="image_status", length = 16)
+    private String imageStatus;
+
+    @Column(name="image_fail_count", nullable = false)
+    private int imageFailCount;
+
+    @Column(name="image_next_retry_at")
+    private java.time.Instant imageNextRetryAt;
+
 }
 

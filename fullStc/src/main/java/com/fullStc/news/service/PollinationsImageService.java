@@ -1,12 +1,19 @@
 package com.fullStc.news.service;
 
+import com.fullStc.news.domain.NewsCluster;
+import com.fullStc.news.dto.UnsplashResponse;
+import com.fullStc.news.repository.NewsClusterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ThreadLocalRandom;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Service
@@ -14,63 +21,118 @@ import java.util.concurrent.ThreadLocalRandom;
 public class PollinationsImageService {
 
     private final OpenAiSummarizer openAiSummarizer;
+    private final NewsClusterRepository newsClusterRepository;
+
+    // 외부 API 호출용 도구
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    // application.properties(yml)에서 키 가져오기
+    @Value("${unsplash.access-key}")
+    private String unsplashAccessKey;
+
+    /**
+     * ✅ [최종 수정] 속도 최적화 로직
+     * 1순위: Unsplash API (0.5초 소요, 고화질)
+     * 2순위: 하드코딩된 기본 이미지 (0초 소요, 절대 실패 안 함)
+     * (기존의 느린 AI 생성 로직은 제거함)
+     */
     public String generateImageUrl(String koreanSummary) {
         try {
-            // 1. GPT에게 요약 요청 (이건 그대로)
+            log.info("🚀 [속도 우선] AI 생성 건너뛰고 Unsplash 검색 시도...");
+
+            // 1. 검색어 만들기 (GPT에게 영어 키워드 요청)
             String englishPrompt = openAiSummarizer.createEnglishPrompt(koreanSummary);
-            if (englishPrompt == null) englishPrompt = "Technology";
+            if (englishPrompt == null) englishPrompt = "News";
 
-            // 2. ★ [핵심] 추상적인 단어 & 동사 '학살' 리스트
-            // 이 단어들이 보이면 무조건 지워버립니다.
-            String[] stopWords = {
-                    "announces", "announce", "announced", "support", "supports", "supporting",
-                    "report", "reports", "reported", "plan", "plans", "planning",
-                    "develop", "develops", "developing", "korean", "korea", // 국가는 가끔 오해를 부름
-                    "aim", "target", "goal", "strategy", "policy", "law",
-                    "daily", "briefing", "summary", "today", "news",
-                    "a", "an", "the", "of", "in", "on", "at", "to", "for"
-            };
+            // 2. 검색어 단순화 (Unsplash는 'Futuristic AI city...'보다 'Technology' 같은 단어가 더 잘 나옴)
+            String searchKeyword = getSimpleKeyword(englishPrompt);
 
-            String temp = englishPrompt.toLowerCase();
-            for (String stop : stopWords) {
-                temp = temp.replaceAll("\\b" + stop + "\\b", "");
+            // 3. Unsplash API 호출
+            String unsplashUrl = getUnsplashImage(searchKeyword);
+
+            // 4. 성공 시 URL 반환
+            if (unsplashUrl != null) {
+                return unsplashUrl;
             }
 
-            // 3. 특수문자 제거 및 공백 정리
-            String cleanPrompt = temp.replaceAll("[^a-z0-9\\s]", "").replaceAll("\\s+", " ").trim();
-
-            // 4. ★ [안전장치] 만약 다 지워서 남는 게 별로 없으면? -> "멋진 기술 배경"으로 대체
-            // (길이가 5글자 이하이면 AI가 못 그림)
-            if (cleanPrompt.length() < 5) {
-                cleanPrompt = "Future Technology Data Center";
-            }
-
-            // 5. 길이 제한 (20자면 충분. 길면 AI가 뇌정지 옴)
-            if (cleanPrompt.length() > 25) {
-                cleanPrompt = cleanPrompt.substring(0, 25);
-            }
-
-            // 6. ★ [마법의 단어] 뒤에 "3D 렌더링" 키워드 붙이기 (가장 에러 안 나는 스타일)
-            // cinematic보다 '3d render'나 'cyberpunk'가 훨씬 성공률 높음
-            String finalPrompt = cleanPrompt + " 3d render isometric";
-
-            log.info("🌸 [Pollinations] 최종 생존 키워드: {}", finalPrompt);
-
-            String encoded = URLEncoder.encode(finalPrompt, StandardCharsets.UTF_8).replace("+", "%20");
-
-            // 7. URL 생성 (seed를 랜덤으로 줘서 캐싱 문제 회피)
-            return String.format(
-                    "https://image.pollinations.ai/prompt/%s?width=1024&height=600&seed=%d&model=turbo&nologo=true",
-                    encoded,
-                    ThreadLocalRandom.current().nextInt(0, 1000000)
-            );
+            // 실패 시 예외를 던져서 catch 블록으로 이동
+            throw new RuntimeException("Unsplash Returned Null");
 
         } catch (Exception e) {
-            log.error("💥 이미지 생성 로직 실패: {}", e.getMessage());
-            // 에러 나면 아예 안전한 기본 이미지 URL 리턴
-            return "https://image.pollinations.ai/prompt/computer%20chip%20technology?width=1024&height=600&model=turbo&nologo=true";
-        }
-    
+            log.warn("⚠️ 이미지 확보 실패 -> '기본 안전 이미지' 사용: {}", e.getMessage());
 
+            // 5. [최후의 보루] 절대 실패하지 않는 반도체/기술 배경 이미지 리턴
+            return "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1080";
+        }
+    }
+
+    /**
+     * Unsplash 정식 API 호출
+     */
+    private String getUnsplashImage(String query) {
+        try {
+            // orientation=landscape: 가로 사진만 검색
+            String url = "https://api.unsplash.com/photos/random?query=" + query + "&orientation=landscape";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Client-ID " + unsplashAccessKey);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<UnsplashResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    UnsplashResponse.class
+            );
+
+            if (response.getBody() != null && response.getBody().getUrls() != null) {
+                String result = response.getBody().getUrls().getRegular();
+                log.info("📸 Unsplash 이미지 확보 성공: {}", result);
+                return result;
+            }
+        } catch (Exception ex) {
+            // 403(한도초과), 401(키 오류) 등 로그만 남기고 null 리턴
+            log.error("💥 Unsplash API 에러 (키 확인 필요): {}", ex.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 문장에서 핵심 키워드 1개만 뽑기 (검색 정확도 & 속도 향상용)
+     */
+    private String getSimpleKeyword(String prompt) {
+        String p = prompt.toLowerCase();
+
+        if (p.contains("economy") || p.contains("finance") || p.contains("stock")) return "economy";
+        if (p.contains("politics") || p.contains("government") || p.contains("president")) return "politics";
+        if (p.contains("it") || p.contains("tech") || p.contains("ai") || p.contains("computer")) return "technology";
+        if (p.contains("society") || p.contains("people") || p.contains("city")) return "city";
+        if (p.contains("culture") || p.contains("art") || p.contains("music")) return "art";
+        if (p.contains("world") || p.contains("global")) return "world map";
+
+        // 아무것도 해당 안 되면 그냥 뉴스 느낌
+        return "newspaper";
+    }
+
+    /**
+     * 비동기 재시도 (컨트롤러에서 호출됨)
+     */
+    @Async
+    @Transactional
+    public void retryGenerateAsync(Long clusterId) {
+        NewsCluster cluster = newsClusterRepository.findById(clusterId).orElse(null);
+        if (cluster == null) return;
+
+        // 위에서 만든 '빠른 로직' 호출
+        String newUrl = generateImageUrl(cluster.getClusterSummary());
+
+        if (newUrl != null && !newUrl.isBlank()) {
+            cluster.setImageUrl(newUrl);
+            cluster.setImageStatus("OK");
+            cluster.setImageNextRetryAt(null);
+            newsClusterRepository.save(cluster);
+            log.info("✅ [이미지 갱신 완료] Cluster ID: {}", clusterId);
+        }
     }
 }

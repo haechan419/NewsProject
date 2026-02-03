@@ -13,6 +13,9 @@ const CategoryPage = () => {
     // ✅ 리스트에서 처음에 보여줄 개수(헤드라인 제외)
     const [visibleCount, setVisibleCount] = useState(5);
 
+    // ✅ 백엔드 주소
+    const API_BASE = 'http://localhost:8080';
+
     const displayTitle = useMemo(() => {
         if (!category) return 'NEWS';
         switch (category) {
@@ -26,30 +29,22 @@ const CategoryPage = () => {
         }
     }, [category]);
 
-    // ✅ (선택) 카테고리별 ISSUE NO 매핑
     const issueNo = useMemo(() => {
-        const map = {
-            politics: 1,
-            economy: 2,
-            society: 3,
-            it: 4,
-            culture: 5,
-            world: 6,
-        };
-        return (category && map[category]) ? map[category] : 4;
+        const map = { politics: 1, economy: 2, society: 3, it: 4, culture: 5, world: 6 };
+        return map[category] || 4;
     }, [category]);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await axios.get(`http://localhost:8080/briefing?category=${category}`, {
+                const res = await axios.get(`${API_BASE}/briefing?category=${category}`, {
                     withCredentials: true,
                 });
                 setArticles(res.data || []);
             } catch (error) {
                 console.error('뉴스 로딩 실패:', error);
-                if (error?.response && error.response.status === 401) {
+                if (error?.response?.status === 401) {
                     alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
                     navigate('/login');
                 }
@@ -57,34 +52,25 @@ const CategoryPage = () => {
                 setLoading(false);
             }
         };
-
         if (category) fetchData();
     }, [category, navigate]);
 
-    // ✅ 카테고리 바뀌면 "더보기" 상태 초기화
     useEffect(() => {
         setVisibleCount(5);
     }, [category]);
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        return String(dateString).split('T')[0].replace(/-/g, '.');
+    const formatDate = (d) => {
+        if (!d) return '';
+        return String(d).split('T')[0].replace(/-/g, '.');
     };
 
-    /**
-     * ✅ 이미지 URL 뽑기 + 쓰레기값 방어
-     * - null/undefined/빈문자
-     * - "null" 같은 문자열
-     */
     const getImg = (news) => {
         const raw = (news && (news.image || news.imageUrl || news.thumbnail)) || '';
-        if (!raw) return '';
         const s = String(raw).trim();
-        if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return '';
+        if (!s || s === 'null' || s === 'undefined') return '';
         return s;
     };
 
-    // ✅ 요약에서 짧은 프리뷰 뽑기 (서론 우선)
     const getPreview = (text) => {
         if (!text) return '';
         const t = String(text);
@@ -97,12 +83,7 @@ const CategoryPage = () => {
 
         if (introStart !== -1) {
             const start = introStart + '[서론]'.length;
-            const end =
-                bodyStart !== -1
-                    ? bodyStart
-                    : concStart !== -1
-                        ? concStart
-                        : t.length;
+            const end = bodyStart !== -1 ? bodyStart : (concStart !== -1 ? concStart : t.length);
             candidate = t.substring(start, end).trim();
         }
 
@@ -112,20 +93,42 @@ const CategoryPage = () => {
         return candidate.length > 110 ? candidate.substring(0, 110) + '…' : candidate;
     };
 
-    const headlineNews = articles.length > 0 ? articles[0] : null;
-
-    // ✅ 리스트는 헤드라인(0) 제외하고, visibleCount만큼만 보여준다
-    const otherNews = articles.length > 0 ? articles.slice(1, 1 + visibleCount) : [];
-
-    // ✅ "더보기" 버튼 표시 여부
-    const hasMore = articles.length > (1 + visibleCount);
-
-    const handleMore = () => {
-        setVisibleCount((prev) => prev + 5);
+    // ✅ SVG 폴백 (외부 요청 없음)
+    const svgFallback = (cat) => {
+        const safeCat = String(cat || 'NEWS').toUpperCase().replace(/[<>&]/g, '');
+        const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="600">
+        <rect width="100%" height="100%" fill="#eee"/>
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#aaa" font-size="40" font-family="Arial">${safeCat}</text>
+        <text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" fill="#ccc" font-size="20" font-family="Arial">Image Refreshing...</text>
+      </svg>
+    `.trim();
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     };
 
-    // ✅ 폴백 이미지 경로(프론트 public/fallback.png)
-    const FALLBACK_SRC = '/fallback.png';
+    // ✅ 이미지 깨짐 감지 → 즉시 SVG로 바꾸고 → 백엔드 신고
+    const handleImgError = (e, newsId) => {
+        const el = e.currentTarget;
+
+        // 무한 루프 방지
+        if (el.dataset.fallback === '1') return;
+        el.dataset.fallback = '1';
+
+        // 1) 즉시 SVG로 교체
+        el.src = svgFallback(category);
+
+        // 2) 백엔드에 fail 신고 (있을 때만)
+        if (newsId) {
+            axios.post(`${API_BASE}/api/images/fail/${newsId}`, null, { withCredentials: true })
+                .catch(() => {});
+        }
+    };
+
+    const headlineNews = articles.length > 0 ? articles[0] : null;
+
+    // ✅ 리스트는 헤드라인 제외하고 visibleCount만큼
+    const otherNews = articles.length > 0 ? articles.slice(1, 1 + visibleCount) : [];
+    const hasMore = articles.length > (1 + visibleCount);
 
     return (
         <div className="catPage">
@@ -140,27 +143,23 @@ const CategoryPage = () => {
 
             <div className="category-container">
                 {loading ? (
-                    <div className="loading-box">AI가 뉴스를 분석하고 있습니다... 🤖</div>
+                    <div className="loading-box">
+                        <div className="spinner"></div>
+                        <p>AI가 뉴스를 분석 중...</p>
+                    </div>
                 ) : (
                     <>
-                        {/* ✅ 헤드라인 */}
+                        {/* ✅ 헤드라인 (기존 클래스 유지) */}
                         {headlineNews ? (
                             <section className="headlineGrid">
                                 <div className="headlineMedia">
-                                    {getImg(headlineNews) ? (
-                                        <img
-                                            src={getImg(headlineNews)}
-                                            alt="headline"
-                                            referrerPolicy="no-referrer"
-                                            loading="lazy"
-                                            onError={(e) => {
-                                                if (e.currentTarget.src.includes(FALLBACK_SRC)) return;
-                                                e.currentTarget.src = FALLBACK_SRC;
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="mediaPlaceholder" />
-                                    )}
+                                    <img
+                                        src={getImg(headlineNews) || svgFallback(category)}
+                                        alt="headline"
+                                        loading="eager"
+                                        referrerPolicy="no-referrer"
+                                        onError={(e) => handleImgError(e, headlineNews.id)}
+                                    />
                                 </div>
 
                                 <article className="headlineNaverCard">
@@ -194,7 +193,7 @@ const CategoryPage = () => {
                             </div>
                         )}
 
-                        {/* ✅ 리스트 */}
+                        {/* ✅ 리스트 (기존 DOM/클래스 구조 유지) */}
                         <div className="news-list naverList">
                             {otherNews.map((news, idx) => (
                                 <div
@@ -206,20 +205,13 @@ const CategoryPage = () => {
                                 >
                                     <div className="naverLeft">
                                         <div className="naverThumb">
-                                            {getImg(news) ? (
-                                                <img
-                                                    src={getImg(news)}
-                                                    alt="뉴스 썸네일"
-                                                    referrerPolicy="no-referrer"
-                                                    loading="lazy"
-                                                    onError={(e) => {
-                                                        if (e.currentTarget.src.includes(FALLBACK_SRC)) return;
-                                                        e.currentTarget.src = FALLBACK_SRC;
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="thumbPlaceholder" />
-                                            )}
+                                            <img
+                                                src={getImg(news) || svgFallback(category)}
+                                                alt="뉴스 썸네일"
+                                                loading="lazy"
+                                                referrerPolicy="no-referrer"
+                                                onError={(e) => handleImgError(e, news.id)}
+                                            />
                                         </div>
 
                                         <div className="naverInfo">
@@ -236,7 +228,6 @@ const CategoryPage = () => {
                                         </div>
                                     </div>
 
-                                    {/* ✅ 순위: 헤드라인이 1번이니까 리스트는 2번부터 */}
                                     <div className="naverRank">{idx + 2}</div>
                                 </div>
                             ))}
@@ -245,7 +236,7 @@ const CategoryPage = () => {
                         {/* ✅ 더보기 버튼 */}
                         <div className="more-row">
                             {hasMore && (
-                                <button className="more-btn" onClick={handleMore}>
+                                <button className="more-btn" onClick={() => setVisibleCount(v => v + 5)}>
                                     뉴스 더보기 ▾
                                 </button>
                             )}

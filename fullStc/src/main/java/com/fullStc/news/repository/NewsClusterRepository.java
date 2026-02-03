@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -108,4 +109,13 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
         // (기존) 네이티브 쿼리용 - 이것도 ID DESC로 되어 있어서 최신순 맞음
         @Query(value = "SELECT * FROM news_cluster WHERE category = :category ORDER BY id DESC LIMIT 20", nativeQuery = true)
         List<NewsCluster> findByCategoryNative(@Param("category") String category);
+
+        @Query("""
+        select c from NewsCluster c
+        where c.imageStatus = 'FAILED'
+          and c.imageNextRetryAt is not null
+          and c.imageNextRetryAt <= :now
+        order by c.imageNextRetryAt asc
+    """)
+        List<NewsCluster> findRetryDue(@Param("now") Instant now);
 }

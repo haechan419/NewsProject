@@ -69,24 +69,27 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // CSRF 보호 활성화 (Double Submit Cookie 패턴)
-        // 쿠키에 CSRF 토큰 저장, 헤더에서 검증
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
-                .ignoringRequestMatchers("/api/auth/**",
+                .ignoringRequestMatchers(
+                        "/api/auth/**",
                         "/api/boards/**",
                         "/api/comments/**",
                         "/api/files/**",
                         "/api/ai/**",
-                        "/api/qa/**",  // QA API 경로 추가 !!!!!!!!!!!!
+                        "/api/qa/**",
                         "/api/faq/**",
                         "/api/support/**",
                         "/api/inquiry/**",
                         "/api/category/**",
                         "/api/user/**",
-                        "/api/market/**",  // 금융 시장 데이터 API
-                        "/api/drive/**",  // 드라이브 모드 API
+                        "/api/market/**",
+                        "/api/drive/**",
+                        // ▼ [NEW] 이미지 관련 API는 CSRF 검사 면제 (POST 요청 허용)
+                        "/api/images/**",
+                        "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
+
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/oauth2/**",
@@ -128,6 +131,10 @@ public class SecurityConfig {
         auth.requestMatchers("/api/ai/mypage/**").permitAll();
         auth.requestMatchers("/api/ai/video/**").permitAll();
         auth.requestMatchers("/upload/**").permitAll();
+
+            // ▼ [NEW] 이미지 실패 신고 및 뉴스 조회는 로그인 없이 허용
+            auth.requestMatchers("/api/images/**").permitAll();
+            auth.requestMatchers("/briefing/**").permitAll();
 
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
