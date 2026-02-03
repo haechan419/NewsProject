@@ -31,18 +31,9 @@ public class AiController {
     @Operation(summary = "AI 채팅", description = "AI에게 메시지를 전송하고 응답을 받습니다.")
     @PostMapping("/chat")
     public ResponseEntity<Map<String, Object>> chat(@RequestBody ChatRequestDTO requestDTO) {
-        log.info("AI 채팅 요청 - 메시지: {}", requestDTO != null ? requestDTO.getMessage() : "null");
+        log.info("AI 채팅 요청 - 메시지: {}", requestDTO.getMessage());
         
         try {
-            // 요청 데이터 검증
-            if (requestDTO == null) {
-                log.error("AI 채팅 요청 데이터가 null입니다");
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("success", false);
-                errorResponse.put("error", "요청 데이터가 없습니다.");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
             ChatResponseDTO responseDTO = aiService.chat(requestDTO);
             
             Map<String, Object> response = new HashMap<>();
@@ -51,19 +42,12 @@ public class AiController {
             
             return ResponseEntity.ok(response);
             
-        } catch (IllegalArgumentException e) {
-            log.warn("AI 채팅 요청 검증 실패: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("AI 채팅 에러: {}", e.getMessage());
+
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
-            
-        } catch (Exception e) {
-            log.error("AI 채팅 에러: {}", e.getMessage(), e);
-            
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("error", e.getMessage() != null ? e.getMessage() : "알 수 없는 오류가 발생했습니다.");
             
             return ResponseEntity.internalServerError().body(errorResponse);
         }

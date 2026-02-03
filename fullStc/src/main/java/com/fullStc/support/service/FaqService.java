@@ -32,11 +32,6 @@ public interface FaqService {
     List<FaqResponse> searchFaqs(String keyword, FaqCategory category);
 
     /**
-     * FAQ 버튼 클릭 (조회수 증가 후 응답)
-     */
-    FaqResponse clickFaq(Long id);
-
-    /**
      * FAQ 카테고리 목록 조회
      */
     List<FaqCategory> getCategories();

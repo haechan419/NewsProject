@@ -64,13 +64,27 @@ public class BoardService {
      * 게시글 목록 조회 (전체)
      * @param offset 시작 위치
      * @param limit 조회할 개수
-     * @return 게시글 목록
+     * @return 페이징 정보를 포함한 게시글 목록
      */
-    public List<BoardListResponseDTO> getBoards(int offset, int limit) {
+    public BoardPageResponseDTO getBoards(int offset, int limit) {
         List<Board> boards = boardRepository.findByIsDeletedFalseOrderByCreatedAtDesc(offset, limit);
-        return boards.stream()
+        long totalCount = boardRepository.countByIsDeletedFalse();
+        int currentPage = (offset / limit) + 1;
+        int totalPages = (int) Math.ceil((double) totalCount / limit);
+        
+        List<BoardListResponseDTO> boardDTOs = boards.stream()
                 .map(BoardListResponseDTO::from)
                 .collect(Collectors.toList());
+        
+        return BoardPageResponseDTO.builder()
+                .boards(boardDTOs)
+                .totalCount(totalCount)
+                .currentPage(currentPage)
+                .totalPages(totalPages)
+                .limit(limit)
+                .hasNext(currentPage < totalPages)
+                .hasPrevious(currentPage > 1)
+                .build();
     }
 
     /**
@@ -78,28 +92,75 @@ public class BoardService {
      * @param boardType 게시판 타입 (NORMAL 또는 DEBATE)
      * @param offset 시작 위치
      * @param limit 조회할 개수
-     * @return 게시글 목록
+     * @return 페이징 정보를 포함한 게시글 목록
      */
-    public List<BoardListResponseDTO> getBoardsByType(String boardType, int offset, int limit) {
+    public BoardPageResponseDTO getBoardsByType(String boardType, int offset, int limit) {
         List<Board> boards = boardRepository.findByBoardTypeAndIsDeletedFalseOrderByCreatedAtDesc(boardType, offset, limit);
-        return boards.stream()
+        long totalCount = boardRepository.countByBoardTypeAndIsDeletedFalse(boardType);
+        int currentPage = (offset / limit) + 1;
+        int totalPages = (int) Math.ceil((double) totalCount / limit);
+        
+        List<BoardListResponseDTO> boardDTOs = boards.stream()
                 .map(BoardListResponseDTO::from)
                 .collect(Collectors.toList());
+        
+        return BoardPageResponseDTO.builder()
+                .boards(boardDTOs)
+                .totalCount(totalCount)
+                .currentPage(currentPage)
+                .totalPages(totalPages)
+                .limit(limit)
+                .hasNext(currentPage < totalPages)
+                .hasPrevious(currentPage > 1)
+                .build();
     }
 
     /**
      * 게시글 검색
-     * 제목 또는 내용에 키워드가 포함된 게시글을 검색합니다.
      * @param keyword 검색 키워드
+     * @param searchType 검색 타입 (TITLE: 제목만, TITLE_CONTENT: 제목+내용, WRITER: 작성자)
      * @param offset 시작 위치
      * @param limit 조회할 개수
-     * @return 검색된 게시글 목록
+     * @return 페이징 정보를 포함한 검색된 게시글 목록
      */
-    public List<BoardListResponseDTO> searchBoards(String keyword, int offset, int limit) {
-        List<Board> boards = boardRepository.searchByKeyword(keyword, offset, limit);
-        return boards.stream()
+    public BoardPageResponseDTO searchBoards(String keyword, String searchType, int offset, int limit) {
+        List<Board> boards;
+        long totalCount;
+        
+        if (searchType == null || searchType.isEmpty() || "TITLE_CONTENT".equals(searchType)) {
+            // 기본값: 제목 + 내용
+            boards = boardRepository.searchByTitleAndContent(keyword, offset, limit);
+            totalCount = boardRepository.countByTitleAndContent(keyword);
+        } else if ("TITLE".equals(searchType)) {
+            // 제목만
+            boards = boardRepository.searchByTitle(keyword, offset, limit);
+            totalCount = boardRepository.countByTitle(keyword);
+        } else if ("WRITER".equals(searchType)) {
+            // 작성자
+            boards = boardRepository.searchByWriter(keyword, offset, limit);
+            totalCount = boardRepository.countByWriter(keyword);
+        } else {
+            // 기본값: 제목 + 내용
+            boards = boardRepository.searchByTitleAndContent(keyword, offset, limit);
+            totalCount = boardRepository.countByTitleAndContent(keyword);
+        }
+        
+        int currentPage = (offset / limit) + 1;
+        int totalPages = (int) Math.ceil((double) totalCount / limit);
+        
+        List<BoardListResponseDTO> boardDTOs = boards.stream()
                 .map(BoardListResponseDTO::from)
                 .collect(Collectors.toList());
+        
+        return BoardPageResponseDTO.builder()
+                .boards(boardDTOs)
+                .totalCount(totalCount)
+                .currentPage(currentPage)
+                .totalPages(totalPages)
+                .limit(limit)
+                .hasNext(currentPage < totalPages)
+                .hasPrevious(currentPage > 1)
+                .build();
     }
 
     /**

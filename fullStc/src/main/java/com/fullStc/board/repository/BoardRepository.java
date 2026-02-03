@@ -33,24 +33,99 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
      */
     @Query(value = "SELECT * FROM board WHERE board_type = :boardType AND is_deleted = false ORDER BY created_at DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
     List<Board> findByBoardTypeAndIsDeletedFalseOrderByCreatedAtDesc(
-            @Param("boardType") String boardType,
-            @Param("offset") int offset,
+            @Param("boardType") String boardType, 
+            @Param("offset") int offset, 
             @Param("limit") int limit);
 
     /**
-     * 키워드로 게시글 검색
-     * 제목 또는 내용에 키워드가 포함된 삭제되지 않은 게시글을 검색합니다.
+     * 키워드로 게시글 검색 (제목만)
      * @param keyword 검색 키워드
      * @param offset 시작 위치
      * @param limit 조회할 개수
      * @return 게시글 목록
      */
     @Query(value = "SELECT * FROM board WHERE is_deleted = false " +
-           "AND (title LIKE %:keyword% OR content LIKE %:keyword%) " +
+           "AND LOWER(title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "ORDER BY created_at DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
-    List<Board> searchByKeyword(
-            @Param("keyword") String keyword,
-            @Param("offset") int offset,
+    List<Board> searchByTitle(
+            @Param("keyword") String keyword, 
+            @Param("offset") int offset, 
             @Param("limit") int limit);
+
+    /**
+     * 키워드로 게시글 검색 (제목 + 내용)
+     * @param keyword 검색 키워드
+     * @param offset 시작 위치
+     * @param limit 조회할 개수
+     * @return 게시글 목록
+     */
+    @Query(value = "SELECT * FROM board WHERE is_deleted = false " +
+           "AND (LOWER(title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "ORDER BY created_at DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
+    List<Board> searchByTitleAndContent(
+            @Param("keyword") String keyword, 
+            @Param("offset") int offset, 
+            @Param("limit") int limit);
+
+    /**
+     * 키워드로 게시글 검색 (작성자)
+     * @param keyword 검색 키워드
+     * @param offset 시작 위치
+     * @param limit 조회할 개수
+     * @return 게시글 목록
+     */
+    @Query(value = "SELECT b.* FROM board b " +
+           "INNER JOIN members m ON b.user_id = m.id " +
+           "WHERE b.is_deleted = false " +
+           "AND LOWER(m.nickname) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY b.created_at DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
+    List<Board> searchByWriter(
+            @Param("keyword") String keyword, 
+            @Param("offset") int offset, 
+            @Param("limit") int limit);
+
+    /**
+     * 삭제되지 않은 게시글 전체 개수 조회
+     * @return 전체 개수
+     */
+    @Query(value = "SELECT COUNT(*) FROM board WHERE is_deleted = false", nativeQuery = true)
+    long countByIsDeletedFalse();
+
+    /**
+     * 타입별 삭제되지 않은 게시글 전체 개수 조회
+     * @param boardType 게시판 타입
+     * @return 전체 개수
+     */
+    @Query(value = "SELECT COUNT(*) FROM board WHERE board_type = :boardType AND is_deleted = false", nativeQuery = true)
+    long countByBoardTypeAndIsDeletedFalse(@Param("boardType") String boardType);
+
+    /**
+     * 키워드로 검색된 게시글 전체 개수 조회 (제목만)
+     * @param keyword 검색 키워드
+     * @return 전체 개수
+     */
+    @Query(value = "SELECT COUNT(*) FROM board WHERE is_deleted = false " +
+           "AND LOWER(title) LIKE LOWER(CONCAT('%', :keyword, '%'))", nativeQuery = true)
+    long countByTitle(@Param("keyword") String keyword);
+
+    /**
+     * 키워드로 검색된 게시글 전체 개수 조회 (제목 + 내용)
+     * @param keyword 검색 키워드
+     * @return 전체 개수
+     */
+    @Query(value = "SELECT COUNT(*) FROM board WHERE is_deleted = false " +
+           "AND (LOWER(title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(content) LIKE LOWER(CONCAT('%', :keyword, '%')))", nativeQuery = true)
+    long countByTitleAndContent(@Param("keyword") String keyword);
+
+    /**
+     * 키워드로 검색된 게시글 전체 개수 조회 (작성자)
+     * @param keyword 검색 키워드
+     * @return 전체 개수
+     */
+    @Query(value = "SELECT COUNT(*) FROM board b " +
+           "INNER JOIN members m ON b.user_id = m.id " +
+           "WHERE b.is_deleted = false " +
+           "AND LOWER(m.nickname) LIKE LOWER(CONCAT('%', :keyword, '%'))", nativeQuery = true)
+    long countByWriter(@Param("keyword") String keyword);
 }
 

@@ -105,23 +105,6 @@ public class FaqController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * FAQ 버튼 클릭 (조회수 증가 후 즉시 응답)
-     */
-    @Operation(summary = "FAQ 버튼 클릭", description = "FAQ 버튼 클릭 시 조회수를 증가시키고 답변을 반환합니다.")
-    @PostMapping("/button/{id}")
-    public ResponseEntity<Map<String, Object>> clickFaq(@PathVariable Long id) {
-        log.info("FAQ 버튼 클릭 - id: {}", id);
-
-        FaqResponse faq = faqService.clickFaq(id);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", faq);
-
-        return ResponseEntity.ok(response);
-    }
-
     // ===== 관리자 API =====
 
     /**

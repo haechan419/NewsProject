@@ -31,6 +31,9 @@ beautifulsoup4==4.14.3
 # Scheduler
 schedule==1.2.1
 
+# Web Search (Tavily API)
+tavily-python==0.5.0
+
 # Financial Data
 yfinance==1.1.0
 finance-datareader==0.9.101

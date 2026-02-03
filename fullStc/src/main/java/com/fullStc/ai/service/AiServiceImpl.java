@@ -59,42 +59,75 @@ public class AiServiceImpl implements AiService {
 
             // Python 서버에 POST 요청
             String url = pythonServerUrl + "/chat";
-            log.info("Python 서버 요청 URL: {}", url);
+            log.debug("Python 서버 요청 URL: {}", url);
 
             PythonChatResponseDTO pythonResponse = restTemplate.postForObject(
-                    url,
-                    httpEntity,
-                    PythonChatResponseDTO.class);
+                url,
+                httpEntity,
+                PythonChatResponseDTO.class
+            );
 
-            if (pythonResponse == null) {
-                log.error("Python 서버로부터 null 응답 수신");
-                throw new RuntimeException("AI 서버로부터 응답을 받지 못했습니다. 서버가 실행 중인지 확인해주세요.");
+            if (pythonResponse == null || pythonResponse.getReply() == null) {
+                log.error("Python 서버로부터 빈 응답 수신");
+                throw new RuntimeException("AI 응답을 받지 못했습니다.");
             }
 
-            if (pythonResponse.getReply() == null || pythonResponse.getReply().trim().isEmpty()) {
-                log.error("Python 서버로부터 빈 응답 수신: {}", pythonResponse);
-                throw new RuntimeException("AI 응답이 비어있습니다.");
+            log.info("AI 채팅 응답 수신 완료");
+
+            // Python 응답의 sources를 ChatResponseDTO의 sources로 변환
+            List<ChatResponseDTO.SearchSource> sources = null;
+            if (pythonResponse.getSources() != null && !pythonResponse.getSources().isEmpty()) {
+                sources = pythonResponse.getSources().stream()
+                    .map(src -> new ChatResponseDTO.SearchSource(
+                        src.getTitle(),
+                        src.getUrl(),
+                        src.getSnippet()
+                    ))
+                    .collect(Collectors.toList());
+                log.info("검색 출처 {}개 변환 완료", sources.size());
             }
 
-            log.info("AI 채팅 응답 수신 완료: reply length={}", pythonResponse.getReply().length());
+            // Python 응답의 trendingData를 ChatResponseDTO의 trendingData로 변환
+            ChatResponseDTO.TrendingData trendingData = null;
+            if (pythonResponse.getIsTrending() != null && pythonResponse.getIsTrending()
+                && pythonResponse.getTrendingData() != null) {
+
+                PythonChatResponseDTO.TrendingData pyTrending = pythonResponse.getTrendingData();
+
+                List<ChatResponseDTO.TrendingKeyword> keywords = null;
+                if (pyTrending.getKeywords() != null) {
+                    keywords = pyTrending.getKeywords().stream()
+                        .map(kw -> new ChatResponseDTO.TrendingKeyword(
+                            kw.getRank(),
+                            kw.getKeyword(),
+                            kw.getState()
+                        ))
+                        .collect(Collectors.toList());
+                }
+
+                trendingData = ChatResponseDTO.TrendingData.builder()
+                    .keywords(keywords)
+                    .updatedAt(pyTrending.getUpdatedAt())
+                    .source(pyTrending.getSource())
+                    .build();
+
+                log.info("실시간 검색어 데이터 변환 완료: {}개 키워드",
+                    keywords != null ? keywords.size() : 0);
+            }
 
             return ChatResponseDTO.builder()
                     .reply(pythonResponse.getReply())
                     .timestamp(LocalDateTime.now())
+                    .searched(pythonResponse.getSearched() != null ? pythonResponse.getSearched() : false)
+                    .searchQuery(pythonResponse.getSearchQuery())
+                    .sources(sources)
+                    .isTrending(pythonResponse.getIsTrending() != null ? pythonResponse.getIsTrending() : false)
+                    .trendingData(trendingData)
                     .build();
 
         } catch (RestClientException e) {
-            log.error("Python 서버 통신 에러: {}", e.getMessage(), e);
-            String errorMessage = "AI 서버와 통신 중 오류가 발생했습니다.";
-            if (e.getMessage() != null && e.getMessage().contains("Connection refused")) {
-                errorMessage = "AI 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.";
-            } else if (e.getMessage() != null && e.getMessage().contains("timeout")) {
-                errorMessage = "AI 서버 응답 시간이 초과되었습니다.";
-            }
-            throw new RuntimeException(errorMessage, e);
-        } catch (Exception e) {
-            log.error("AI 채팅 처리 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
-            throw new RuntimeException("AI 채팅 처리 중 오류가 발생했습니다: " + e.getMessage(), e);
+            log.error("Python 서버 통신 에러: {}", e.getMessage());
+            throw new RuntimeException("AI 서버와 통신 중 오류가 발생했습니다.", e);
         }
     }
 
@@ -108,7 +141,8 @@ public class AiServiceImpl implements AiService {
             history = requestDTO.getConversationHistory().stream()
                     .map(msg -> new PythonChatRequestDTO.ConversationMessage(
                             msg.getRole(),
-                            msg.getContent()))
+                            msg.getContent()
+                    ))
                     .collect(Collectors.toList());
         }
 

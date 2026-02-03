@@ -19,13 +19,13 @@ import java.util.Map;
 
 /**
  * Q&A 챗봇 컨트롤러
- * HyperCLOVA AI를 통한 고객센터 Q&A
+ * GPT-4o-mini를 통한 고객센터 Q&A
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/qa")
 @RequiredArgsConstructor
-@Tag(name = "Q&A Chatbot", description = "고객센터 Q&A 챗봇 API (HyperCLOVA)")
+@Tag(name = "Q&A Chatbot", description = "고객센터 Q&A 챗봇 API (GPT-4o-mini)")
 public class QaController {
 
     private final QaService qaService;
@@ -33,7 +33,7 @@ public class QaController {
     /**
      * Q&A 메시지 전송
      */
-    @Operation(summary = "Q&A 메시지 전송", description = "질문을 전송하고 HyperCLOVA AI의 답변을 받습니다.")
+    @Operation(summary = "Q&A 메시지 전송", description = "질문을 전송하고 GPT-4o-mini의 답변을 받습니다.")
     @PostMapping("/message")
     public ResponseEntity<Map<String, Object>> sendMessage(@RequestBody QaMessageRequest request) {
         Long userId = getCurrentUserId();

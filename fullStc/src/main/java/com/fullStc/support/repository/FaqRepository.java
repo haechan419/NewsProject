@@ -16,12 +16,12 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
     /**
      * 카테고리별 FAQ 목록 조회
      */
-    List<Faq> findByCategoryOrderByViewCountDesc(FaqCategory category);
+    List<Faq> findByCategoryOrderByCreatedAtDesc(FaqCategory category);
 
     /**
-     * 전체 FAQ 목록 조회 (조회수 내림차순)
+     * 전체 FAQ 목록 조회 (생성일 내림차순)
      */
-    List<Faq> findAllByOrderByViewCountDesc();
+    List<Faq> findAllByOrderByCreatedAtDesc();
 
     /**
      * 키워드 검색 (질문, 답변, 키워드 필드에서 검색)

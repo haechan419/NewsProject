@@ -28,7 +28,7 @@ public class FaqServiceImpl implements FaqService {
     @Override
     public List<FaqResponse> getAllFaqs() {
         log.info("전체 FAQ 목록 조회");
-        return faqRepository.findAllByOrderByViewCountDesc()
+        return faqRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(FaqResponse::from)
                 .collect(Collectors.toList());
@@ -37,7 +37,7 @@ public class FaqServiceImpl implements FaqService {
     @Override
     public List<FaqResponse> getFaqsByCategory(FaqCategory category) {
         log.info("카테고리별 FAQ 목록 조회: {}", category);
-        return faqRepository.findByCategoryOrderByViewCountDesc(category)
+        return faqRepository.findByCategoryOrderByCreatedAtDesc(category)
                 .stream()
                 .map(FaqResponse::from)
                 .collect(Collectors.toList());
@@ -65,16 +65,6 @@ public class FaqServiceImpl implements FaqService {
         return faqs.stream()
                 .map(FaqResponse::from)
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional
-    public FaqResponse clickFaq(Long id) {
-        log.info("FAQ 버튼 클릭: {}", id);
-        Faq faq = faqRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("FAQ를 찾을 수 없습니다. ID: " + id));
-        faq.increaseViewCount();
-        return FaqResponse.from(faq);
     }
 
     @Override

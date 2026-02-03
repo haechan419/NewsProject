@@ -79,8 +79,8 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             return true;
         }
 
-        // 금융 시장 데이터 API는 체크하지 않음 (메인 페이지에서 사용)
-        if (path.startsWith("/api/market/")) {
+        // AI 관련 API는 체크하지 않음 (채팅, 얼굴 인식 등)
+        if (path.startsWith("/api/ai/")) {
             return true;
         }
 

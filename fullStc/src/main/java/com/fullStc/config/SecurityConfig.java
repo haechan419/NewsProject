@@ -146,6 +146,8 @@ public class SecurityConfig {
             auth.requestMatchers("/api/ai/face/recognize").permitAll();
             // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
             auth.requestMatchers("/api/category/list").permitAll();
+            // AI 채팅 API는 인증 없이 접근 가능
+            auth.requestMatchers("/api/ai/chat", "/api/ai/**").permitAll();
             // 금융 시장 데이터 API는 인증 없이 접근 가능 (메인 페이지에서 사용)
             auth.requestMatchers("/api/market/**").permitAll();
             // 드라이브 모드 API는 인증 없이 접근 가능
