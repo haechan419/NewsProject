@@ -47,67 +47,70 @@ public class OpenAiSummarizer {
                 "model", model,
                 "messages", List.of(
                         Map.of("role", "system", "content", system),
-                        Map.of("role", "user", "content", user)),
-                "temperature", 0.2);
+                        Map.of("role", "user", "content", user)
+                ),
+                "temperature", 0.2
+        );
 
         return callGpt(body);
     }
 
     /**
-     * ★ [수정됨] 뉴스 클러스터를 [제목] + [서론/본론/결론] 구조로 요약
+     * ★ [NEW] 뉴스 클러스터(여러 기사)를 읽고 "제목 + 3줄 요약"을 반환
      */
     public String summarizeCluster(List<News> newsList) {
-        if (newsList == null || newsList.isEmpty())
-            return "";
+        if (newsList == null || newsList.isEmpty()) return "";
 
-        // 1. 뉴스 내용 텍스트로 합치기
-        StringBuilder newsContentBuilder = new StringBuilder();
+        // 1. 프롬프트 만들기 (제목과 요약을 나눠서 달라고 강력하게 요청)
+        StringBuilder sb = new StringBuilder();
+        sb.append("이 뉴스들을 종합해서 다음 형식으로 출력해.\n");
+        sb.append("첫째줄: 전체 내용을 아우르는 30자 이내의 깔끔한 헤드라인(제목). 따옴표나 수식어 없이 담백하게.\n");
+        sb.append("둘째줄부터: 핵심 내용 3줄 요약 (명사형 종결, -음/함 체)\n\n");
+        sb.append("[기사 목록]\n");
+
         int count = 0;
         for (News n : newsList) {
-            if (count++ >= 5)
-                break; // 토큰 절약 (최대 5개 기사만 참고)
-
-            newsContentBuilder.append("- 제목: ").append(n.getTitle()).append("\n");
+            if (count++ >= 5) break; // 토큰 절약 (최대 5개)
+            sb.append("- ").append(n.getTitle()).append("\n");
+            // 본문 내용 붙이기 (너무 길면 자름)
             if (n.getContent() != null) {
-                // 본문이 너무 길면 앞부분 300자만 자름
-                String body = n.getContent().length() > 300 ? n.getContent().substring(0, 300) : n.getContent();
-                newsContentBuilder.append("  내용: ").append(body).append("\n\n");
+                String body = n.getContent().length() > 200 ? n.getContent().substring(0, 200) : n.getContent();
+                sb.append("  내용: ").append(body).append("\n\n");
             }
         }
 
-        // 2. [서론-본론-결론] 프롬프트 작성
-        String prompt = """
-                    너는 전문 뉴스 에디터야. 아래 제공된 뉴스 기사들을 종합해서 하나의 완벽한 브리핑 리포트를 작성해줘.
-
-                    [필수 지침]
-                    1. 독자가 사건을 한눈에 파악할 수 있도록 **[서론] - [본론] - [결론]** 구조를 반드시 지켜줘.
-                    2. **[제목]**은 가장 핵심적이고 사람들의 이목을 끌 수 있는 문장으로 맨 윗줄에 작성해줘.
-                    3. 내용은 한국어로 자연스럽게 작성해.
-
-                    [출력 형식 예시]
-                    [제목] 여기에 제목 작성
-
-                    [서론]
-                    (사건의 배경과 핵심 요약을 1~2문장으로 기술)
-
-                    [본론]
-                    (주요 사실 관계, 쟁점, 구체적인 수치나 데이터를 포함하여 상세히 기술)
-
-                    [결론]
-                    (향후 전망, 시사점, 또는 마무리 멘트)
-
-                    ---
-                    [뉴스 데이터]
-                    %s
-                """.formatted(newsContentBuilder.toString());
-
-        // 3. GPT 요청
+        // 2. GPT 요청
         Map<String, Object> body = Map.of(
                 "model", model,
                 "messages", List.of(
-                        Map.of("role", "system", "content", "You are a helpful news assistant."),
-                        Map.of("role", "user", "content", prompt)),
-                "temperature", 0.7 // 조금 더 자연스러운 문장을 위해 온도 살짝 높임
+                        Map.of("role", "system", "content", "너는 뉴스 편집장이야. 여러 기사를 읽고 완벽한 헤드라인과 요약을 뽑아내."),
+                        Map.of("role", "user", "content", sb.toString())
+                ),
+                "temperature", 0.3
+        );
+
+        return callGpt(body);
+    }
+
+    /**
+     * 한국어 요약을 영어 프롬프트로 변환
+     */
+    public String createEnglishPrompt(String koreanSummary) {
+        if (koreanSummary == null || koreanSummary.trim().isEmpty()) {
+            return null;
+        }
+
+        String system = "You are a translator. Translate the Korean text into a concise English prompt suitable for image generation. Keep it under 80 characters.";
+        String user = "Translate this Korean text into a short English prompt for image generation:\n\n" + koreanSummary;
+
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "messages", List.of(
+                        Map.of("role", "system", "content", system),
+                        Map.of("role", "user", "content", user)
+                ),
+                "temperature", 0.3,
+                "max_tokens", 100
         );
 
         return callGpt(body);
@@ -124,8 +127,7 @@ public class OpenAiSummarizer {
                     .bodyToMono(Map.class)
                     .block();
 
-            if (resp == null)
-                return null;
+            if (resp == null) return null;
 
             List choices = (List) resp.get("choices");
             Map first = (Map) choices.get(0);
@@ -136,24 +138,5 @@ public class OpenAiSummarizer {
             System.out.println("GPT 호출 실패: " + e.getMessage());
             return null;
         }
-    }
-
-    /**
-     * ★ [NEW] 한글 요약문을 받아서 -> 고퀄리티 영어 그림 프롬프트로 변환
-     */
-    public String createEnglishPrompt(String koreanSummary) {
-        // [수정] 오직 프롬프트 내용만 출력하도록 강제합니다.
-        String system = "너는 AI 이미지 프롬프트 엔지니어다. 불필요한 서론(Here is...)이나 제목(Image Prompt:)은 절대 빼고, 오직 영문 프롬프트 내용만 한 줄로 출력해라.";
-
-        Map<String, Object> body = Map.of(
-                "model", model,
-                "messages", List.of(
-                        Map.of("role", "system", "content", system),
-                        Map.of("role", "user", "content", "아래 내용을 4K 뉴스 사진 스타일의 영문 프롬프트로 바꿔: " + koreanSummary)
-                ),
-                "temperature", 0.5 // 일관성을 위해 온도를 조금 낮춤
-        );
-
-        return callGpt(body);
     }
 }

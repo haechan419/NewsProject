@@ -130,10 +130,10 @@ public interface NewsRepository extends JpaRepository<News, Long> {
           LIMIT :limit
       """, nativeQuery = true)
   List<News> findEmbeddingCandidates(
-          @Param("category") String category,
-          @Param("publishedAt") java.sql.Timestamp publishedAt,
-          @Param("hours") int hours,
-          @Param("limit") int limit);
+      @Param("category") String category,
+      @Param("publishedAt") java.sql.Timestamp publishedAt,
+      @Param("hours") int hours,
+      @Param("limit") int limit);
 
   // 최근 클러스터 목록
   @Query(value = """
@@ -244,7 +244,7 @@ public interface NewsRepository extends JpaRepository<News, Long> {
           LIMIT :limit
       """, nativeQuery = true)
   List<News> findRepTargetsByClusterIdsForSummary(@Param("clusterIds") List<Long> clusterIds,
-                                                  @Param("limit") int limit);
+      @Param("limit") int limit);
 
   // =================================================================================
   // 4. ★ 클러스터 통계 및 집계 (교차검증 보너스용)
@@ -261,8 +261,7 @@ public interface NewsRepository extends JpaRepository<News, Long> {
   }
 
   @Query("SELECT n.dupClusterId as clusterId, COUNT(n) as count " +
-          "FROM News n WHERE n.dupClusterId IN :clusterIds GROUP BY n.dupClusterId")
+      "FROM News n WHERE n.dupClusterId IN :clusterIds GROUP BY n.dupClusterId")
   List<ClusterCountInfo> countByClusterIds(@Param("clusterIds") List<Long> clusterIds);
 
-  List<News> findTop10ByCategoryOrderByPublishedAtDesc(String category);
 }

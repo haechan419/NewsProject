@@ -46,14 +46,14 @@ class BoardDataInitializerTest {
         // given & when
         // BoardDataInitializer가 실행되면 자동으로 회원이 생성됨
         // 또는 수동으로 테스트할 수 있도록 별도 메서드 호출
-
+        
         // User1부터 User300까지의 회원이 존재하는지 확인
         for (int i = 1; i <= 300; i++) {
             String email = "user" + i + "@dummy.com";
             String nickname = "User" + i;
-
+            
             Optional<Member> member = memberRepository.findByEmail(email);
-
+            
             if (member.isPresent()) {
                 assertThat(member.get().getNickname()).isEqualTo(nickname);
                 assertThat(member.get().getEmail()).isEqualTo(email);
@@ -66,10 +66,10 @@ class BoardDataInitializerTest {
         // then
         List<Member> allMembers = memberRepository.findAll();
         long userCount = allMembers.stream()
-                .filter(m -> m.getNickname().startsWith("User") &&
-                        m.getEmail().contains("@dummy.com"))
-                .count();
-
+            .filter(m -> m.getNickname().startsWith("User") && 
+                       m.getEmail().contains("@dummy.com"))
+            .count();
+        
         log.info("더미 회원 수: {}명", userCount);
         assertThat(userCount).isGreaterThanOrEqualTo(0); // 최소 0명 이상
     }
@@ -81,26 +81,18 @@ class BoardDataInitializerTest {
     void testCreateDummyBoards() {
         // given
         // BoardDataInitializer가 실행되면 게시글이 생성됨
-
+        
         // when
         List<Board> allBoards = boardRepository.findAll();
         List<Board> nonDeletedBoards = allBoards.stream()
-                .filter(b -> !b.getIsDeleted())
-                .toList();
+            .filter(b -> !b.getIsDeleted())
+            .toList();
 
         // then
         log.info("전체 게시글 수: {}개", allBoards.size());
         log.info("삭제되지 않은 게시글 수: {}개", nonDeletedBoards.size());
-
-        // 게시글이 생성되었는지 확인 (0개 이상이면 통과)
-        // BoardDataInitializer가 실행되지 않았을 수 있으므로 0개도 허용
-        assertThat(nonDeletedBoards.size()).isGreaterThanOrEqualTo(0);
-
-        // 게시글이 있을 때만 상세 검증 수행
-        if (nonDeletedBoards.isEmpty()) {
-            log.warn("게시글이 없어 상세 검증을 건너뜁니다. BoardDataInitializer가 실행되지 않았을 수 있습니다.");
-            return;
-        }
+        
+        assertThat(nonDeletedBoards.size()).isGreaterThan(0);
 
         // 게시글 검증
         for (Board board : nonDeletedBoards) {
@@ -109,12 +101,12 @@ class BoardDataInitializerTest {
             assertThat(board.getTitle()).isNotNull().isNotEmpty();
             assertThat(board.getContent()).isNotNull().isNotEmpty();
             assertThat(board.getBoardType()).isNotNull();
-
+            
             // 랜덤 값 범위 검증
             assertThat(board.getViewCount()).isGreaterThanOrEqualTo(0).isLessThanOrEqualTo(1000);
             assertThat(board.getLikeCount()).isGreaterThanOrEqualTo(0).isLessThanOrEqualTo(500);
             assertThat(board.getCommentCount()).isGreaterThanOrEqualTo(0).isLessThanOrEqualTo(200);
-
+            
             // 토론 게시판인 경우 추가 검증
             if (board.getBoardType() == Board.BoardType.DEBATE) {
                 assertThat(board.getDebateTopic()).isNotNull().isNotEmpty();
@@ -135,30 +127,30 @@ class BoardDataInitializerTest {
     void testBoardTypeRatio() {
         // given
         List<Board> allBoards = boardRepository.findAll().stream()
-                .filter(b -> !b.getIsDeleted())
-                .toList();
+            .filter(b -> !b.getIsDeleted())
+            .toList();
 
         // when
         long normalCount = allBoards.stream()
-                .filter(b -> b.getBoardType() == Board.BoardType.NORMAL)
-                .count();
-
+            .filter(b -> b.getBoardType() == Board.BoardType.NORMAL)
+            .count();
+        
         long debateCount = allBoards.stream()
-                .filter(b -> b.getBoardType() == Board.BoardType.DEBATE)
-                .count();
+            .filter(b -> b.getBoardType() == Board.BoardType.DEBATE)
+            .count();
 
         // then
         log.info("일반 게시판: {}개", normalCount);
         log.info("토론 게시판: {}개", debateCount);
         log.info("전체 게시글 수: {}개", allBoards.size());
-
+        
         if (allBoards.size() > 0) {
             double normalRatio = (double) normalCount / allBoards.size();
             double debateRatio = (double) debateCount / allBoards.size();
-
+            
             log.info("일반 게시판 비율: {:.2f}%", normalRatio * 100);
             log.info("토론 게시판 비율: {:.2f}%", debateRatio * 100);
-
+            
             // 게시글이 충분히 많을 때만 비율 검증 (랜덤이므로 작은 수에서는 실패할 수 있음)
             // 최소 10개 이상의 게시글이 있을 때만 검증
             if (allBoards.size() >= 10) {
@@ -183,21 +175,21 @@ class BoardDataInitializerTest {
     void testBoardsPerMember() {
         // given
         List<Member> dummyMembers = memberRepository.findAll().stream()
-                .filter(m -> m.getNickname().startsWith("User") &&
+            .filter(m -> m.getNickname().startsWith("User") && 
                         m.getEmail().contains("@dummy.com"))
-                .toList();
+            .toList();
 
         // when & then
         for (Member member : dummyMembers) {
             List<Board> memberBoards = boardRepository.findAll().stream()
-                    .filter(b -> b.getUser().getId().equals(member.getId()) &&
-                            !b.getIsDeleted())
-                    .toList();
+                .filter(b -> b.getUser().getId().equals(member.getId()) && 
+                           !b.getIsDeleted())
+                .toList();
 
             // 각 회원당 3~10개의 게시글이 있어야 함
             // (랜덤이므로 최소 0개 이상이면 통과)
             assertThat(memberBoards.size()).isGreaterThanOrEqualTo(0);
-
+            
             if (memberBoards.size() > 0) {
                 log.debug("회원 {}의 게시글 수: {}개", member.getNickname(), memberBoards.size());
             }
@@ -232,8 +224,8 @@ class BoardDataInitializerTest {
     void testRandomValueRanges() {
         // given
         List<Board> allBoards = boardRepository.findAll().stream()
-                .filter(b -> !b.getIsDeleted())
-                .toList();
+            .filter(b -> !b.getIsDeleted())
+            .toList();
 
         // when & then
         boolean hasViewCountInRange = false;
@@ -245,12 +237,12 @@ class BoardDataInitializerTest {
             if (board.getViewCount() >= 1 && board.getViewCount() <= 1000) {
                 hasViewCountInRange = true;
             }
-
+            
             // 좋아요 범위: 1~500
             if (board.getLikeCount() >= 1 && board.getLikeCount() <= 500) {
                 hasLikeCountInRange = true;
             }
-
+            
             // 댓글 수 범위: 1~200
             if (board.getCommentCount() >= 1 && board.getCommentCount() <= 200) {
                 hasCommentCountInRange = true;
@@ -261,7 +253,7 @@ class BoardDataInitializerTest {
             assertThat(hasViewCountInRange).isTrue();
             assertThat(hasLikeCountInRange).isTrue();
             assertThat(hasCommentCountInRange).isTrue();
-
+            
             log.info("랜덤 값 범위 검증 통과");
         }
     }
@@ -274,22 +266,22 @@ class BoardDataInitializerTest {
         // given
         List<Member> allMembers = memberRepository.findAll();
         List<Board> allBoards = boardRepository.findAll().stream()
-                .filter(b -> !b.getIsDeleted())
-                .toList();
+            .filter(b -> !b.getIsDeleted())
+            .toList();
 
         // when
         long dummyMemberCount = allMembers.stream()
-                .filter(m -> m.getNickname().startsWith("User") &&
+            .filter(m -> m.getNickname().startsWith("User") && 
                         m.getEmail().contains("@dummy.com"))
-                .count();
+            .count();
 
         long normalBoardCount = allBoards.stream()
-                .filter(b -> b.getBoardType() == Board.BoardType.NORMAL)
-                .count();
+            .filter(b -> b.getBoardType() == Board.BoardType.NORMAL)
+            .count();
 
         long debateBoardCount = allBoards.stream()
-                .filter(b -> b.getBoardType() == Board.BoardType.DEBATE)
-                .count();
+            .filter(b -> b.getBoardType() == Board.BoardType.DEBATE)
+            .count();
 
         // then
         log.info("=== 더미 데이터 통계 ===");
@@ -297,26 +289,27 @@ class BoardDataInitializerTest {
         log.info("전체 게시글 수: {}개", allBoards.size());
         log.info("일반 게시판: {}개", normalBoardCount);
         log.info("토론 게시판: {}개", debateBoardCount);
-
+        
         if (allBoards.size() > 0) {
             double avgViewCount = allBoards.stream()
-                    .mapToInt(Board::getViewCount)
-                    .average()
-                    .orElse(0.0);
-
+                .mapToInt(Board::getViewCount)
+                .average()
+                .orElse(0.0);
+            
             double avgLikeCount = allBoards.stream()
-                    .mapToInt(Board::getLikeCount)
-                    .average()
-                    .orElse(0.0);
-
+                .mapToInt(Board::getLikeCount)
+                .average()
+                .orElse(0.0);
+            
             double avgCommentCount = allBoards.stream()
-                    .mapToInt(Board::getCommentCount)
-                    .average()
-                    .orElse(0.0);
-
+                .mapToInt(Board::getCommentCount)
+                .average()
+                .orElse(0.0);
+            
             log.info("평균 조회수: {:.2f}", avgViewCount);
             log.info("평균 좋아요: {:.2f}", avgLikeCount);
             log.info("평균 댓글 수: {:.2f}", avgCommentCount);
         }
     }
 }
+

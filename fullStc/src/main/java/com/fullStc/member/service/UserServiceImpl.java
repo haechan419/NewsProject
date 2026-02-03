@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.fullStc.ai.service.AiFaceService;
 import com.fullStc.board.service.FileStorageService;
 import com.fullStc.member.domain.Member;
 import com.fullStc.member.domain.MemberCategory;
@@ -36,7 +35,6 @@ public class UserServiceImpl implements UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final MemberProfileImageRepository memberProfileImageRepository;
     private final FileStorageService fileStorageService;
-    private final AiFaceService aiFaceService;
 
     // 사용자 정보 조회
     @Override
@@ -90,17 +88,13 @@ public class UserServiceImpl implements UserService {
         // 기존 카테고리 삭제
         memberCategoryRepository.deleteByMemberId(userId);
 
-        // 새로운 카테고리 추가 (비어있지 않은 경우에만)
-        if (categoryUpdateDTO.getCategories() != null) {
-            for (String category : categoryUpdateDTO.getCategories()) {
-                if (category != null && !category.trim().isEmpty()) {
-                    MemberCategory memberCategory = MemberCategory.builder()
-                            .member(member)
-                            .category(category.trim())
-                            .build();
-                    memberCategoryRepository.save(memberCategory);
-                }
-            }
+        // 새로운 카테고리 추가
+        for (String category : categoryUpdateDTO.getCategories()) {
+            MemberCategory memberCategory = MemberCategory.builder()
+                    .member(member)
+                    .category(category)
+                    .build();
+            memberCategoryRepository.save(memberCategory);
         }
 
         log.info("관심 카테고리 업데이트 완료: userId={}, categories={}", userId, categoryUpdateDTO.getCategories());
@@ -135,26 +129,10 @@ public class UserServiceImpl implements UserService {
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
 
-        // 1. 얼굴 데이터 삭제 (DB + Python 서버)
-        try {
-            aiFaceService.deleteFaceData(member.getEmail());
-            log.info("얼굴 데이터 삭제 완료: userId={}, email={}", userId, member.getEmail());
-        } catch (Exception e) {
-            log.error("얼굴 데이터 삭제 중 오류 발생 (계속 진행): {}", e.getMessage());
-        }
-
-        // 2. 프로필 이미지 삭제
-        try {
-            deleteProfileImage(userId);
-            log.info("프로필 이미지 삭제 완료: userId={}", userId);
-        } catch (Exception e) {
-            log.error("프로필 이미지 삭제 중 오류 발생 (계속 진행): {}", e.getMessage());
-        }
-
-        // 3. 계정 비활성 처리 (소프트 삭제)
+        // 계정 비활성 처리 (소프트 삭제)
         member.changeEnabled(false);
 
-        // 4. 로그인 유지용 토큰 제거
+        // 로그인 유지용 토큰 제거
         refreshTokenRepository.deleteByMemberId(userId);
 
         log.info("계정 비활성 처리 완료: userId={}", userId);
@@ -218,29 +196,10 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
 
         memberProfileImageRepository.findByMember(member).ifPresent(existing -> {
-            // 원본 파일 삭제
             String storedFileName = existing.getImageUrl();
             if (storedFileName != null) {
-                try {
-                    fileStorageService.deleteFile(storedFileName);
-                    log.info("원본 프로필 이미지 파일 삭제 완료: {}", storedFileName);
-                } catch (Exception e) {
-                    log.error("원본 프로필 이미지 파일 삭제 실패 (계속 진행): {}", e.getMessage());
-                }
+                fileStorageService.deleteFile(storedFileName);
             }
-
-            // 썸네일 파일 삭제
-            String thumbnailFileName = existing.getThumbnailFileName();
-            if (thumbnailFileName != null) {
-                try {
-                    fileStorageService.deleteFile(thumbnailFileName);
-                    log.info("썸네일 프로필 이미지 파일 삭제 완료: {}", thumbnailFileName);
-                } catch (Exception e) {
-                    log.error("썸네일 프로필 이미지 파일 삭제 실패 (계속 진행): {}", e.getMessage());
-                }
-            }
-
-            // DB 레코드 삭제
             memberProfileImageRepository.delete(existing);
         });
 

@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 /**
  * Q&A 서비스 구현체
- * FAQ DB 참조 + HyperCLOVA AI (Msty) 연동
+ * FAQ DB 참조 + GPT-4o-mini (Python 서버) 연동
  */
 @Slf4j
 @Service
@@ -37,11 +37,8 @@ public class QaServiceImpl implements QaService {
     private final MemberRepository memberRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${ai.msty.server.url:http://localhost:11964}")
-    private String mstyServerUrl;
-
-    @Value("${ai.msty.model:hf.co/rippertnt/HyperCLOVA-SEED-Text-Instruct-1.5B-Q4_K_M-GGUF:hyperclovax-seed-text-instruct-1.5b-q4_k_m.gguf}")
-    private String mstyModel;
+    @Value("${ai.python.server.url:http://localhost:8000}")
+    private String pythonServerUrl;
 
     @Override
     @Transactional
@@ -62,15 +59,12 @@ public class QaServiceImpl implements QaService {
         List<Faq> relatedFaqs = searchRelatedFaqs(request.getMessage());
         log.info("관련 FAQ 검색 결과: {} 건", relatedFaqs.size());
 
-        // 4. 시스템 프롬프트 생성 (FAQ 정보 포함)
-        String systemPrompt = buildSystemPrompt(relatedFaqs);
-
-        // 5. Msty (HyperCLOVA) API 호출
+        // 4. Python 서버의 GPT-4o-mini API 호출 (FAQ 정보 포함)
         String aiReply;
         try {
-            aiReply = callMstyApi(systemPrompt, request.getMessage(), request.getConversationHistory());
+            aiReply = callPythonQaApi(request.getMessage(), request.getConversationHistory(), relatedFaqs);
         } catch (Exception e) {
-            log.error("Msty API 호출 실패: {}", e.getMessage());
+            log.error("Python Q&A API 호출 실패: {}", e.getMessage());
             aiReply = "죄송합니다. 현재 AI 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.";
         }
 
@@ -136,102 +130,89 @@ public class QaServiceImpl implements QaService {
     }
 
     /**
-     * 시스템 프롬프트 생성 (FAQ 정보 포함)
+     * Python 서버의 GPT-4o-mini Q&A API 호출
      */
-    private String buildSystemPrompt(List<Faq> relatedFaqs) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("당신은 뉴스 플랫폼 고객센터의 친절한 AI 상담원입니다.\n");
-        sb.append("사용자의 질문에 명확하고 도움이 되는 답변을 제공해주세요.\n");
-        sb.append("한국어로 대화하며, 존댓말을 사용합니다.\n\n");
-
-        if (!relatedFaqs.isEmpty()) {
-            sb.append("다음은 참고할 수 있는 FAQ 정보입니다:\n\n");
-            for (int i = 0; i < relatedFaqs.size(); i++) {
-                Faq faq = relatedFaqs.get(i);
-                sb.append("--- FAQ ").append(i + 1).append(" ---\n");
-                sb.append("카테고리: ").append(faq.getCategory().getDisplayName()).append("\n");
-                sb.append("질문: ").append(faq.getQuestion()).append("\n");
-                sb.append("답변: ").append(faq.getAnswer()).append("\n\n");
-            }
-            sb.append("위 FAQ 정보를 참고하여 사용자의 질문에 답변해주세요.\n");
-            sb.append("FAQ에 정확히 일치하는 내용이 있으면 해당 내용을 바탕으로 답변하고,\n");
-            sb.append("없으면 일반적인 안내를 제공해주세요.\n");
-        }
-
-        return sb.toString();
-    }
-
-    /**
-     * Msty (HyperCLOVA) API 호출
-     */
-    private String callMstyApi(String systemPrompt, String userMessage, 
-                               List<QaMessageRequest.ConversationMessage> history) {
-        log.info("Msty API 호출 시작 - URL: {}", mstyServerUrl);
+    private String callPythonQaApi(String userMessage, 
+                                   List<QaMessageRequest.ConversationMessage> history,
+                                   List<Faq> relatedFaqs) {
+        log.info("Python Q&A API 호출 시작 - URL: {}", pythonServerUrl);
 
         try {
-            // OpenAI 호환 API 형식으로 요청 구성
+            // FAQ 데이터를 Map 리스트로 변환
+            List<Map<String, String>> faqData = new ArrayList<>();
+            for (Faq faq : relatedFaqs) {
+                Map<String, String> faqMap = new HashMap<>();
+                faqMap.put("category", faq.getCategory() != null ? faq.getCategory().getDisplayName() : "");
+                faqMap.put("question", faq.getQuestion());
+                faqMap.put("answer", faq.getAnswer());
+                faqData.add(faqMap);
+            }
+            
+            log.info("Python Q&A API로 전송할 FAQ 데이터: {}건", faqData.size());
+            if (!faqData.isEmpty()) {
+                log.debug("FAQ 데이터 샘플: {}", faqData.get(0));
+            }
+            
+            // 요청 본문 구성
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", mstyModel);
-            requestBody.put("max_tokens", 1024);
-            requestBody.put("temperature", 0.7);
-
-            // 메시지 구성
-            List<Map<String, String>> messages = new ArrayList<>();
-
-            // 시스템 프롬프트
-            Map<String, String> systemMsg = new HashMap<>();
-            systemMsg.put("role", "system");
-            systemMsg.put("content", systemPrompt);
-            messages.add(systemMsg);
-
-            // 이전 대화 기록
+            requestBody.put("message", userMessage);
+            requestBody.put("faq_data", faqData);
+            
+            // 대화 기록 변환
             if (history != null && !history.isEmpty()) {
+                List<Map<String, String>> conversationHistory = new ArrayList<>();
                 for (QaMessageRequest.ConversationMessage msg : history) {
                     Map<String, String> historyMsg = new HashMap<>();
                     historyMsg.put("role", msg.getRole());
                     historyMsg.put("content", msg.getContent());
-                    messages.add(historyMsg);
+                    conversationHistory.add(historyMsg);
                 }
+                requestBody.put("conversation_history", conversationHistory);
             }
-
-            // 현재 사용자 메시지
-            Map<String, String> userMsg = new HashMap<>();
-            userMsg.put("role", "user");
-            userMsg.put("content", userMessage);
-            messages.add(userMsg);
-
-            requestBody.put("messages", messages);
-
+            
             // HTTP 요청
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
+            
             HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(requestBody, headers);
-
-            String url = mstyServerUrl + "/v1/chat/completions";
-            log.debug("Msty 요청 URL: {}", url);
-
+            
+            String url = pythonServerUrl + "/qa";
+            log.debug("Python Q&A 요청 URL: {}", url);
+            
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(url, httpEntity, Map.class);
-
-            if (response != null && response.containsKey("choices")) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-                if (!choices.isEmpty()) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-                    String content = (String) message.get("content");
-                    log.info("Msty API 응답 수신 완료");
-                    return content;
-                }
+            
+            if (response != null && response.containsKey("reply")) {
+                String reply = (String) response.get("reply");
+                log.info("Python Q&A API 응답 수신 완료");
+                return reply;
             }
-
-            log.error("Msty API 응답 형식 오류");
+            
+            log.error("Python Q&A API 응답 형식 오류");
             return "죄송합니다. AI 응답을 처리하는 중 오류가 발생했습니다.";
-
+            
         } catch (RestClientException e) {
-            log.error("Msty API 통신 오류: {}", e.getMessage());
-            throw new RuntimeException("AI 서버와 통신 중 오류가 발생했습니다.", e);
+            String errorMessage = e.getMessage();
+            log.error("Python Q&A API 통신 오류: {}", errorMessage);
+            
+            // 타임아웃 오류인지 확인
+            if (errorMessage != null && (errorMessage.contains("Read timed out") || 
+                                         errorMessage.contains("timeout") ||
+                                         errorMessage.contains("Timed out"))) {
+                log.warn("Python Q&A API 응답 타임아웃 발생. 서버가 응답하지 않거나 너무 느립니다.");
+                return "죄송합니다. AI 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.";
+            }
+            
+            // 연결 오류인지 확인
+            if (errorMessage != null && (errorMessage.contains("Connection refused") ||
+                                         errorMessage.contains("connect timed out") ||
+                                         errorMessage.contains("I/O error"))) {
+                log.warn("Python Q&A API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.");
+                return "죄송합니다. AI 서버에 연결할 수 없습니다. 서버 상태를 확인 중입니다.";
+            }
+            
+            // 기타 오류
+            throw new RuntimeException("AI 서버와 통신 중 오류가 발생했습니다: " + errorMessage, e);
         }
     }
 }

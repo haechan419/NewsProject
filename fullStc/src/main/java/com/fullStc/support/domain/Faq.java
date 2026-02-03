@@ -36,10 +36,6 @@ public class Faq {
     @Column(columnDefinition = "TEXT")
     private String keywords;  // 검색 키워드 (쉼표 구분)
 
-    @Column(name = "view_count")
-    @Builder.Default
-    private Integer viewCount = 0;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -47,13 +43,6 @@ public class Faq {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    /**
-     * 조회수 증가
-     */
-    public void increaseViewCount() {
-        this.viewCount++;
-    }
 
     /**
      * FAQ 수정

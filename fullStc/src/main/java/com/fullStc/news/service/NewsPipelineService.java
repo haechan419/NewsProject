@@ -35,7 +35,7 @@ public class NewsPipelineService {
 
         return new PipelineResult(
                 enrich.contentFilled(),
-                0,
+               0,
                 clustered,
                 summarized,
                 emb,

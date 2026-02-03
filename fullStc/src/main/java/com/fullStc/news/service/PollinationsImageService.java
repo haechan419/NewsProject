@@ -47,4 +47,4 @@ public class PollinationsImageService {
             return null;
         }
     }
-    }
+}

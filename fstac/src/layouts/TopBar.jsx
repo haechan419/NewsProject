@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutAsync } from '../slices/authSlice';
-import { DriveModeContext } from '../App';
 import './TopBar.css';
 
 const TopBar = () => {
@@ -10,10 +9,9 @@ const TopBar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const driveMode = useContext(DriveModeContext);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-
+  
   // MainPage인지 확인 (경로가 '/'인 경우)
   const isMainPage = location.pathname === '/';
 
@@ -39,7 +37,7 @@ const TopBar = () => {
 
   return (
     <div className={`top-bar-container ${isMainPage ? 'top-bar-overlay' : ''}`}>
-
+      
       {/* 1. 왼쪽: NAVER whale 로고 박스 */}
       <div className="logo-area" onClick={() => navigate('/')}>
         <div className="logo-box">
@@ -51,12 +49,12 @@ const TopBar = () => {
       {/* 2. 중앙: 메뉴 리스트 */}
       <nav className="nav-bar">
         <ul>
-          <li onClick={() => navigate('/category/politics')}>정치</li>
-          <li onClick={() => navigate('/category/economy')}>경제</li>
-          <li onClick={() => navigate('/category/culture')}>문화</li>
-          <li onClick={() => navigate('/category/it')}>IT/과학</li>
-          <li onClick={() => navigate('/category/society')}>사회</li>
-          <li onClick={() => navigate('/category/world')}>국제</li>
+          <li onClick={() => navigate('/politics')}>정치</li>
+          <li onClick={() => navigate('/economy')}>경제</li>
+          <li onClick={() => navigate('/entertainment')}>엔터</li>
+          <li onClick={() => navigate('/it')}>IT/과학</li>
+          <li onClick={() => navigate('/sports')}>스포츠</li>
+          <li onClick={() => navigate('/international')}>국제</li>
           <li onClick={() => navigate('/board')}>게시판</li>
         </ul>
       </nav>
@@ -69,24 +67,24 @@ const TopBar = () => {
         </button>
 
         {/* [요청사항] 예쁜 운전대 아이콘 (3-Spoke Wheel Style) */}
-        <button className="icon-btn" aria-label="Drive Mode" onClick={driveMode.openDriveMode}>
+        <button className="icon-btn" aria-label="Drive Mode">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             {/* 중앙 허브 */}
-            <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"></circle>
+            <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"></circle> 
             {/* 스포크 (핸들 지지대) */}
             <path d="M12 14.5V22"></path> {/* 아래쪽 */}
             <path d="M9.5 12H2"></path>   {/* 왼쪽 */}
             <path d="M14.5 12H22"></path>  {/* 오른쪽 */}
             {/* 핸들 안쪽 그립감 디테일 (옵션) */}
-            <path d="M12 2v2" opacity="0.3"></path>
+            <path d="M12 2v2" opacity="0.3"></path> 
           </svg>
         </button>
 
         {/* 유저 아이콘 */}
         <div className="user-icon-container" ref={dropdownRef}>
-          <button
-            className="icon-btn"
+          <button 
+            className="icon-btn" 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             aria-label="User Menu"
           >
@@ -100,15 +98,11 @@ const TopBar = () => {
             <div className="dropdown-menu">
               {isAuthenticated ? (
                 <>
-                  <div className="dropdown-item" style={{ cursor: 'default', fontWeight: 500 }}>
+                  <div className="dropdown-item" style={{cursor: 'default', fontWeight: 500}}>
                     {user?.nickname || '사용자'}님
                   </div>
-                  <Link to="/mypage" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>
-                    마이페이지
-                  </Link>
                   <Link to="/profile/edit" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>프로필 수정</Link>
-
-                  <button className="dropdown-item" style={{ color: '#e74c3c' }} onClick={handleLogout}>로그아웃</button>
+                  <button className="dropdown-item" style={{color: '#e74c3c'}} onClick={handleLogout}>로그아웃</button>
                 </>
               ) : (
                 <Link to="/login" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>로그인</Link>

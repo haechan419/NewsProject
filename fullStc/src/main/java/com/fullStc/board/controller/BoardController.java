@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fullStc.board.dto.*;
 import com.fullStc.board.service.BoardService;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/boards")
 @RequiredArgsConstructor
@@ -20,14 +18,14 @@ public class BoardController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    public ResponseEntity<List<BoardListResponseDTO>> getBoards(
+    public ResponseEntity<BoardPageResponseDTO> getBoards(
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(boardService.getBoards(offset, limit));
     }
 
     @GetMapping("/type/{boardType}")
-    public ResponseEntity<List<BoardListResponseDTO>> getBoardsByType(
+    public ResponseEntity<BoardPageResponseDTO> getBoardsByType(
             @PathVariable String boardType,
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "10") int limit) {
@@ -35,11 +33,12 @@ public class BoardController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<BoardListResponseDTO>> searchBoards(
+    public ResponseEntity<BoardPageResponseDTO> searchBoards(
             @RequestParam String keyword,
+            @RequestParam(required = false, defaultValue = "TITLE_CONTENT") String searchType,
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(boardService.searchBoards(keyword, offset, limit));
+        return ResponseEntity.ok(boardService.searchBoards(keyword, searchType, offset, limit));
     }
 
     @GetMapping("/{boardId}")

@@ -16,15 +16,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FaqResponse {
 
-    private Long id;
-    private FaqCategory category;
-    private String categoryName;
-    private String question;
-    private String answer;
-    private String keywords;
-    private Integer viewCount;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long id; 
+    private FaqCategory category; // 카테고리
+    private String categoryName; // 카테고리 이름
+    private String question; // 질문
+    private String answer; // 답변
+    private String keywords; // 키워드
+    private LocalDateTime createdAt; // 생성일시
+    private LocalDateTime updatedAt; // 수정일시
 
     /**
      * Entity -> DTO 변환
@@ -37,7 +36,6 @@ public class FaqResponse {
                 .question(faq.getQuestion())
                 .answer(faq.getAnswer())
                 .keywords(faq.getKeywords())
-                .viewCount(faq.getViewCount())
                 .createdAt(faq.getCreatedAt())
                 .updatedAt(faq.getUpdatedAt())
                 .build();

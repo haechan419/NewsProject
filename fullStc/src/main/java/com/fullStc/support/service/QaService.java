@@ -13,7 +13,7 @@ public interface QaService {
 
     /**
      * Q&A 메시지 전송 및 AI 응답 받기
-     * - FAQ DB를 참조하여 HyperCLOVA AI가 답변 생성
+     * - FAQ DB를 참조하여 GPT-4o-mini가 답변 생성
      */
     QaMessageResponse sendMessage(Long userId, QaMessageRequest request);
 

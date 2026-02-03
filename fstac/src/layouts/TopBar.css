@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   /* 로고 영역이 고정된 크기를 갖지 않도록 설정 */
-  flex-shrink: 0;
+  flex-shrink: 0; 
 }
 
 .logo-box {
@@ -52,12 +52,12 @@
 .nav-bar {
   flex: 1; /* 남은 공간을 차지하여 우측 메뉴를 끝으로 밀어냄 */
   display: flex;
-
+  
   /* [수정 포인트] 중앙 정렬(center) -> 왼쪽 정렬(flex-start) */
-  justify-content: flex-start;
-
+  justify-content: flex-start; 
+  
   /* [수정 포인트] 로고와의 간격 조정 (원하시는 만큼 숫자를 조절하세요) */
-  margin-left: 80px;
+  margin-left: 80px; 
 }
 
 .nav-bar ul {

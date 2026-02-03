@@ -7,12 +7,12 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "news", uniqueConstraints = @UniqueConstraint(name = "uk_source", columnNames = { "provider",
-        "source_id" }), indexes = {
-        @Index(name = "idx_published", columnList = "published_at"),
-        @Index(name = "idx_provider", columnList = "provider"),
-        @Index(name = "idx_cluster", columnList = "dup_cluster_id"),
-        @Index(name = "idx_verified", columnList = "verified_at")
-})
+                "source_id" }), indexes = {
+                                @Index(name = "idx_published", columnList = "published_at"),
+                                @Index(name = "idx_provider", columnList = "provider"),
+                                @Index(name = "idx_cluster", columnList = "dup_cluster_id"),
+                                @Index(name = "idx_verified", columnList = "verified_at")
+                })
 @Getter
 @Setter
 @NoArgsConstructor

@@ -63,15 +63,11 @@ export const searchFaqs = async (keyword, category = null) => {
 /**
  * FAQ 버튼 클릭 (즉시 답변)
  * @param {number} id - FAQ ID
+ * @deprecated 조회수 기능이 제거되어 getFaqById를 사용하세요
  */
 export const clickFaq = async (id) => {
-  try {
-    const response = await apiClient.post(`/api/faq/button/${id}`);
-    return response.data.data;
-  } catch (error) {
-    console.error('FAQ 클릭 에러:', error);
-    throw error;
-  }
+  // 조회수 기능 제거로 인해 단순히 FAQ를 조회만 함
+  return getFaqById(id);
 };
 
 // ===== 관리자 API =====

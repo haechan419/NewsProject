@@ -85,8 +85,6 @@ public class SecurityConfig {
                         "/api/inquiry/**",
                         "/api/category/**",
                         "/api/user/**",
-                        "/api/market/**",  // 금융 시장 데이터 API
-                        "/api/drive/**",  // 드라이브 모드 API
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/oauth2/**",
@@ -111,7 +109,6 @@ public class SecurityConfig {
                     "/static/**",
                     "/public/**",
                     "/resources/**",
-                    "/upload/**", // 추가한 부분
                     "/css/**",
                     "/js/**",
                     "/images/**",
@@ -124,24 +121,16 @@ public class SecurityConfig {
             // 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
             auth.requestMatchers("/admin/**").permitAll();
 
-            // 1. AI 마이페이지 관련 경로들을 허용 리스트에 추가합니다.
-        auth.requestMatchers("/api/ai/mypage/**").permitAll();
-        auth.requestMatchers("/api/ai/video/**").permitAll();
-        auth.requestMatchers("/upload/**").permitAll();
-
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
             // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
             auth.requestMatchers("/api/auth/**").permitAll();
-            auth.requestMatchers("/api/ai/mypage/**").permitAll();
             // 얼굴 인식 API는 인증 없이 접근 가능 (로그인 페이지에서 사용)
             auth.requestMatchers("/api/ai/face/recognize").permitAll();
             // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
             auth.requestMatchers("/api/category/list").permitAll();
-            // 금융 시장 데이터 API는 인증 없이 접근 가능 (메인 페이지에서 사용)
-            auth.requestMatchers("/api/market/**").permitAll();
-            // 드라이브 모드 API는 인증 없이 접근 가능
-            auth.requestMatchers("/api/drive/**").permitAll();
+             // AI 채팅 API는 인증 없이 접근 가능
+             auth.requestMatchers("/api/ai/chat", "/api/ai/**").permitAll();
             // OAuth2 경로 허용
             auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
             // /login 경로 허용 (OAuth2 에러 리다이렉트용)

@@ -40,7 +40,7 @@ public class NewsCluster {
     private String clusterTitle;
 
     @Lob
-    @Column(name="cluster_summary",columnDefinition = "TEXT")
+    @Column(name="cluster_summary")
     private String clusterSummary;
 
     @Column(name="quality_score")
@@ -66,13 +66,6 @@ public class NewsCluster {
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
     }
-
-    @Column(columnDefinition = "TEXT")
-    private String imageUrl;
-
-    // (Getter/Setter 필요하면 추가, @Data 쓰시면 생략 가능)
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public String getImageUrl() { return this.imageUrl; }
 
     @JsonIgnore  // 👈 이거 필수! (안 붙이면 프론트가 다운됨)
     @OneToMany(mappedBy = "newsCluster")
