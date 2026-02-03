@@ -63,11 +63,7 @@ public class MyPageServiceImpl implements MyPageService {
 
     @Override
     public void toggleScrap(Long memberId, String newsId) {
-        scrapRepository.findByMemberIdAndNewsId(memberId, newsId)
-                .ifPresentOrElse(
-                    scrapRepository::delete,
-                    () -> scrapRepository.save(Scrap.builder().memberId(memberId).newsId(newsId).build())
-                );
+        scrapService.toggleScrap(memberId, newsId);
     }
 
     // 변환 보조 메서드: VideoTask 엔티티 구조 변경을 반영했습니다.

@@ -1,14 +1,20 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
+import { getMyPageData } from '@/api/myPageApi';
+import { toggleScrap } from '@/scrap/api/scrapApi';
 import './CategoryPage.css';
 
 const CategoryPage = () => {
     const { category } = useParams();
     const navigate = useNavigate();
+    const { user } = useSelector((state) => state.auth || {});
+    const memberId = user?.id ?? user?.memberId ?? null;
 
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [scrapIds, setScrapIds] = useState([]);
 
     // ✅ 리스트에서 처음에 보여줄 개수(헤드라인 제외)
     const [visibleCount, setVisibleCount] = useState(5);
@@ -58,6 +64,43 @@ const CategoryPage = () => {
     useEffect(() => {
         setVisibleCount(5);
     }, [category]);
+
+    // 스크랩 ID 목록 로드 (별 채움 표시용)
+    useEffect(() => {
+        if (!memberId) return;
+        const load = async () => {
+            try {
+                const data = await getMyPageData(memberId);
+                const ids = data?.scrapNewsIds || data?.scrapItems?.map((i) => i.newsId) || [];
+                setScrapIds(ids.map(String));
+            } catch {
+                setScrapIds([]);
+            }
+        };
+        load();
+    }, [memberId]);
+
+    const handleScrapClick = useCallback(
+        async (e, newsId) => {
+            e.stopPropagation();
+            if (!memberId) {
+                alert('로그인 후 스크랩할 수 있습니다.');
+                return;
+            }
+            try {
+                await toggleScrap(memberId, String(newsId));
+                setScrapIds((prev) =>
+                    prev.includes(String(newsId))
+                        ? prev.filter((id) => id !== String(newsId))
+                        : [...prev, String(newsId)]
+                );
+            } catch (err) {
+                console.error('스크랩 토글 실패:', err);
+                alert('스크랩 처리에 실패했습니다.');
+            }
+        },
+        [memberId]
+    );
 
     const formatDate = (d) => {
         if (!d) return '';
@@ -228,7 +271,15 @@ const CategoryPage = () => {
                                         </div>
                                     </div>
 
-                                    <div className="naverRank">{idx + 2}</div>
+                                    <button
+                                        type="button"
+                                        className="naverScrap"
+                                        onClick={(e) => handleScrapClick(e, news.id)}
+                                        title={scrapIds.includes(String(news.id)) ? '스크랩 해제' : '스크랩'}
+                                        aria-label={scrapIds.includes(String(news.id)) ? '스크랩 해제' : '스크랩'}
+                                    >
+                                        {scrapIds.includes(String(news.id)) ? '★' : '☆'}
+                                    </button>
                                 </div>
                             ))}
                         </div>
