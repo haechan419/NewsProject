@@ -97,13 +97,19 @@ const NewsDetailPage = () => {
         }
     };
 
+    const fromScrapList = location.state?.fromScrapList;
+    const goBack = () => {
+        if (fromScrapList) navigate('/mypage?tab=scrap');
+        else navigate(-1);
+    };
+
     // ✅ state 없이 직접 주소로 들어온 경우(새로고침 포함)
     if (!news) {
         return (
             <div className="detailWrap">
                 <div className="detailCard">
                     <div className="detailTop">
-                        <button className="backBtn" onClick={() => navigate(-1)}>← 뒤로</button>
+                        <button className="backBtn" onClick={goBack}>← 뒤로</button>
                     </div>
 
                     <h1 className="detailTitle">기사 정보를 불러올 수 없어요</h1>
@@ -117,10 +123,10 @@ const NewsDetailPage = () => {
     }
 
     return (
-        <div className="detailWrap">
+            <div className="detailWrap">
             <div className="detailCard">
                 <div className="detailTop">
-                    <button className="backBtn" onClick={() => navigate(-1)}>← 뒤로</button>
+                    <button className="backBtn" onClick={goBack}>← 뒤로</button>
 
                     <div className="detailMeta">
                         <span className="metaPill">AI SUMMARY</span>
