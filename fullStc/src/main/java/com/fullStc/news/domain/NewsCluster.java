@@ -67,8 +67,9 @@ public class NewsCluster {
         if (updatedAt == null) updatedAt = now;
     }
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
+
 
     // (Getter/Setter 필요하면 추가, @Data 쓰시면 생략 가능)
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
@@ -82,5 +83,15 @@ public class NewsCluster {
     void preUpdate() {
         updatedAt = Instant.now();
     }
+
+    @Column(name="image_status", length = 16)
+    private String imageStatus;
+
+    @Column(name="image_fail_count", nullable = false)
+    private int imageFailCount;
+
+    @Column(name="image_next_retry_at")
+    private java.time.Instant imageNextRetryAt;
+
 }
 

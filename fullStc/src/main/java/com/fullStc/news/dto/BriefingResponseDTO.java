@@ -4,6 +4,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import com.fullStc.news.domain.NewsCluster;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 @Getter
 @NoArgsConstructor
 public class BriefingResponseDTO {
@@ -13,9 +17,25 @@ public class BriefingResponseDTO {
     private String originalUrl;
     private String date;
     private String category;
-    private String image; // ★ 이미지가 담길 필드
+    private String image;
 
-    // 1. [정석] NewsCluster(요약본) -> DTO 변환
+    // ✅ 백엔드 공개 주소(개발용)
+    // 배포 시 application.yml 값으로 빼는 게 베스트지만, 일단 고치기만 하면 이걸로 충분함.
+    private static final String BACKEND_BASE_URL = "http://localhost:8080";
+
+    private static String toProxyImageUrl(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+
+        // 이미 프록시면 그대로
+        if (raw.startsWith(BACKEND_BASE_URL + "/api/images/pollinations")) return raw;
+
+        String b64 = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+
+        return BACKEND_BASE_URL + "/api/images/pollinations?b64=" + b64;
+    }
+
+    // 1) NewsCluster -> DTO
     public BriefingResponseDTO(NewsCluster cluster) {
         this.id = cluster.getId();
         this.title = cluster.getClusterTitle();
@@ -24,13 +44,11 @@ public class BriefingResponseDTO {
         this.date = (cluster.getCreatedAt() != null) ? cluster.getCreatedAt().toString() : "";
         this.category = cluster.getCategory();
 
-        // ★ [수정] null 대신 DB에 저장된 URL을 꺼내서 넣습니다!
-        // (NewsCluster 엔티티에 getImageUrl() 메소드가 있어야 합니다)
-        this.image = cluster.getImageUrl();
+        // ✅ 핵심: 원본 URL 대신 프록시 URL로 내려줌
+        this.image = toProxyImageUrl(cluster.getImageUrl());
     }
 
-    // 2. [비상 대책] 낱개 데이터 -> DTO 변환
-    // ★ 파라미터 맨 뒤에 String image를 추가했습니다.
+    // 2) 낱개 데이터 -> DTO
     public BriefingResponseDTO(Long id, String title, String summary, String category, String originalUrl, String date, String image) {
         this.id = id;
         this.title = title;
@@ -39,7 +57,7 @@ public class BriefingResponseDTO {
         this.originalUrl = originalUrl;
         this.date = date;
 
-        // ★ [수정] 받아온 이미지 URL을 넣습니다.
-        this.image = image;
+        // ✅ 핵심: 원본 URL 대신 프록시 URL로 내려줌
+        this.image = toProxyImageUrl(image);
     }
 }

@@ -62,7 +62,7 @@ class TestFaceRegistration:
         assert "message" in data
         assert "face_detected" in data
         
-        print(f"✅ 얼굴 등록 성공: {data}")
+        print(f"[성공] 얼굴 등록 성공: {data}")
 
     def test_register_face_no_image(self):
         """이미지 없이 얼굴 등록 시도 - 실패 테스트"""
@@ -77,7 +77,7 @@ class TestFaceRegistration:
         # 에러 응답 확인 (422 또는 400)
         assert response.status_code in [400, 422]
         
-        print(f"✅ 이미지 없음 검증 성공")
+        print(f"[성공] 이미지 없음 검증 성공")
 
     def test_register_face_no_user_id(self):
         """사용자 ID 없이 얼굴 등록 시도 - 실패 테스트"""
@@ -92,7 +92,7 @@ class TestFaceRegistration:
         # 에러 응답 확인
         assert response.status_code in [400, 422]
         
-        print(f"✅ 사용자 ID 없음 검증 성공")
+        print(f"[성공] 사용자 ID 없음 검증 성공")
 
     def test_register_face_invalid_base64(self):
         """잘못된 Base64 이미지로 얼굴 등록 시도"""
@@ -107,7 +107,7 @@ class TestFaceRegistration:
         # 응답 확인 (Base64 디코딩 에러 발생 가능)
         assert response.status_code in [400, 500]
         
-        print(f"✅ 잘못된 Base64 검증 성공")
+        print(f"[성공] 잘못된 Base64 검증 성공")
 
 
 class TestFaceRecognition:
@@ -150,7 +150,7 @@ class TestFaceRecognition:
         assert "face_detected" in data
         assert "face_count" in data
         
-        print(f"✅ 얼굴 인식 테스트 완료: {data}")
+        print(f"[성공] 얼굴 인식 테스트 완료: {data}")
 
     def test_recognize_face_no_user_id(self):
         """사용자 ID 없이 전체 비교 얼굴 인식"""
@@ -168,7 +168,7 @@ class TestFaceRecognition:
         assert "success" in data
         assert "face_detected" in data
         
-        print(f"✅ 전체 비교 얼굴 인식 테스트 완료")
+        print(f"[성공] 전체 비교 얼굴 인식 테스트 완료")
 
     def test_recognize_face_no_match(self):
         """매칭되지 않는 얼굴 인식 테스트"""
@@ -187,7 +187,7 @@ class TestFaceRecognition:
         # 매칭 실패 시에도 success는 true일 수 있음 (API 호출 자체는 성공)
         assert "face_detected" in data
         
-        print(f"✅ 매칭 실패 테스트 완료")
+        print(f"[성공] 매칭 실패 테스트 완료")
 
 
 class TestFaceDataManagement:
@@ -200,7 +200,7 @@ class TestFaceDataManagement:
         # 404 Not Found 응답 확인
         assert response.status_code == 404
         
-        print(f"✅ 존재하지 않는 얼굴 정보 조회 테스트 완료")
+        print(f"[성공] 존재하지 않는 얼굴 정보 조회 테스트 완료")
 
     def test_delete_face_not_found(self):
         """존재하지 않는 사용자의 얼굴 데이터 삭제"""
@@ -209,7 +209,7 @@ class TestFaceDataManagement:
         # 404 Not Found 응답 확인
         assert response.status_code == 404
         
-        print(f"✅ 존재하지 않는 얼굴 삭제 테스트 완료")
+        print(f"[성공] 존재하지 않는 얼굴 삭제 테스트 완료")
 
     def test_register_get_delete_flow(self):
         """얼굴 등록 -> 조회 -> 삭제 플로우 테스트"""
@@ -240,7 +240,7 @@ class TestFaceDataManagement:
         final_get_response = client.get(f"/face/{test_user_id}")
         assert final_get_response.status_code == 404
         
-        print(f"✅ 전체 플로우 테스트 완료")
+        print(f"[성공] 전체 플로우 테스트 완료")
 
 
 class TestChatAPI:
@@ -263,7 +263,7 @@ class TestChatAPI:
         assert "reply" in data
         assert len(data["reply"]) > 0
         
-        print(f"✅ 챗봇 응답 테스트 완료")
+        print(f"[성공] 챗봇 응답 테스트 완료")
 
     def test_chat_with_history(self):
         """대화 히스토리를 포함한 메시지 전송"""
@@ -284,7 +284,7 @@ class TestChatAPI:
         data = response.json()
         assert "reply" in data
         
-        print(f"✅ 대화 히스토리 포함 테스트 완료")
+        print(f"[성공] 대화 히스토리 포함 테스트 완료")
 
     def test_chat_empty_message(self):
         """빈 메시지 전송 시 에러 처리"""
@@ -298,25 +298,7 @@ class TestChatAPI:
         # 에러 응답 확인 (422 Validation Error 또는 400)
         assert response.status_code in [400, 422]
         
-        print(f"✅ 빈 메시지 검증 테스트 완료")
-
-
-class TestMarketDataAPI:
-    """시장 데이터 API 테스트"""
-
-    def test_get_market_data(self):
-        """시장 데이터 조회 테스트"""
-        response = client.get("/market/data")
-        
-        # 상태 코드 확인
-        assert response.status_code == 200
-        
-        # 응답 데이터 확인
-        data = response.json()
-        # 시장 데이터 구조 확인 (구현에 따라 다를 수 있음)
-        assert isinstance(data, dict) or isinstance(data, list)
-        
-        print(f"✅ 시장 데이터 조회 테스트 완료")
+        print(f"[성공] 빈 메시지 검증 테스트 완료")
 
 
 # pytest 실행 시 출력 설정

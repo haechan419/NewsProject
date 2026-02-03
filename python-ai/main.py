@@ -21,10 +21,10 @@ import shutil
 # 사용자 정의 모듈 임포트
 try:
     from video_worker import run_engine
-    print("🎬 [Success] 영상 엔진 로드 완료")
+    print("[Success] 영상 엔진 로드 완료")
 except Exception as e:
     run_engine = None
-    print(f"❌ [Error] 영상 엔진 로드 실패: {e}")
+    print(f"[Error] 영상 엔진 로드 실패: {e}")
 except ImportError:
     run_engine = None
 
@@ -70,6 +70,15 @@ app.add_middleware(
 # 드라이브 모드 라우터 및 정적 파일
 from drive.router import router as drive_router
 app.include_router(drive_router)
+
+# 환율 API 클라이언트 임포트
+try:
+    from exchange_rate import ExchangeRateClient, ExchangeRate
+    exchange_rate_client = ExchangeRateClient()
+    logger.info("[Success] 환율 API 클라이언트 로드 완료")
+except Exception as e:
+    exchange_rate_client = None
+    logger.warning(f"[Warning] 환율 API 클라이언트 로드 실패: {e}")
 _DRIVE_STATIC = Path(__file__).resolve().parent / "drive" / "static"
 if _DRIVE_STATIC.exists():
     app.mount("/static", StaticFiles(directory=str(_DRIVE_STATIC)), name="drive_static")
@@ -84,7 +93,7 @@ async def startup_event():
         # 영상 제작은 시간이 걸리므로 별도 스레드(Thread)에서 실행
         video_thread = threading.Thread(target=run_engine, daemon=True)
         video_thread.start()
-        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+        logger.info("[System] AI 영상 제작 엔진이 통합 가동되었습니다.")
 
 # 생존 확인 엔드포인트
 @app.get("/")
@@ -157,6 +166,37 @@ class FaceRecognitionResponse(BaseModel):
     matched_user_name: Optional[str] = None  # 매칭된 사용자 이름
     confidence: Optional[float] = None  # 매칭 신뢰도
     error: Optional[str] = None
+
+
+# ===== 환율 관련 모델 =====
+class ExchangeRateResponse(BaseModel):
+    """환율 정보 응답"""
+    cur_unit: str
+    cur_nm: str
+    deal_bas_r: Optional[str] = None  # Decimal을 문자열로 변환
+    ttb: Optional[str] = None
+    tts: Optional[str] = None
+    bkpr: Optional[str] = None
+
+    @classmethod
+    def from_exchange_rate(cls, rate):
+        """ExchangeRate 객체를 ExchangeRateResponse로 변환"""
+        from exchange_rate import ExchangeRate
+        return cls(
+            cur_unit=rate.cur_unit,
+            cur_nm=rate.cur_nm,
+            deal_bas_r=str(rate.deal_bas_r) if rate.deal_bas_r is not None else None,
+            ttb=str(rate.ttb) if rate.ttb is not None else None,
+            tts=str(rate.tts) if rate.tts is not None else None,
+            bkpr=str(rate.bkpr) if rate.bkpr is not None else None
+        )
+
+
+class ExchangeRateListResponse(BaseModel):
+    """환율 목록 응답"""
+    exchange_rates: List[ExchangeRateResponse]
+    count: int
+    search_date: Optional[str] = None
 
 
 # ===== 시스템 프롬프트 =====
@@ -457,9 +497,9 @@ async def generate_video(request: VideoGenerationRequest):
             # 제작 로직이 끝날 때까지 기다리지 않고 즉시 응답을 주기 위해 Thread 사용
             task_thread = threading.Thread(target=run_engine)
             task_thread.start()
-            logger.info(f"🎬 [엔진 가동] vno {request.vno} 제작을 위해 백그라운드 엔진을 실행했습니다.")
+            logger.info(f"[엔진 가동] vno {request.vno} 제작을 위해 백그라운드 엔진을 실행했습니다.")
         else:
-            logger.error("❌ 영상 엔진(run_engine)이 로드되지 않았습니다.")
+            logger.error("[Error] 영상 엔진(run_engine)이 로드되지 않았습니다.")
             raise HTTPException(status_code=500, detail="Video engine not found")
 
         return {
@@ -468,7 +508,7 @@ async def generate_video(request: VideoGenerationRequest):
             "vno": request.vno
         }
     except Exception as e:
-        logger.error(f"❌ [영상 요청 에러]: {str(e)}")
+        logger.error(f"[Error] [영상 요청 에러]: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
@@ -789,42 +829,134 @@ async def get_face_info(user_id: str):
         )
 
 
-# ===== 금융 데이터 API 엔드포인트 =====
-from market_data import get_korean_indices, get_global_indices
-
-@app.get("/api/market/korean-indices")
-async def get_korean_indices_api():
+# ===== 환율 API 엔드포인트 =====
+@app.get("/api/exchange-rate", response_model=ExchangeRateListResponse)
+async def get_all_exchange_rates():
     """
-    한국 지수 데이터 조회 (코스피, 코스닥)
-    Spring Boot에서 호출
+    모든 환율 조회 (당일)
     """
+    if exchange_rate_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="환율 API 클라이언트를 사용할 수 없습니다."
+        )
+    
     try:
-        logger.info("한국 지수 데이터 요청 수신")
-        data = get_korean_indices()
-        return data
+        logger.info("[환율] 당일 환율 조회 요청")
+        rates = exchange_rate_client.get_exchange_rates()
+        
+        if not rates:
+            logger.warning("[환율] 환율 데이터가 없습니다")
+            return ExchangeRateListResponse(
+                exchange_rates=[],
+                count=0,
+                search_date=None
+            )
+        
+        response_list = [ExchangeRateResponse.from_exchange_rate(rate) for rate in rates]
+        
+        logger.info(f"[환율] 환율 조회 성공 - 개수: {len(response_list)}")
+        return ExchangeRateListResponse(
+            exchange_rates=response_list,
+            count=len(response_list),
+            search_date=None
+        )
+        
     except Exception as e:
-        logger.error(f"한국 지수 데이터 조회 실패: {str(e)}")
+        logger.error(f"[환율] 환율 조회 실패: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"한국 지수 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+            detail=f"환율 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
 
-@app.get("/api/market/global-indices")
-async def get_global_indices_api():
+@app.get("/api/exchange-rate/date/{search_date}", response_model=ExchangeRateListResponse)
+async def get_exchange_rates_by_date(search_date: str):
     """
-    글로벌 지수 데이터 조회 (S&P 500, NASDAQ, Dow Jones)
-    Spring Boot에서 호출
+    특정 날짜의 환율 조회
+    
+    Args:
+        search_date: 조회 날짜 (yyyyMMdd 형식, 예: 20260203)
     """
+    if exchange_rate_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="환율 API 클라이언트를 사용할 수 없습니다."
+        )
+    
     try:
-        logger.info("글로벌 지수 데이터 요청 수신")
-        data = get_global_indices()
-        return data
+        # 날짜 형식 검증
+        if len(search_date) != 8 or not search_date.isdigit():
+            raise HTTPException(
+                status_code=400,
+                detail="날짜 형식이 올바르지 않습니다. yyyyMMdd 형식이어야 합니다. (예: 20260203)"
+            )
+        
+        logger.info(f"[환율] 특정 날짜 환율 조회 요청 - 날짜: {search_date}")
+        rates = exchange_rate_client.get_exchange_rates(search_date=search_date)
+        
+        if not rates:
+            logger.warning(f"[환율] 환율 데이터가 없습니다 - 날짜: {search_date}")
+            return ExchangeRateListResponse(
+                exchange_rates=[],
+                count=0,
+                search_date=search_date
+            )
+        
+        response_list = [ExchangeRateResponse.from_exchange_rate(rate) for rate in rates]
+        
+        logger.info(f"[환율] 환율 조회 성공 - 날짜: {search_date}, 개수: {len(response_list)}")
+        return ExchangeRateListResponse(
+            exchange_rates=response_list,
+            count=len(response_list),
+            search_date=search_date
+        )
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"글로벌 지수 데이터 조회 실패: {str(e)}")
+        logger.error(f"[환율] 환율 조회 실패 - 날짜: {search_date}, 오류: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"글로벌 지수 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+            detail=f"환율 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@app.get("/api/exchange-rate/currency/{cur_unit}", response_model=ExchangeRateResponse)
+async def get_exchange_rate_by_currency(cur_unit: str):
+    """
+    특정 통화의 환율 조회 (당일)
+    
+    Args:
+        cur_unit: 통화 코드 (USD, JPY, EUR 등)
+    """
+    if exchange_rate_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="환율 API 클라이언트를 사용할 수 없습니다."
+        )
+    
+    try:
+        logger.info(f"[환율] 특정 통화 환율 조회 요청 - 통화: {cur_unit}")
+        rate = exchange_rate_client.get_exchange_rate_by_currency(cur_unit)
+        
+        if rate is None:
+            logger.warning(f"[환율] 환율 정보를 찾을 수 없습니다 - 통화: {cur_unit}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"{cur_unit} 통화의 환율 정보를 찾을 수 없습니다."
+            )
+        
+        logger.info(f"[환율] 환율 조회 성공 - 통화: {cur_unit}")
+        return ExchangeRateResponse.from_exchange_rate(rate)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[환율] 환율 조회 실패 - 통화: {cur_unit}, 오류: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"환율 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
 

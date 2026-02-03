@@ -86,7 +86,11 @@ public class SecurityConfig {
                         "/api/category/**",
                         "/api/user/**",
                         "/api/market/**",  // 금융 시장 데이터 API
+                        "/api/exchange-rate/**",  // 환율 API
                         "/api/drive/**",  // 드라이브 모드 API
+                        "/api/images/**",
+                        "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
+
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/oauth2/**",
@@ -128,6 +132,10 @@ public class SecurityConfig {
         auth.requestMatchers("/api/ai/mypage/**").permitAll();
         auth.requestMatchers("/api/ai/video/**").permitAll();
         auth.requestMatchers("/upload/**").permitAll();
+
+            // ▼ [NEW] 이미지 실패 신고 및 뉴스 조회는 로그인 없이 허용
+            auth.requestMatchers("/api/images/**").permitAll();
+            auth.requestMatchers("/briefing/**").permitAll();
 
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();

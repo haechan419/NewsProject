@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import ScrapTab from "../../scrap/ScrapTab";
 import "./MyPage.css";
 
 const MyPage = ({ memberId }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   // --- 상태 관리 ---
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,11 @@ const MyPage = ({ memberId }) => {
   const [customTitle, setCustomTitle] = useState("");
   const [videoMode, setVideoMode] = useState("9:16");
   const [activeTab, setActiveTab] = useState("videos");
+
+  // URL ?tab=scrap 이면 스크랩 탭으로 (상세에서 뒤로가기 시)
+  useEffect(() => {
+    if (searchParams.get("tab") === "scrap") setActiveTab("scrap");
+  }, [searchParams]);
 
   // 1. Redux에서 인증 상태 가져오기
   // 토큰은 쿠키에 있으므로 isAuthenticated로 로그인 여부만 판단합니다.
@@ -233,14 +240,30 @@ const MyPage = ({ memberId }) => {
             className={activeTab === "scrap" ? "active" : ""}
             onClick={() => setActiveTab("scrap")}
           >
-            스크랩 ({data.scrapNewsIds?.length || 0})
+            스크랩 ({data.scrapItems?.length ?? data.scrapNewsIds?.length ?? 0})
           </button>
         </div>
 
-        {/* 영상 그리드 (호버 재생) */}
-        <div className="video-grid">
-          {activeTab === "videos" &&
-            data.myVideos?.map((video) => (
+        {/* 스크랩 탭: scrap 폴더 컴포넌트 */}
+        {activeTab === "scrap" && (
+          <ScrapTab
+            scrapItems={data.scrapItems ?? []}
+            memberId={memberId ? Number(memberId) : null}
+            onUnscrapSuccess={(item) => {
+              setData((prev) => ({
+                ...prev,
+                scrapItems: (prev.scrapItems ?? []).filter(
+                  (i) => i.sno !== item.sno && i.newsId !== item.newsId
+                ),
+              }));
+            }}
+          />
+        )}
+
+        {/* 영상 그리드 (호버 재생) - 동영상 탭일 때만 */}
+        {activeTab === "videos" && (
+          <div className="video-grid">
+            {data.myVideos?.map((video) => (
               <div key={video.vno} className="video-card">
                 <div className="video-thumb">
                   {video.status === "COMPLETED" ? (
@@ -286,19 +309,20 @@ const MyPage = ({ memberId }) => {
                 </div>
               </div>
             ))}
-          {activeTab === "videos" && data.myVideos?.length === 0 && (
-            <p
-              style={{
-                gridColumn: "1/-1",
-                textAlign: "center",
-                padding: "40px",
-                color: "#606060",
-              }}
-            >
-              아직 생성된 영상이 없습니다. 첫 영상을 만들어보세요!
-            </p>
-          )}
-        </div>
+            {data.myVideos?.length === 0 && (
+              <p
+                style={{
+                  gridColumn: "1/-1",
+                  textAlign: "center",
+                  padding: "40px",
+                  color: "#606060",
+                }}
+              >
+                아직 생성된 영상이 없습니다. 첫 영상을 만들어보세요!
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ★ 이 부분에 카테고리 설정 UI를 추가합니다 */}

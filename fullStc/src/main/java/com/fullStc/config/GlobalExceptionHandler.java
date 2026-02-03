@@ -1,5 +1,6 @@
 package com.fullStc.config;
 
+import com.fullStc.exchange.exception.ExchangeRateException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -53,6 +54,20 @@ public class GlobalExceptionHandler {
         String message = ex.getMessage() != null ? ex.getMessage() : "잘못된 요청입니다";
         
         response.put("error", "ERROR_BAD_REQUEST");
+        response.put("message", message);
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // ExchangeRateException 처리 (환율 API 오류)
+    @ExceptionHandler(ExchangeRateException.class)
+    public ResponseEntity<Map<String, Object>> handleExchangeRateException(ExchangeRateException ex) {
+        log.error("ExchangeRateException 발생: {}", ex.getMessage(), ex);
+        
+        Map<String, Object> response = new HashMap<>();
+        String message = ex.getMessage() != null ? ex.getMessage() : "환율 정보 조회 중 오류가 발생했습니다";
+        
+        response.put("error", "ERROR_EXCHANGE_RATE");
         response.put("message", message);
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);

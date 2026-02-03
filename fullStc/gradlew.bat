@@ -26,6 +26,9 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
+@rem Windows CMD 인코딩을 UTF-8로 설정 (한글 깨짐 방지)
+chcp 65001 >nul 2>&1
+
 set DIRNAME=%~dp0
 if "%DIRNAME%"=="" set DIRNAME=.
 @rem This is normally unused

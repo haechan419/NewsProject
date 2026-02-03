@@ -8,6 +8,8 @@ import com.fullStc.ai.dto.VideoTaskDTO; // SNVideoTaskDTO -> VideoTaskDTO 이름
 import com.fullStc.ai.repository.VideoTaskRepository; // SNVideoTaskRepository -> VideoTaskRepository 이름 변경 반영
 import com.fullStc.ai.repository.MemberConfigRepository;
 import com.fullStc.ai.repository.ScrapRepository;
+import com.fullStc.scrap.dto.ScrapItemDto;
+import com.fullStc.scrap.service.ScrapService;
 import lombok.RequiredArgsConstructor; // 빨간 줄 방지를 위한 필수 임포트
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class MyPageServiceImpl implements MyPageService {
     private final VideoTaskRepository videoTaskRepository; // 변수명 수정
     private final ScrapRepository scrapRepository;
     private final MemberConfigRepository memberConfigRepository;
+    private final ScrapService scrapService;
 
     @Override
     @Transactional(readOnly = true)
@@ -42,6 +45,7 @@ public class MyPageServiceImpl implements MyPageService {
                 .stream()
                 .map(Scrap::getNewsId)
                 .collect(Collectors.toList());
+        List<ScrapItemDto> scrapItems = scrapService.getScrapItems(memberId);
 
         // 3. 개인 설정 정보 가져오기 (없으면 기본값 생성)
         MemberConfig config = memberConfigRepository.findById(memberId)
@@ -51,6 +55,7 @@ public class MyPageServiceImpl implements MyPageService {
         return MyPageResponseDTO.builder()
                 .myVideos(videoList)
                 .scrapNewsIds(scrapIds)
+                .scrapItems(scrapItems)
                 .interestCategories(config.getInterestCategories())
                 .isVip(config.isVip())
                 .build();

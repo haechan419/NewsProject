@@ -98,6 +98,13 @@ tasks.named('bootRun') {
 	systemProperty 'console.encoding', 'UTF-8'
 	systemProperty 'user.language', 'ko'
 	systemProperty 'user.country', 'KR'
+	// Windows CMD에서 한글 출력을 위한 JVM 옵션
+	jvmArgs = [
+		'-Dfile.encoding=UTF-8',
+		'-Dconsole.encoding=UTF-8',
+		'-Duser.language=ko',
+		'-Duser.country=KR'
+	]
 }
 
 // JaCoCo 설정
