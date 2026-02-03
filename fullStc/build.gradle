@@ -65,8 +65,8 @@ dependencies {
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 //	// DB
-	// runtimeOnly 'com.mysql:mysql-connector-j'
-	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+	 runtimeOnly 'com.mysql:mysql-connector-j'
+//	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'

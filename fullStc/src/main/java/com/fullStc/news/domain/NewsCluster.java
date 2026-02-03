@@ -67,8 +67,9 @@ public class NewsCluster {
         if (updatedAt == null) updatedAt = now;
     }
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
+
 
     // (Getter/Setter 필요하면 추가, @Data 쓰시면 생략 가능)
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

@@ -10,6 +10,9 @@ const CategoryPage = () => {
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    // ✅ 리스트에서 처음에 보여줄 개수(헤드라인 제외)
+    const [visibleCount, setVisibleCount] = useState(5);
+
     const displayTitle = useMemo(() => {
         if (!category) return 'NEWS';
         switch (category) {
@@ -19,8 +22,21 @@ const CategoryPage = () => {
             case 'it': return 'IT & SCIENCE';
             case 'culture': return 'CULTURE & ART';
             case 'world': return 'INTERNATIONAL';
-            default: return category.toUpperCase();
+            default: return String(category).toUpperCase();
         }
+    }, [category]);
+
+    // ✅ (선택) 카테고리별 ISSUE NO 매핑
+    const issueNo = useMemo(() => {
+        const map = {
+            politics: 1,
+            economy: 2,
+            society: 3,
+            it: 4,
+            culture: 5,
+            world: 6,
+        };
+        return (category && map[category]) ? map[category] : 4;
     }, [category]);
 
     useEffect(() => {
@@ -33,7 +49,7 @@ const CategoryPage = () => {
                 setArticles(res.data || []);
             } catch (error) {
                 console.error('뉴스 로딩 실패:', error);
-                if (error.response && error.response.status === 401) {
+                if (error?.response && error.response.status === 401) {
                     alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
                     navigate('/login');
                 }
@@ -41,15 +57,32 @@ const CategoryPage = () => {
                 setLoading(false);
             }
         };
+
         if (category) fetchData();
     }, [category, navigate]);
 
+    // ✅ 카테고리 바뀌면 "더보기" 상태 초기화
+    useEffect(() => {
+        setVisibleCount(5);
+    }, [category]);
+
     const formatDate = (dateString) => {
         if (!dateString) return '';
-        return dateString.split('T')[0].replace(/-/g, '.');
+        return String(dateString).split('T')[0].replace(/-/g, '.');
     };
 
-    const getImg = (news) => news?.image || news?.imageUrl || news?.thumbnail || '';
+    /**
+     * ✅ 이미지 URL 뽑기 + 쓰레기값 방어
+     * - null/undefined/빈문자
+     * - "null" 같은 문자열
+     */
+    const getImg = (news) => {
+        const raw = (news && (news.image || news.imageUrl || news.thumbnail)) || '';
+        if (!raw) return '';
+        const s = String(raw).trim();
+        if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return '';
+        return s;
+    };
 
     // ✅ 요약에서 짧은 프리뷰 뽑기 (서론 우선)
     const getPreview = (text) => {
@@ -80,14 +113,26 @@ const CategoryPage = () => {
     };
 
     const headlineNews = articles.length > 0 ? articles[0] : null;
-    const otherNews = articles.length > 0 ? articles.slice(1) : [];
+
+    // ✅ 리스트는 헤드라인(0) 제외하고, visibleCount만큼만 보여준다
+    const otherNews = articles.length > 0 ? articles.slice(1, 1 + visibleCount) : [];
+
+    // ✅ "더보기" 버튼 표시 여부
+    const hasMore = articles.length > (1 + visibleCount);
+
+    const handleMore = () => {
+        setVisibleCount((prev) => prev + 5);
+    };
+
+    // ✅ 폴백 이미지 경로(프론트 public/fallback.png)
+    const FALLBACK_SRC = '/fallback.png';
 
     return (
         <div className="catPage">
             {/* 히어로 배너 */}
             <div className="category-hero">
                 <div className="hero-inner">
-                    <div className="hero-chip">ISSUE NO.4</div>
+                    <div className="hero-chip">ISSUE NO.{issueNo}</div>
                     <h1 className="hero-title">{displayTitle}</h1>
                     <div className="hero-sub">오늘의 핵심 이슈</div>
                 </div>
@@ -98,12 +143,21 @@ const CategoryPage = () => {
                     <div className="loading-box">AI가 뉴스를 분석하고 있습니다... 🤖</div>
                 ) : (
                     <>
-                        {/* ✅ 헤드라인: 네이버 카드 느낌 */}
+                        {/* ✅ 헤드라인 */}
                         {headlineNews ? (
                             <section className="headlineGrid">
                                 <div className="headlineMedia">
                                     {getImg(headlineNews) ? (
-                                        <img src={getImg(headlineNews)} alt="headline" />
+                                        <img
+                                            src={getImg(headlineNews)}
+                                            alt="headline"
+                                            referrerPolicy="no-referrer"
+                                            loading="lazy"
+                                            onError={(e) => {
+                                                if (e.currentTarget.src.includes(FALLBACK_SRC)) return;
+                                                e.currentTarget.src = FALLBACK_SRC;
+                                            }}
+                                        />
                                     ) : (
                                         <div className="mediaPlaceholder" />
                                     )}
@@ -112,9 +166,7 @@ const CategoryPage = () => {
                                 <article className="headlineNaverCard">
                                     <div className="headlineLabel">Headline News</div>
 
-                                    <h2 className="headlineNaverTitle">
-                                        {headlineNews.title}
-                                    </h2>
+                                    <h2 className="headlineNaverTitle">{headlineNews.title}</h2>
 
                                     <p className="headlineNaverDesc">
                                         {getPreview(headlineNews.clusterSummary || headlineNews.summary)}
@@ -123,11 +175,12 @@ const CategoryPage = () => {
                                     <div className="headlineBottom">
                                         <button
                                             className="headlineNaverLink"
-                                            onClick={() => navigate(`/news/${headlineNews.id}`, { state: { news: headlineNews } })}
+                                            onClick={() =>
+                                                navigate(`/news/${headlineNews.id}`, { state: { news: headlineNews } })
+                                            }
                                         >
                                             ↗ 상세 페이지 보기
                                         </button>
-
 
                                         <span className="headlineDate">
                       {formatDate(headlineNews.date || headlineNews.publishedAt)}
@@ -141,7 +194,7 @@ const CategoryPage = () => {
                             </div>
                         )}
 
-                        {/* ✅ 리스트: 프리뷰만 */}
+                        {/* ✅ 리스트 */}
                         <div className="news-list naverList">
                             {otherNews.map((news, idx) => (
                                 <div
@@ -151,11 +204,19 @@ const CategoryPage = () => {
                                     role="button"
                                     tabIndex={0}
                                 >
-
                                     <div className="naverLeft">
                                         <div className="naverThumb">
                                             {getImg(news) ? (
-                                                <img src={getImg(news)} alt="뉴스 썸네일" />
+                                                <img
+                                                    src={getImg(news)}
+                                                    alt="뉴스 썸네일"
+                                                    referrerPolicy="no-referrer"
+                                                    loading="lazy"
+                                                    onError={(e) => {
+                                                        if (e.currentTarget.src.includes(FALLBACK_SRC)) return;
+                                                        e.currentTarget.src = FALLBACK_SRC;
+                                                    }}
+                                                />
                                             ) : (
                                                 <div className="thumbPlaceholder" />
                                             )}
@@ -175,13 +236,19 @@ const CategoryPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* ✅ 순위: 헤드라인이 1번이니까 리스트는 2번부터 */}
                                     <div className="naverRank">{idx + 2}</div>
                                 </div>
                             ))}
                         </div>
 
+                        {/* ✅ 더보기 버튼 */}
                         <div className="more-row">
-                            <button className="more-btn">헤드라인 더보기 ▾</button>
+                            {hasMore && (
+                                <button className="more-btn" onClick={handleMore}>
+                                    뉴스 더보기 ▾
+                                </button>
+                            )}
                         </div>
                     </>
                 )}

@@ -29,12 +29,16 @@ public class PipelineOrchestratorService {
      */
     public void processNewNews(String category) {
         try {
-            String query = CategoryKeywords.buildQuery(category, null);
+            // (기존) 로그용으로는 query 변수를 남겨둬도 되지만, 실제 검색엔 쓰지 마세요.
+            String queryLog = CategoryKeywords.buildQuery(category, null);
+            log.info("🚀 [PIPELINE-ROOT] Start Fetching for category='{}' (Auto-Mapping applied)", category);
 
-            log.info("🚀 [PIPELINE-ROOT] Start Fetching for category='{}', query='{}'", category, query);
+            // ★ [핵심 수정] 두 번째 인자(query)에 'null'을 넣어야
+            // NaverNewsProvider가 "politics" -> "정치"로 자동 변환해서 최신 뉴스를 긁어옵니다!
+            NewsResponse response = newsAggregatorService.fetchAndSave(category, null, 30);
 
             // ★ [수정 포인트] 리턴값이 List<Long>이 아니라 NewsResponse 객체입니다.
-            NewsResponse response = newsAggregatorService.fetchAndSave(category, query, 30);
+//            NewsResponse response = newsAggregatorService.fetchAndSave(category, query, 30);
 
             // ★ [수정 포인트] 객체 안에서 ID 목록을 꺼냅니다.
             List<Long> newIds = response.getInsertedIds();

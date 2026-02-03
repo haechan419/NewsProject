@@ -126,6 +126,15 @@ const AppRouter = () => {
                         }
                     />
 
+                    <Route
+                        path="/news/:id"
+                        element={
+                            <ProtectedRoute>
+                                <NewsDetailPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
                     {/* 카테고리 페이지 라우트 */}
                     <Route
                         path="/category/:category"
@@ -135,6 +144,8 @@ const AppRouter = () => {
                             </ProtectedRoute>
                         }
                     />
+
+
 
                     {/* 404 처리 - 로그인 페이지로 리다이렉트 */}
                     <Route path="*" element={<Navigate to="/" replace />} />
