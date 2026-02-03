@@ -20,7 +20,7 @@ public class RestTemplateConfig {
         // 연결 타임아웃: 30초 (Python 서버 연결 대기)
         factory.setConnectTimeout(30000);
         // 읽기 타임아웃: 3분 (플레이리스트 TTS 생성 시 긴 텍스트/다건 기사로 시간 소요)
-        factory.setReadTimeout(180000);
+        factory.setReadTimeout(600000);
         
         RestTemplate restTemplate = new RestTemplate(factory);
         

@@ -8,6 +8,8 @@ import com.fullStc.ai.dto.VideoTaskDTO; // SNVideoTaskDTO -> VideoTaskDTO 이름
 import com.fullStc.ai.repository.VideoTaskRepository; // SNVideoTaskRepository -> VideoTaskRepository 이름 변경 반영
 import com.fullStc.ai.repository.MemberConfigRepository;
 import com.fullStc.ai.repository.ScrapRepository;
+import com.fullStc.scrap.dto.ScrapItemDto;
+import com.fullStc.scrap.service.ScrapService;
 import lombok.RequiredArgsConstructor; // 빨간 줄 방지를 위한 필수 임포트
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class MyPageServiceImpl implements MyPageService {
     private final VideoTaskRepository videoTaskRepository; // 변수명 수정
     private final ScrapRepository scrapRepository;
     private final MemberConfigRepository memberConfigRepository;
+    private final ScrapService scrapService;
 
     @Override
     @Transactional(readOnly = true)
@@ -37,11 +40,12 @@ public class MyPageServiceImpl implements MyPageService {
                 .map(this::entityToDTO)
                 .collect(Collectors.toList());
 
-        // 2. 내가 스크랩한 뉴스 ID 리스트 가져오기
+        // 2. 내가 스크랩한 뉴스 ID 리스트 + 카드용 스크랩 목록 (scrap 패키지 위임)
         List<String> scrapIds = scrapRepository.findByMemberId(memberId)
                 .stream()
                 .map(Scrap::getNewsId)
                 .collect(Collectors.toList());
+        List<ScrapItemDto> scrapItems = scrapService.getScrapItems(memberId);
 
         // 3. 개인 설정 정보 가져오기 (없으면 기본값 생성)
         MemberConfig config = memberConfigRepository.findById(memberId)
@@ -51,6 +55,7 @@ public class MyPageServiceImpl implements MyPageService {
         return MyPageResponseDTO.builder()
                 .myVideos(videoList)
                 .scrapNewsIds(scrapIds)
+                .scrapItems(scrapItems)
                 .interestCategories(config.getInterestCategories())
                 .isVip(config.isVip())
                 .build();
@@ -58,11 +63,7 @@ public class MyPageServiceImpl implements MyPageService {
 
     @Override
     public void toggleScrap(Long memberId, String newsId) {
-        scrapRepository.findByMemberIdAndNewsId(memberId, newsId)
-                .ifPresentOrElse(
-                    scrapRepository::delete,
-                    () -> scrapRepository.save(Scrap.builder().memberId(memberId).newsId(newsId).build())
-                );
+        scrapService.toggleScrap(memberId, newsId);
     }
 
     // 변환 보조 메서드: VideoTask 엔티티 구조 변경을 반영했습니다.

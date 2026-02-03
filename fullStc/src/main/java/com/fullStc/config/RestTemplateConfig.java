@@ -20,7 +20,7 @@ public class RestTemplateConfig {
         factory.setConnectTimeout(5000);
         
         // 읽기 타임아웃: 30초 (AI 응답 대기)
-        factory.setReadTimeout(30000);
+        factory.setReadTimeout(600000);
         
         return new RestTemplate(factory);
     }

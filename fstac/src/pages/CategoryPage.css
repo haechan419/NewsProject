@@ -275,18 +275,40 @@
     color:#d1d5db;
 }
 
-.naverRank {
-    width: 30px;
-    height: 22px;
-    border-radius: 5px;
-    background: #eaf2ff;
-    border: 1px solid #cfe0ff;
-    color: #2563eb;
-    font-weight: 900;
+/* 스크랩 별 버튼 (기존 naverRank 숫자 대체) */
+.naverScrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #94a3b8;
+    font-size: 20px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.naverScrap:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #f59e0b;
+}
+
+.naverScrap:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+/* 스크랩된 상태: 채워진 별 */
+.naverItem .naverScrap[title="스크랩 해제"] {
+    color: #f59e0b;
+    background: #fffbeb;
+    border-color: #fde68a;
 }
 
 /* 더보기 버튼 */
