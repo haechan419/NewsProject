@@ -1,8 +1,11 @@
 .youtube-layout {
   display: flex;
+
   background-color: #fff;
   color: #0f0f0f;
-  font-family: Roboto, Arial, sans-serif;
+    padding-left: 100px;   /* ⭐ 이거 하나 추가 */
+    padding-right: 100px;
+    font-family: Roboto, Arial, sans-serif;
 }
 
 /* 사이드바 */
@@ -10,7 +13,7 @@
   width: 260px;
   background-color: #ffffff;
   border-right: 1px solid #eeeeee;
-  padding: 30px 15px;
+  padding: 30px 0px;
   display: flex;
   flex-direction: column;
   height: 100vh;

@@ -668,7 +668,7 @@ const MainPage = () => {
                                             <>
                                                 {briefingNews.map((news) => {
                                                     // 더미 이미지 URL (이미지가 없을 경우 사용)
-                                                    const dummyImageUrl = `https://via.placeholder.com/120x80/4B5563/FFFFFF?text=${encodeURIComponent(news.category || 'News')}`;
+                                                    const dummyImageUrl = `https://placehold.co/120x80/4B5563/FFFFFF?text=${encodeURIComponent(news.category || 'News')}`;
                                                     const imageUrl = news.imageUrl || news.thumbnailUrl || dummyImageUrl;
 
                                                     return (
