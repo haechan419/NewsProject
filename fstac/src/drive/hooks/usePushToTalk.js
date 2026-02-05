@@ -60,7 +60,6 @@ export function usePushToTalk(options = {}) {
       } else {
         const silenceElapsed = now - silenceStartTimeRef.current;
         if (silenceElapsed >= silenceDuration) {
-          console.log(`[Push-to-Talk] 침묵 감지 자동 종료`);
           stopRecording();
           return;
         }
@@ -117,7 +116,6 @@ export function usePushToTalk(options = {}) {
       analyzeAudio();
 
       maxDurationTimerRef.current = setTimeout(() => {
-        console.log("[Push-to-Talk] 최대 시간 도달 자동 종료");
         stopRecording();
       }, maxDuration);
 
@@ -146,15 +144,18 @@ export function usePushToTalk(options = {}) {
       if (mediaRecorder.state === "recording") {
         mediaRecorder.onstop = () => {
           if (recordingDuration < MIN_RECORDING_DURATION) {
+            audioChunksRef.current = [];
             resolve(null);
             return;
           }
           const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
+          audioChunksRef.current = [];
           resolve(blob);
         };
         mediaRecorder.stop();
       } else {
         const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
+        audioChunksRef.current = [];
         resolve(blob.size > 0 ? blob : null);
       }
 
@@ -178,7 +179,6 @@ export function usePushToTalk(options = {}) {
       setIsRecording(false);
       setAudioLevel(-Infinity);
       mediaRecorderRef.current = null;
-      audioChunksRef.current = [];
       recordingStartTimeRef.current = null;
       silenceStartTimeRef.current = null;
       maxLevelRef.current = -Infinity;

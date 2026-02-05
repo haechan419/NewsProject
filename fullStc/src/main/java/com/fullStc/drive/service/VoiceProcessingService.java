@@ -41,7 +41,6 @@ public class VoiceProcessingService {
     public CommandIntentResponse analyzeComplexCommand(String rawText, Long userId) {
         try {
             String url = pythonServerUrl + "/api/drive/analyze-intent";
-            
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("raw_text", rawText);
             requestBody.put("user_id", userId);
@@ -51,23 +50,24 @@ public class VoiceProcessingService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
             
             @SuppressWarnings("unchecked")
-            ResponseEntity<Map<String, Object>> httpResponse = (ResponseEntity<Map<String, Object>>) 
+            ResponseEntity<Map<String, Object>> httpResponse = (ResponseEntity<Map<String, Object>>)
                 (ResponseEntity<?>) restTemplate.postForEntity(url, request, Map.class);
-            
+
             if (httpResponse.getStatusCode().is2xxSuccessful() && httpResponse.getBody() != null) {
                 Map<String, Object> body = httpResponse.getBody();
                 Object confidenceObj = body.get("confidence");
-                Float confidence = confidenceObj != null 
-                    ? ((Number) confidenceObj).floatValue() 
+                Float confidence = confidenceObj != null
+                    ? ((Number) confidenceObj).floatValue()
                     : 0.0f;
-                
+                String intent = (String) body.get("intent");
+                String message = (String) body.get("message");
+
                 CommandIntentResponse intentResponse = CommandIntentResponse.builder()
-                        .intent((String) body.get("intent"))
+                        .intent(intent)
                         .confidence(confidence)
                         .processedLocally(false)
-                        .message((String) body.get("message"))
+                        .message(message)
                         .build();
-                // STT 결과(rawText) 유지
                 intentResponse.setRawText(rawText);
                 return intentResponse;
             }
@@ -223,15 +223,12 @@ public class VoiceProcessingService {
     public String transcribeAudio(MultipartFile audioFile, Long userId) {
         try {
             String url = pythonServerUrl + "/api/drive/stt";
-            
-            // 파일 정보 로깅
+
             String originalFilename = audioFile.getOriginalFilename();
             String contentType = audioFile.getContentType();
             long size = audioFile.getSize();
-            log.info("STT 요청 - 파일명: {}, Content-Type: {}, 크기: {} bytes", 
-                originalFilename, contentType, size);
-            
-            // MultipartFile을 ByteArrayResource로 변환
+            log.info("STT 요청 - 파일명: {}, Content-Type: {}, 크기: {} bytes", originalFilename, contentType, size);
+
             byte[] audioBytes = audioFile.getBytes();
             ByteArrayResource resource = new ByteArrayResource(audioBytes) {
                 @Override
@@ -253,9 +250,9 @@ public class VoiceProcessingService {
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
             
             @SuppressWarnings("unchecked")
-            ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>) 
+            ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>)
                 (ResponseEntity<?>) restTemplate.postForEntity(url, request, Map.class);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> bodyMap = response.getBody();
                 String text = (String) bodyMap.get("text");
@@ -265,7 +262,7 @@ public class VoiceProcessingService {
         } catch (Exception e) {
             log.error("STT 변환 실패: {}", e.getMessage(), e);
         }
-        
+
         return null;
     }
 

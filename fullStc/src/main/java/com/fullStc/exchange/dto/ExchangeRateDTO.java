@@ -8,46 +8,30 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * 환율 정보 DTO
- */
+// 환율 정보 DTO
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExchangeRateDTO {
-    /**
-     * 통화 코드 (USD, JPY, EUR 등)
-     */
+    // 통화 코드
     private String curUnit;
 
-    /**
-     * 국가/통화명
-     */
+    // 국가/통화명
     private String curNm;
 
-    /**
-     * 매매 기준율
-     */
+    // 매매 기준율
     private BigDecimal dealBasR;
 
-    /**
-     * 송금 받으실 때
-     */
+    // 송금 받을 때
     private BigDecimal ttb;
 
-    /**
-     * 송금 보내실 때
-     */
+    // 송금 보낼 때
     private BigDecimal tts;
 
-    /**
-     * 장부가격
-     */
+    // 장부가격
     private BigDecimal bkpr;
 
-    /**
-     * 조회 날짜
-     */
+    // 조회 날짜
     private LocalDate searchDate;
 }

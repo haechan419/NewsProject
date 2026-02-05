@@ -263,6 +263,7 @@ const MainPage = () => {
 
   // 환율 데이터 상태
   const [exchangeRates, setExchangeRates] = useState([]);
+  const previousExchangeRatesRef = useRef([]);
   const [isLoadingExchangeRates, setIsLoadingExchangeRates] = useState(true);
 
   // 환율 데이터 가져오기
@@ -276,9 +277,12 @@ const MainPage = () => {
 
         if (response && response.exchangeRates && Array.isArray(response.exchangeRates)) {
           console.log('[환율] 환율 데이터 개수:', response.exchangeRates.length);
+          // 이전 값 저장 후 새 값 설정
+          previousExchangeRatesRef.current = exchangeRates.length > 0 ? exchangeRates : previousExchangeRatesRef.current;
           setExchangeRates(response.exchangeRates);
         } else {
           console.warn('[환율] 응답 구조가 올바르지 않습니다:', response);
+          previousExchangeRatesRef.current = exchangeRates.length > 0 ? exchangeRates : previousExchangeRatesRef.current;
           setExchangeRates([]);
         }
       } catch (error) {
@@ -293,8 +297,8 @@ const MainPage = () => {
     // 초기 데이터 로드
     fetchExchangeRates();
 
-    // 10분마다 데이터 갱신 (캐시 TTL에 맞춤)
-    const interval = setInterval(fetchExchangeRates, 600000);
+    // 10초마다 데이터 갱신 (캐시 TTL에 맞춤)
+    const interval = setInterval(fetchExchangeRates, 10000);
 
     return () => clearInterval(interval);
   }, []);
@@ -303,8 +307,36 @@ const MainPage = () => {
   const formatNumber = (num) => {
     if (num == null) return '0';
     return typeof num === 'number'
-        ? num.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : parseFloat(num).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      ? num.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : parseFloat(num).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // 환율 변화량 계산 및 색상 결정
+  const getExchangeRateChange = (currentRate) => {
+    if (!currentRate || !currentRate.curUnit) {
+      return { change: 0, color: 'text-gray-900', arrow: '' };
+    }
+
+    const currentValue = parseFloat(currentRate.dealBasR) || 0;
+    const previousRate = previousExchangeRatesRef.current.find(
+      rate => rate.curUnit?.toUpperCase().split('(')[0].trim() ===
+        currentRate.curUnit?.toUpperCase().split('(')[0].trim()
+    );
+
+    if (!previousRate || !previousRate.dealBasR) {
+      return { change: 0, color: 'text-gray-900', arrow: '' };
+    }
+
+    const previousValue = parseFloat(previousRate.dealBasR) || 0;
+    const change = currentValue - previousValue;
+
+    if (change > 0) {
+      return { change, color: 'text-red-600', arrow: '↑' }; // 환율 상승 = 빨간색 (원화 약세)
+    } else if (change < 0) {
+      return { change, color: 'text-green-600', arrow: '↓' }; // 환율 하락 = 초록색 (원화 강세)
+    } else {
+      return { change: 0, color: 'text-gray-900', arrow: '' };
+    }
   };
 
   // 주요 통화 필터링 (USD, JPY, EUR, CNY, GBP 등)
@@ -318,61 +350,65 @@ const MainPage = () => {
   }, [exchangeRates]);
 
   return (
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
 
-        {/* 경제 데이터 */}
-        <section className="bg-white border-y border-gray-200 py-3 sm:py-4 overflow-hidden mt-16 sm:mt-20">
-          <div className="mx-auto relative px-[100px]">
-            {isLoadingExchangeRates ? (
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-                  <span>환율 데이터를 불러오는 중...</span>
-                </div>
-            ) : (
-                <div className="flex items-center">
-        <span className="font-semibold text-gray-900 bg-white z-10 pr-2 sm:pr-4 whitespace-nowrap text-[10px] sm:text-xs">
-          경제 &gt;
-        </span>
-                  <div className="flex-1 overflow-hidden relative h-5 sm:h-6">
-                    {majorCurrencies.length > 0 ? (
-                        <div className="marquee-wrapper">
-                          <div className="marquee-track">
-                            {majorCurrencies.map((rate, index) => {
-                              const code = rate.curUnit?.toUpperCase().split('(')[0].trim() || '';
-                              const displayName = code === 'CNH' ? '위안(CNY)' : code;
-                              return (
-                                  <div key={`first-${index}`} className="marquee-item">
-                                    <span className="text-gray-700 text-[10px] sm:text-xs">{displayName}</span>
-                                    <span className="font-medium text-[10px] sm:text-xs text-gray-900">
-                        {formatNumber(rate.dealBasR)}
-                      </span>
-                                  </div>
-                              );
-                            })}
-                            {majorCurrencies.map((rate, index) => {
-                              const code = rate.curUnit?.toUpperCase().split('(')[0].trim() || '';
-                              const displayName = code === 'CNH' ? '위안(CNY)' : code;
-                              return (
-                                  <div key={`second-${index}`} className="marquee-item" aria-hidden="true">
-                                    <span className="text-gray-700 text-[10px] sm:text-xs">{displayName}</span>
-                                    <span className="font-medium text-[10px] sm:text-xs text-gray-900">
-                        {formatNumber(rate.dealBasR)}
-                      </span>
-                                  </div>
-                              );
-                            })}
+      {/* 경제 데이터 */}
+      <section className="bg-white border-y border-gray-200 py-3 sm:py-4 overflow-hidden mt-16 sm:mt-20">
+        <div className="mx-auto relative px-[100px]">
+          {isLoadingExchangeRates ? (
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+              <span>환율 데이터를 불러오는 중...</span>
+            </div>
+          ) : (
+            <div className="flex items-center">
+              <span className="font-semibold text-gray-900 bg-white z-10 pr-2 sm:pr-4 whitespace-nowrap text-[10px] sm:text-xs">
+                경제 &gt;
+              </span>
+              <div className="flex-1 overflow-hidden relative h-5 sm:h-6">
+                {majorCurrencies.length > 0 ? (
+                  <div className="marquee-wrapper">
+                    <div className="marquee-track">
+                      {majorCurrencies.map((rate, index) => {
+                        const code = rate.curUnit?.toUpperCase().split('(')[0].trim() || '';
+                        const displayName = code === 'CNH' ? '위안(CNY)' : code;
+                        const changeInfo = getExchangeRateChange(rate);
+                        return (
+                          <div key={`first-${index}`} className="marquee-item">
+                            <span className="text-gray-700 text-[10px] sm:text-xs">{displayName}</span>
+                            <span className={`font-medium text-[10px] sm:text-xs ${changeInfo.color}`}>
+                              {formatNumber(rate.dealBasR)}
+                              {changeInfo.arrow && <span className="ml-0.5">{changeInfo.arrow}</span>}
+                            </span>
                           </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center text-xs sm:text-sm text-gray-500">
-                          <span>환율 데이터가 없습니다</span>
-                        </div>
-                    )}
+                        );
+                      })}
+                      {majorCurrencies.map((rate, index) => {
+                        const code = rate.curUnit?.toUpperCase().split('(')[0].trim() || '';
+                        const displayName = code === 'CNH' ? '위안(CNY)' : code;
+                        const changeInfo = getExchangeRateChange(rate);
+                        return (
+                          <div key={`second-${index}`} className="marquee-item" aria-hidden="true">
+                            <span className="text-gray-700 text-[10px] sm:text-xs">{displayName}</span>
+                            <span className={`font-medium text-[10px] sm:text-xs ${changeInfo.color}`}>
+                              {formatNumber(rate.dealBasR)}
+                              {changeInfo.arrow && <span className="ml-0.5">{changeInfo.arrow}</span>}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-            )}
-          </div>
+                ) : (
+                  <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <span>환율 데이터가 없습니다</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
-          <style>{`
+        <style>{`
     .marquee-wrapper {
       width: 100%;
       overflow: hidden;
@@ -406,399 +442,399 @@ const MainPage = () => {
       animation-play-state: paused;
     }
   `}</style>
-        </section>
+      </section>
 
 
-        {/* 메인 콘텐츠 & 관심 보도자료 섹션 */}
-        <section className="bg-white py-4 sm:py-6 md:py-8">
-          <div className="mx-auto px-[100px] grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 sm:gap-6 lg:items-start">
-            {/* 왼쪽: 메인 비디오 영역 */}
-            <div ref={videoAreaRef} className="relative w-full">
-              {/* 메인 비디오 */}
-              <div
-                  className="relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200 aspect-[16/9] sm:aspect-[21/9] cursor-pointer"
-                  onClick={openFullscreenModal}
-              >
-                {/* 카테고리 라벨 (위쪽) */}
-                <div className="absolute top-4 left-4 z-10">
+      {/* 메인 콘텐츠 & 관심 보도자료 섹션 */}
+      <section className="bg-white py-4 sm:py-6 md:py-8">
+        <div className="mx-auto px-[100px] grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 sm:gap-6 lg:items-start">
+          {/* 왼쪽: 메인 비디오 영역 */}
+          <div ref={videoAreaRef} className="relative w-full">
+            {/* 메인 비디오 */}
+            <div
+              className="relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200 aspect-[16/9] sm:aspect-[21/9] cursor-pointer"
+              onClick={openFullscreenModal}
+            >
+              {/* 카테고리 라벨 (위쪽) */}
+              <div className="absolute top-4 left-4 z-10">
                 <span className="px-3 py-1.5 bg-black/70 text-white text-sm font-medium rounded">
                   {getCategoryDisplayName(videoCategories[currentVideoIndex])}
                 </span>
-                </div>
+              </div>
 
-                {/* 재생 아이콘 오버레이 */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                  <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition-all">
-                    <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                  {/* 볼륨 컨트롤 - 재생 버튼 아래 */}
-                  <div className="mt-4 flex items-center gap-2 pointer-events-auto">
-                    <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsMuted(!isMuted);
-                        }}
-                        className="bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
-                        aria-label={isMuted ? "음소거 해제" : "음소거"}
-                    >
-                      {isMuted ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                          </svg>
-                      ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                          </svg>
-                      )}
-                    </button>
-                    {!isMuted && (
-                        <div className="flex items-center gap-2 bg-black/50 rounded-full px-3 py-2">
-                          <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              value={volume}
-                              onChange={(e) => {
-                                setVolume(parseFloat(e.target.value));
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-20 h-1 bg-white/50 rounded-lg appearance-none cursor-pointer slider"
-                              style={{
-                                background: `linear-gradient(to right, white 0%, white ${volume * 100}%, rgba(255,255,255,0.5) ${volume * 100}%, rgba(255,255,255,0.5) 100%)`
-                              }}
-                          />
-                        </div>
+              {/* 재생 아이콘 오버레이 */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition-all">
+                  <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                {/* 볼륨 컨트롤 - 재생 버튼 아래 */}
+                <div className="mt-4 flex items-center gap-2 pointer-events-auto">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMuted(!isMuted);
+                    }}
+                    className="bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+                    aria-label={isMuted ? "음소거 해제" : "음소거"}
+                  >
+                    {isMuted ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
                     )}
-                  </div>
-                </div>
-
-                {/* 메인 비디오 */}
-                {videoCategories.map((category, index) => {
-                  const video = videoData[category];
-                  const isActive = currentVideoIndex === index;
-                  const hasError = videoLoadErrors[category];
-                  const isLoaded = videoLoaded[category];
-
-                  return (
-                      <div
-                          key={category}
-                          className={`video-carousel-item absolute inset-0 transition-opacity duration-500 ${isActive ? 'opacity-100 z-[1]' : 'opacity-0 z-0'}`}
-                      >
-                        {/* 비디오 플레이어 */}
-                        <video
-                            className={`w-full h-full object-cover ${isActive ? 'block' : 'hidden'}`}
-                            muted={isMuted}
-                            playsInline
-                            preload="auto"
-                            onLoadedData={(e) => {
-                              const videoEl = e.target;
-                              videoEl.volume = volume;
-                              videoEl.muted = isMuted;
-                              setVideoLoaded(prev => ({ ...prev, [category]: true }));
-                            }}
-                            onCanPlay={(e) => {
-                              const videoEl = e.target;
-                              videoEl.volume = volume;
-                              videoEl.muted = isMuted;
-                              setVideoLoaded(prev => ({ ...prev, [category]: true }));
-                            }}
-                            onEnded={isActive ? handleVideoEnded : undefined}
-                            autoPlay={isActive}
-                            onError={(e) => {
-                              console.error('비디오 로드 실패:', category, e);
-                              setVideoLoadErrors(prev => ({ ...prev, [category]: true }));
-                            }}
-                        >
-                          <source src={video.videoUrl} type="video/mp4" />
-                          Your browser does not support the video tag.
-                        </video>
-
-                        {/* 비디오 플레이스홀더 (비디오 로드 실패 시에만 표시) */}
-                        {hasError && (
-                            <div
-                                className="absolute inset-0 flex items-center justify-center z-[2]"
-                                style={{ backgroundColor: video.color }}
-                            >
-                              <div className="text-center text-white px-2">
-                                <p className="text-lg font-medium">{getCategoryDisplayName(category)}</p>
-                              </div>
-                            </div>
-                        )}
-
-                        {/* 로딩 중 표시 */}
-                        {isActive && !isLoaded && !hasError && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-[3]">
-                              <div className="text-white text-center px-2">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                                <p className="text-sm">영상 로딩 중...</p>
-                              </div>
-                            </div>
-                        )}
-                      </div>
-                  );
-                })}
-
-                {/* 왼쪽 화살표 버튼 */}
-                <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      goToPreviousVideo();
-                    }}
-                    className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full transition-all z-10 shadow-md"
-                    aria-label="이전 비디오"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* 오른쪽 화살표 버튼 */}
-                <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      goToNextVideo();
-                    }}
-                    className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full transition-all z-10 shadow-md"
-                    aria-label="다음 비디오"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-
-
-                {/* 비디오 제목과 내용 오버레이 */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-4 sm:p-6 z-10">
-                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
-                    {videoData[videoCategories[currentVideoIndex]]?.title || '뉴스'}
-                  </h2>
-                  <p className="text-sm sm:text-base text-white/90">
-                    {videoData[videoCategories[currentVideoIndex]]?.content || ''}
-                  </p>
-                </div>
-              </div>
-
-              {/* 썸네일 네비게이션 */}
-              <div className="mt-3 sm:mt-4 flex justify-between gap-2 sm:gap-3 pb-2">
-                {thumbnailCategories.map((category) => {
-                  const video = videoData[category];
-                  return (
-                      <button
-                          key={category}
-                          onClick={() => handleThumbnailClick(category)}
-                          className="flex-1 relative aspect-video rounded overflow-hidden border-2 border-gray-200 hover:border-gray-400 transition-all group min-w-0"
-                          style={{ backgroundColor: video.color }}
-                      >
-                        {/* 썸네일 비디오 */}
-                        <video
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
-                            muted
-                            loop
-                            playsInline
-                            preload="metadata"
-                            onMouseEnter={(e) => {
-                              e.target.play().catch(() => { });
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.pause();
-                              e.target.currentTime = 0;
-                            }}
-                            onError={(e) => {
-                              e.target.classList.add('hidden');
-                            }}
-                        >
-                          <source src={video.videoUrl} type="video/mp4" />
-                        </video>
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
-                          <span className="text-white text-xs font-medium truncate block">{getCategoryDisplayName(category)}</span>
-                        </div>
-                      </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 오른쪽: 관심 보도자료 사이드바 */}
-            <div ref={sidebarRef} className="bg-white rounded-lg flex flex-col min-h-0 lg:sticky lg:top-4" style={{ height: sidebarHeight }}>
-              <div className="flex flex-col h-full min-h-0">
-                <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-gray-200 flex-shrink-0">
-                  <h2 className="text-base sm:text-lg font-bold text-gray-900">관심 보도자료</h2>
-                </div>
-
-                {/* 카테고리 탭 */}
-                <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 scrollbar-hide flex-shrink-0">
-                  {userCategories.length > 0 ? (
-                      userCategories.map((category) => (
-                          <button
-                              key={category}
-                              onClick={() => {
-                                setSelectedCategory(category);
-                                fetchNewsByCategory(category, true);
-                              }}
-                              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category
-                                  ? 'bg-gray-800 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                          >
-                            {getCategoryDisplayName(category)}
-                          </button>
-                      ))
-                  ) : (
-                      <span className="text-xs sm:text-sm text-gray-500">관심 카테고리를 선택해주세요</span>
+                  </button>
+                  {!isMuted && (
+                    <div className="flex items-center gap-2 bg-black/50 rounded-full px-3 py-2">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={volume}
+                        onChange={(e) => {
+                          setVolume(parseFloat(e.target.value));
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-20 h-1 bg-white/50 rounded-lg appearance-none cursor-pointer slider"
+                        style={{
+                          background: `linear-gradient(to right, white 0%, white ${volume * 100}%, rgba(255,255,255,0.5) ${volume * 100}%, rgba(255,255,255,0.5) 100%)`
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
-
-                {/* 뉴스 리스트 - 무한 스크롤 적용 */}
-                {isLoadingNews ? (
-                    <div className="flex items-center justify-center py-12 flex-1">
-                      <span className="text-gray-500 text-sm">뉴스를 불러오는 중...</span>
-                    </div>
-                ) : (
-                    <div
-                        ref={newsContainerRef}
-                        className="space-y-2 sm:space-y-3 overflow-y-auto flex-1 min-h-0 pr-2"
-                    >
-                      {selectedCategory ? (
-                          briefingNews.length > 0 ? (
-                              <>
-                                {briefingNews.map((news) => {
-                                  // 더미 이미지 URL (이미지가 없을 경우 사용)
-                                  const dummyImageUrl = `https://placehold.co/120x80/4B5563/FFFFFF?text=${encodeURIComponent(news.category || 'News')}`;
-                                  const imageUrl = news.imageUrl || news.thumbnailUrl || dummyImageUrl;
-
-                                  return (
-                                      <div
-                                          key={news.id}
-                                          className="flex gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer group bg-white"
-                                          onClick={() => {
-                                            if (news.originalUrl) {
-                                              window.open(news.originalUrl, '_blank');
-                                            }
-                                          }}
-                                      >
-                                        {/* 이미지 영역 */}
-                                        <div className="flex-shrink-0 w-24 h-20 sm:w-28 sm:h-24 rounded overflow-hidden bg-gray-100">
-                                          <img
-                                              src={imageUrl}
-                                              alt={news.title || '뉴스 이미지'}
-                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                              onError={(e) => {
-                                                // 이미지 로드 실패 시 더미 이미지로 대체
-                                                e.target.src = dummyImageUrl;
-                                              }}
-                                          />
-                                        </div>
-
-                                        {/* 텍스트 영역 */}
-                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
-                                          <div>
-                                            <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
-                                              {news.title}
-                                            </h3>
-                                            {news.summary && (
-                                                <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2 leading-relaxed">
-                                                  {news.summary.replace(/\[서론\]|\[본론\]|\[결론\]/g, '').trim()}
-                                                </p>
-                                            )}
-                                          </div>
-                                          {news.date && (
-                                              <p className="text-[10px] sm:text-xs text-gray-400 mt-auto">
-                                                {(() => {
-                                                  try {
-                                                    const date = new Date(news.date);
-                                                    if (isNaN(date.getTime())) return '';
-                                                    return date.toLocaleDateString('ko-KR', {
-                                                      year: 'numeric',
-                                                      month: 'short',
-                                                      day: 'numeric'
-                                                    });
-                                                  } catch {
-                                                    return news.date;
-                                                  }
-                                                })()}
-                                              </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                  );
-                                })}
-                                {briefingNews.length >= 10 && (
-                                    <div className="flex items-center justify-center py-4">
-                                      <span className="text-gray-400 text-xs sm:text-sm">카테고리별 최대 10개까지 표시됩니다</span>
-                                    </div>
-                                )}
-                              </>
-                          ) : (
-                              <div className="text-center py-12 text-gray-500 text-sm">
-                                해당 카테고리의 뉴스가 없습니다
-                              </div>
-                          )
-                      ) : (
-                          <div className="text-center py-12 text-gray-500 text-sm">
-                            카테고리를 선택해주세요
-                          </div>
-                      )}
-                    </div>
-                )}
               </div>
-            </div>
-          </div>
-        </section>
 
-        {/* 전체화면 비디오 모달 */}
-        {isFullscreenModalOpen && (
-            <div
-                className="fixed inset-0 bg-black z-50 flex items-center justify-center"
-                onClick={closeFullscreenModal}
-            >
-              {/* 닫기 버튼 */}
+              {/* 메인 비디오 */}
+              {videoCategories.map((category, index) => {
+                const video = videoData[category];
+                const isActive = currentVideoIndex === index;
+                const hasError = videoLoadErrors[category];
+                const isLoaded = videoLoaded[category];
+
+                return (
+                  <div
+                    key={category}
+                    className={`video-carousel-item absolute inset-0 transition-opacity duration-500 ${isActive ? 'opacity-100 z-[1]' : 'opacity-0 z-0'}`}
+                  >
+                    {/* 비디오 플레이어 */}
+                    <video
+                      className={`w-full h-full object-cover ${isActive ? 'block' : 'hidden'}`}
+                      muted={isMuted}
+                      playsInline
+                      preload="auto"
+                      onLoadedData={(e) => {
+                        const videoEl = e.target;
+                        videoEl.volume = volume;
+                        videoEl.muted = isMuted;
+                        setVideoLoaded(prev => ({ ...prev, [category]: true }));
+                      }}
+                      onCanPlay={(e) => {
+                        const videoEl = e.target;
+                        videoEl.volume = volume;
+                        videoEl.muted = isMuted;
+                        setVideoLoaded(prev => ({ ...prev, [category]: true }));
+                      }}
+                      onEnded={isActive ? handleVideoEnded : undefined}
+                      autoPlay={isActive}
+                      onError={(e) => {
+                        console.error('비디오 로드 실패:', category, e);
+                        setVideoLoadErrors(prev => ({ ...prev, [category]: true }));
+                      }}
+                    >
+                      <source src={video.videoUrl} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+
+                    {/* 비디오 플레이스홀더 (비디오 로드 실패 시에만 표시) */}
+                    {hasError && (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center z-[2]"
+                        style={{ backgroundColor: video.color }}
+                      >
+                        <div className="text-center text-white px-2">
+                          <p className="text-lg font-medium">{getCategoryDisplayName(category)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 로딩 중 표시 */}
+                    {isActive && !isLoaded && !hasError && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-[3]">
+                        <div className="text-white text-center px-2">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                          <p className="text-sm">영상 로딩 중...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* 왼쪽 화살표 버튼 */}
               <button
-                  onClick={closeFullscreenModal}
-                  className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-2"
-                  aria-label="닫기"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPreviousVideo();
+                }}
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full transition-all z-10 shadow-md"
+                aria-label="이전 비디오"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
 
-              {/* 비디오 컨테이너 */}
-              <div
-                  className="w-full h-full max-w-7xl mx-auto p-4 flex items-center justify-center"
-                  onClick={(e) => e.stopPropagation()}
+              {/* 오른쪽 화살표 버튼 */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNextVideo();
+                }}
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full transition-all z-10 shadow-md"
+                aria-label="다음 비디오"
               >
-                <video
-                    ref={fullscreenVideoRef}
-                    className="w-full h-full max-h-[90vh] object-contain"
-                    controls
-                    autoPlay
-                    src={videoData[videoCategories[currentVideoIndex]]?.videoUrl}
-                >
-                  <source src={videoData[videoCategories[currentVideoIndex]]?.videoUrl} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
 
-              {/* 비디오 정보 */}
-              <div
-                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 z-10"
-                  onClick={(e) => e.stopPropagation()}
-              >
-                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+
+              {/* 비디오 제목과 내용 오버레이 */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-4 sm:p-6 z-10">
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
                   {videoData[videoCategories[currentVideoIndex]]?.title || '뉴스'}
                 </h2>
-                <p className="text-base sm:text-lg text-white/90">
+                <p className="text-sm sm:text-base text-white/90">
                   {videoData[videoCategories[currentVideoIndex]]?.content || ''}
                 </p>
               </div>
             </div>
-        )}
-      </div>
+
+            {/* 썸네일 네비게이션 */}
+            <div className="mt-3 sm:mt-4 flex justify-between gap-2 sm:gap-3 pb-2">
+              {thumbnailCategories.map((category) => {
+                const video = videoData[category];
+                return (
+                  <button
+                    key={category}
+                    onClick={() => handleThumbnailClick(category)}
+                    className="flex-1 relative aspect-video rounded overflow-hidden border-2 border-gray-200 hover:border-gray-400 transition-all group min-w-0"
+                    style={{ backgroundColor: video.color }}
+                  >
+                    {/* 썸네일 비디오 */}
+                    <video
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      onMouseEnter={(e) => {
+                        e.target.play().catch(() => { });
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.pause();
+                        e.target.currentTime = 0;
+                      }}
+                      onError={(e) => {
+                        e.target.classList.add('hidden');
+                      }}
+                    >
+                      <source src={video.videoUrl} type="video/mp4" />
+                    </video>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                      <span className="text-white text-xs font-medium truncate block">{getCategoryDisplayName(category)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 오른쪽: 관심 보도자료 사이드바 */}
+          <div ref={sidebarRef} className="bg-white rounded-lg flex flex-col min-h-0 lg:sticky lg:top-4" style={{ height: sidebarHeight }}>
+            <div className="flex flex-col h-full min-h-0">
+              <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-gray-200 flex-shrink-0">
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">관심 보도자료</h2>
+              </div>
+
+              {/* 카테고리 탭 */}
+              <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 scrollbar-hide flex-shrink-0">
+                {userCategories.length > 0 ? (
+                  userCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => {
+                        setSelectedCategory(category);
+                        fetchNewsByCategory(category, true);
+                      }}
+                      className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category
+                        ? 'bg-gray-800 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      {getCategoryDisplayName(category)}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs sm:text-sm text-gray-500">관심 카테고리를 선택해주세요</span>
+                )}
+              </div>
+
+              {/* 뉴스 리스트 - 무한 스크롤 적용 */}
+              {isLoadingNews ? (
+                <div className="flex items-center justify-center py-12 flex-1">
+                  <span className="text-gray-500 text-sm">뉴스를 불러오는 중...</span>
+                </div>
+              ) : (
+                <div
+                  ref={newsContainerRef}
+                  className="space-y-2 sm:space-y-3 overflow-y-auto flex-1 min-h-0 pr-2"
+                >
+                  {selectedCategory ? (
+                    briefingNews.length > 0 ? (
+                      <>
+                        {briefingNews.map((news) => {
+                          // 더미 이미지 URL (이미지가 없을 경우 사용)
+                          const dummyImageUrl = `https://placehold.co/120x80/4B5563/FFFFFF?text=${encodeURIComponent(news.category || 'News')}`;
+                          const imageUrl = news.imageUrl || news.thumbnailUrl || dummyImageUrl;
+
+                          return (
+                            <div
+                              key={news.id}
+                              className="flex gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer group bg-white"
+                              onClick={() => {
+                                if (news.originalUrl) {
+                                  window.open(news.originalUrl, '_blank');
+                                }
+                              }}
+                            >
+                              {/* 이미지 영역 */}
+                              <div className="flex-shrink-0 w-24 h-20 sm:w-28 sm:h-24 rounded overflow-hidden bg-gray-100">
+                                <img
+                                  src={imageUrl}
+                                  alt={news.title || '뉴스 이미지'}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                  onError={(e) => {
+                                    // 이미지 로드 실패 시 더미 이미지로 대체
+                                    e.target.src = dummyImageUrl;
+                                  }}
+                                />
+                              </div>
+
+                              {/* 텍스트 영역 */}
+                              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
+                                  <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                                    {news.title}
+                                  </h3>
+                                  {news.summary && (
+                                    <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2 leading-relaxed">
+                                      {news.summary.replace(/\[서론\]|\[본론\]|\[결론\]/g, '').trim()}
+                                    </p>
+                                  )}
+                                </div>
+                                {news.date && (
+                                  <p className="text-[10px] sm:text-xs text-gray-400 mt-auto">
+                                    {(() => {
+                                      try {
+                                        const date = new Date(news.date);
+                                        if (isNaN(date.getTime())) return '';
+                                        return date.toLocaleDateString('ko-KR', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric'
+                                        });
+                                      } catch {
+                                        return news.date;
+                                      }
+                                    })()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {briefingNews.length >= 10 && (
+                          <div className="flex items-center justify-center py-4">
+                            <span className="text-gray-400 text-xs sm:text-sm">카테고리별 최대 10개까지 표시됩니다</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-12 text-gray-500 text-sm">
+                        해당 카테고리의 뉴스가 없습니다
+                      </div>
+                    )
+                  ) : (
+                    <div className="text-center py-12 text-gray-500 text-sm">
+                      카테고리를 선택해주세요
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 전체화면 비디오 모달 */}
+      {isFullscreenModalOpen && (
+        <div
+          className="fixed inset-0 bg-black z-50 flex items-center justify-center"
+          onClick={closeFullscreenModal}
+        >
+          {/* 닫기 버튼 */}
+          <button
+            onClick={closeFullscreenModal}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-2"
+            aria-label="닫기"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* 비디오 컨테이너 */}
+          <div
+            className="w-full h-full max-w-7xl mx-auto p-4 flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <video
+              ref={fullscreenVideoRef}
+              className="w-full h-full max-h-[90vh] object-contain"
+              controls
+              autoPlay
+              src={videoData[videoCategories[currentVideoIndex]]?.videoUrl}
+            >
+              <source src={videoData[videoCategories[currentVideoIndex]]?.videoUrl} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+
+          {/* 비디오 정보 */}
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              {videoData[videoCategories[currentVideoIndex]]?.title || '뉴스'}
+            </h2>
+            <p className="text-base sm:text-lg text-white/90">
+              {videoData[videoCategories[currentVideoIndex]]?.content || ''}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

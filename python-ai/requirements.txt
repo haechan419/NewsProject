@@ -54,3 +54,7 @@ python-multipart>=0.0.6
 # Media / TTS
 moviepy==1.0.3
 edge-tts
+
+# Brief Delivery PDF
+reportlab>=4.0.0
+qrcode[pil]>=7.0

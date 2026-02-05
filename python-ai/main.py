@@ -77,6 +77,10 @@ app.add_middleware(
 from drive.router import router as drive_router
 app.include_router(drive_router)
 
+# 브리핑 배송 라우터
+from brief_delivery.router import router as brief_delivery_router
+app.include_router(brief_delivery_router)
+
 # 환율 API 클라이언트 임포트
 try:
     from exchange_rate import ExchangeRateClient, ExchangeRate
@@ -85,6 +89,15 @@ try:
 except Exception as e:
     exchange_rate_client = None
     logger.warning(f"[Warning] 환율 API 클라이언트 로드 실패: {e}")
+
+# 환율 크롤러 임포트
+try:
+    from exchange_rate_crawler import ExchangeRateCrawler
+    exchange_rate_crawler = ExchangeRateCrawler()
+    logger.info("[Success] 환율 크롤러 로드 완료")
+except Exception as e:
+    exchange_rate_crawler = None
+    logger.warning(f"[Warning] 환율 크롤러 로드 실패: {e}")
 _DRIVE_STATIC = Path(__file__).resolve().parent / "drive" / "static"
 if _DRIVE_STATIC.exists():
     app.mount("/static", StaticFiles(directory=str(_DRIVE_STATIC)), name="drive_static")
@@ -1389,6 +1402,51 @@ async def get_exchange_rate_by_currency(cur_unit: str):
         raise HTTPException(
             status_code=500,
             detail=f"환율 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+# ===== 환율 크롤링 API 엔드포인트 =====
+@app.get("/api/exchange-rate/crawl")
+async def crawl_exchange_rates(search_date: Optional[str] = None):
+    """
+    환율 데이터 크롤링 (API 한도 초과 시 사용)
+    
+    Args:
+        search_date: 조회 날짜 (yyyyMMdd 형식, None이면 당일)
+    
+    Returns:
+        크롤링된 환율 데이터 리스트
+    """
+    if exchange_rate_crawler is None:
+        raise HTTPException(
+            status_code=503,
+            detail="환율 크롤러를 사용할 수 없습니다."
+        )
+    
+    try:
+        logger.info(f"[크롤링] 환율 데이터 크롤링 요청 - 날짜: {search_date}")
+        rates = exchange_rate_crawler.crawl_exchange_rates(search_date)
+        
+        if not rates:
+            logger.warning(f"[크롤링] 환율 데이터를 찾을 수 없습니다 - 날짜: {search_date}")
+            return {
+                "exchange_rates": [],
+                "count": 0,
+                "search_date": search_date or datetime.now().strftime("%Y%m%d")
+            }
+        
+        logger.info(f"[크롤링] 환율 데이터 크롤링 성공 - 날짜: {search_date}, 개수: {len(rates)}")
+        return {
+            "exchange_rates": rates,
+            "count": len(rates),
+            "search_date": search_date or datetime.now().strftime("%Y%m%d")
+        }
+        
+    except Exception as e:
+        logger.error(f"[크롤링] 환율 데이터 크롤링 실패 - 날짜: {search_date}, 오류: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"환율 크롤링 중 오류가 발생했습니다: {str(e)}"
         )
 
 

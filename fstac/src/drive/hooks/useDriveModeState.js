@@ -22,6 +22,7 @@ export function useDriveModeState() {
   const [demoAudioLevel, setDemoAudioLevel] = useState(-60);
   const [demoCommandKey, setDemoCommandKey] = useState(1);
   const [useDemoFallback, setUseDemoFallback] = useState(false);
+  const [useDemoByChoice, setUseDemoByChoice] = useState(false);
 
   return {
     status,
@@ -56,5 +57,7 @@ export function useDriveModeState() {
     setDemoCommandKey,
     useDemoFallback,
     setUseDemoFallback,
+    useDemoByChoice,
+    setUseDemoByChoice,
   };
 }
