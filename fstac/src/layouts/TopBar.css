@@ -1,174 +1,264 @@
 /* TopBar.css */
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
 
-.top-bar-container {
-  width: 100%;
-  height: 80px;
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
-  box-sizing: border-box;
-  font-family: 'Pretendard', sans-serif;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+:root{
+    /* 메인(오버레이) */
+    --main-bg1: #2F5BFF;
+    --main-bg2: #2B55F0;
+    --main-text: rgba(255,255,255,.92);
+    --main-hover: rgba(255,255,255,.98);
+
+    /* 일반 페이지(화이트) */
+    --sub-bg: rgba(255,255,255,.78);
+    --sub-border: rgba(0,0,0,.08);
+    --sub-text: rgba(0,0,0,.88);
+    --sub-text-dim: rgba(0,0,0,.62);
+    --sub-hover: rgba(0,0,0,.96);
+
+    --topbar-h: 84px;
 }
 
-/* MainPage에서 배너 위에 오버레이되는 스타일 */
-.top-bar-container.top-bar-overlay {
-  position: absolute;
-  background-color: rgba(31, 41, 55, 0.85);
+/* ===============================
+   기본(일반 페이지)
+=============================== */
+
+.logo-img {
+    height: 40px; /* ← 피그마에서 로고 높이 그대로 */
+    width: auto;
+    display: block;
+    object-fit: contain;
+    user-select: none;
 }
 
-/* 1. 로고 영역 */
-.logo-area {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  /* 로고 영역이 고정된 크기를 갖지 않도록 설정 */
-  flex-shrink: 0;
+.top-bar-container{
+    width: 100%;
+    height: var(--topbar-h);
+    background-color: var(--sub-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    font-family: "Pretendard", sans-serif;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding-left: 100px;
+    padding-right: 100px;
+    border-bottom: 1px solid var(--sub-border);
 }
 
-.logo-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #F4F0F7;
-  color: #1E1E2D;
-  font-size: 19px;
-  padding: 10px 20px;
-  border-radius: 2px;
-  letter-spacing: -0.2px;
+/* 메인(배너 위) */
+.top-bar-container.top-bar-overlay{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(90deg, var(--main-bg1), var(--main-bg2));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid rgba(255,255,255,.12);
 }
 
-.logo-box span { font-weight: 300; }
-.logo-box strong { font-weight: 700; margin-left: 5px; }
-
-/* 2. 중앙 메뉴 (왼쪽으로 이동) */
-.nav-bar {
-  flex: 1; /* 남은 공간을 차지하여 우측 메뉴를 끝으로 밀어냄 */
-  display: flex;
-
-  /* [수정 포인트] 중앙 정렬(center) -> 왼쪽 정렬(flex-start) */
-  justify-content: flex-start;
-
-  /* [수정 포인트] 로고와의 간격 조정 (원하시는 만큼 숫자를 조절하세요) */
-  margin-left: 80px;
+/* ===============================
+   Logo
+=============================== */
+.logo-area{
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
-.nav-bar ul {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  gap: 60px; /* 메뉴 글자 사이 간격 */
+.logo-box{
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: baseline;
+    letter-spacing: -0.6px;
+    line-height: 1;
 }
 
-.nav-bar li {
-  font-size: 17px;
-  color: #111;
-  cursor: pointer;
-  font-weight: 300; /* 기본 Light */
-  transition: all 0.2s ease;
-  white-space: nowrap; /* 줄바꿈 방지 */
+.logo-box span{
+    font-weight: 800;
+    font-size: 42px;
+    color: rgba(0,0,0,.92);
 }
 
-.top-bar-overlay .nav-bar li {
-  color: #fff;
+.logo-box strong{
+    font-weight: 800;
+    font-size: 42px;
+    color: rgba(47,91,255,.95);
 }
 
-.nav-bar li:hover {
-  font-weight: 400; /* 호버 시 Regular */
-  transform: scale(1.02);
+/* 메인 로고 */
+.top-bar-overlay .logo-box span{
+    color: rgba(255,255,255,.96);
+}
+.top-bar-overlay .logo-box strong{
+    color: rgba(0,0,0,.18);
 }
 
-/* 3. 오른쪽 유틸 메뉴 */
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  flex-shrink: 0; /* 화면이 줄어들어도 찌그러지지 않음 */
+/* ===============================
+   Navigation (로고 옆)
+=============================== */
+.nav-bar{
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+    margin-left: 48px;
 }
 
-.text-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #111;
-  cursor: pointer;
-  padding: 0;
-  font-family: 'Pretendard', sans-serif;
-  font-weight: 300;
-  transition: font-weight 0.2s;
-  white-space: nowrap;
+.nav-bar ul{
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 56px;
+    align-items: center;
 }
 
-.top-bar-overlay .text-btn {
-  color: #fff;
+.nav-bar li{
+    font-size: 18px;
+    color: var(--sub-text);
+    cursor: pointer;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+    transition: color .15s ease, transform .15s ease;
+    white-space: nowrap;
+}
+.nav-bar li:hover{
+    color: var(--sub-hover);
+    transform: translateY(-1px);
 }
 
-.text-btn:hover {
-  font-weight: 400;
+/* 메인 */
+.top-bar-overlay .nav-bar li{
+    color: var(--main-text);
+}
+.top-bar-overlay .nav-bar li:hover{
+    color: var(--main-hover);
 }
 
-.icon-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #000;
-  transition: transform 0.2s;
+/* ===============================
+   Right Menu
+=============================== */
+.user-menu{
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-shrink: 0;
 }
 
-.top-bar-overlay .icon-btn {
-  color: #fff;
+.text-btn{
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: var(--sub-text);
+    cursor: pointer;
+    padding: 0;
+    font-family: "Pretendard", sans-serif;
+}
+.text-btn:hover{
+    color: var(--sub-hover);
 }
 
-.icon-btn:hover {
-  transform: scale(1.1);
+/* 아이콘 */
+.icon-btn{
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0,0,0,.78);
+    border-radius: 10px;
+    transition: background .15s ease;
+}
+.icon-btn:hover{
+    background: rgba(0,0,0,.06);
 }
 
-/* 드롭다운 스타일 */
-.user-icon-container {
-  position: relative;
+/* 메인 */
+.top-bar-overlay .text-btn{
+    color: var(--main-text);
+}
+.top-bar-overlay .icon-btn{
+    color: rgba(255,255,255,.92);
+}
+.top-bar-overlay .icon-btn:hover{
+    background: rgba(255,255,255,.12);
 }
 
-.dropdown-menu {
-  position: absolute;
-  top: 50px;
-  right: -10px;
-  background-color: #fff;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-  width: 150px;
-  overflow: hidden;
-  padding: 8px 0;
-  z-index: 100;
-  font-weight: 300;
+/* ===============================
+   Dropdown (아이콘에 완전 밀착)
+=============================== */
+.user-icon-container{
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
-.dropdown-item {
-  display: block;
-  width: 100%;
-  padding: 10px 16px;
-  font-size: 14px;
-  color: #333;
-  text-decoration: none;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font-family: 'Pretendard', sans-serif;
+/* 핵심 */
+.dropdown-menu{
+    position: absolute;
+    top: 100%;   /* ✅ 아이콘 바로 밑 */
+    right: 0;
+    margin-top: 0; /* 완전 밀착 */
+
+    background: rgba(255,255,255,.98);
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    width: 168px;
+    overflow: hidden;
+    padding: 8px 0;
+    z-index: 2000;
 }
 
-.dropdown-item:hover {
-  background-color: #f8f9fa;
+.dropdown-item{
+    display: block;
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: rgba(0,0,0,.82);
+    text-decoration: none;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: "Pretendard", sans-serif;
+}
+.dropdown-item:hover{
+    background-color: rgba(47,91,255,.08);
+}
+
+/* ===============================
+   Responsive
+=============================== */
+@media (max-width: 960px){
+    .top-bar-container{
+        padding: 0 24px;
+    }
+    .logo-box span,
+    .logo-box strong{
+        font-size: 34px;
+    }
+    .nav-bar ul{
+        gap: 36px;
+    }
+}
+
+@media (max-width: 720px){
+    .nav-bar{
+        margin-left: 24px;
+    }
+    .nav-bar ul{
+        gap: 20px;
+    }
+    .nav-bar li{
+        font-size: 16px;
+    }
 }
