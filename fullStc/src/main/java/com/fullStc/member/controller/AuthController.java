@@ -87,12 +87,8 @@ public class AuthController {
         refreshTokenCookie.setAttribute("SameSite", "Lax");
         response.addCookie(refreshTokenCookie);
 
-        // 보안: 쿠키에 저장하므로 응답 본문에서 토큰 제거 (사용자 정보만 반환)
-        LoginResponseDTO safeResponse = LoginResponseDTO.builder()
-                .user(loginResponse.getUser())
-                .build();
-
-        return ResponseEntity.ok(safeResponse);
+        // 모바일 앱 지원: 토큰도 응답 본문에 포함 (웹은 쿠키 사용, 모바일은 응답 사용)
+        return ResponseEntity.ok(loginResponse);
     }
 
     // 얼굴 로그인
@@ -126,12 +122,8 @@ public class AuthController {
         refreshTokenCookie.setAttribute("SameSite", "Lax");
         response.addCookie(refreshTokenCookie);
 
-        // 보안: 쿠키에 저장하므로 응답 본문에서 토큰 제거 (사용자 정보만 반환)
-        LoginResponseDTO safeResponse = LoginResponseDTO.builder()
-                .user(loginResponse.getUser())
-                .build();
-
-        return ResponseEntity.ok(safeResponse);
+        // 모바일 앱 지원: 토큰도 응답 본문에 포함
+        return ResponseEntity.ok(loginResponse);
     }
 
     // Refresh Token으로 Access Token 갱신
@@ -171,8 +163,8 @@ public class AuthController {
         accessTokenCookie.setAttribute("SameSite", "Lax");
         response.addCookie(accessTokenCookie);
 
-        // 보안: 쿠키에 저장하므로 응답 본문에서 토큰 제거 (빈 객체 반환)
-        return ResponseEntity.ok().build();
+        // 모바일 앱 지원: 토큰도 응답 본문에 포함
+        return ResponseEntity.ok(tokenDTO);
     }
 
     // 로그아웃

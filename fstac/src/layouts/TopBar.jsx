@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutAsync } from '../slices/authSlice';
 import { DriveModeContext } from '../App';
 import './TopBar.css';
+import carIcon from '../assets/images/car.png';
 
 const TopBar = () => {
   const navigate = useNavigate();
@@ -68,19 +69,9 @@ const TopBar = () => {
           고객센터
         </button>
 
-        {/* [요청사항] 예쁜 운전대 아이콘 (3-Spoke Wheel Style) */}
+        {/* [요청사항] 드라이브 모드 아이콘 */}
         <button className="icon-btn" aria-label="Drive Mode" onClick={driveMode.openDriveMode}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            {/* 중앙 허브 */}
-            <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"></circle>
-            {/* 스포크 (핸들 지지대) */}
-            <path d="M12 14.5V22"></path> {/* 아래쪽 */}
-            <path d="M9.5 12H2"></path>   {/* 왼쪽 */}
-            <path d="M14.5 12H22"></path>  {/* 오른쪽 */}
-            {/* 핸들 안쪽 그립감 디테일 (옵션) */}
-            <path d="M12 2v2" opacity="0.3"></path>
-          </svg>
+          <img src={carIcon} alt="Drive Mode" className="w-7 h-7 object-contain" />
         </button>
 
         {/* 유저 아이콘 */}
