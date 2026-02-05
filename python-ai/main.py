@@ -271,6 +271,39 @@ def get_system_prompt(include_date: bool = True):
     current_time = datetime.now().strftime("%Y년 %m월 %d일 %H:%M:%S")
     current_date = datetime.now().strftime("%Y년 %m월 %d일")
 
+    # 마크다운 형식 규칙 (공통)
+    markdown_rules = """
+📝 **답변 형식 규칙** (반드시 마크다운 문법을 사용하세요):
+
+1. **굵은 글씨(Bold)**: 중요한 키워드, 인물명, 수치, 기관명은 반드시 **굵게** 표시
+   - 예: **삼성전자**, **2026년 02월 04일**, **113,000원**
+
+2. **헤딩(###)**: 내용이 길거나 여러 주제가 있을 때 섹션 제목 사용
+   - 예: ### 주요 내용, ### 결론, ### 요약
+
+3. **번호 리스트**: 여러 항목 나열 시 1. 2. 3. 형식 사용
+   - 예: 1. 첫 번째 포인트 2. 두 번째 포인트
+
+4. **인용문(>)**: 핵심 메시지, 중요 발언, 결론 강조 시 사용
+   - 예: > "이것이 핵심 메시지입니다."
+
+5. **문단 분리**: 내용이 길면 적절히 문단을 나누어 가독성 향상
+
+---
+**예시 답변:**
+
+**2026년 02월 04일** 기준, **국제 유가** 전망을 안내해 드리겠습니다.
+
+### 전문가 전망
+1. **EIA(에너지정보청)**: 브렌트유 연평균 **55달러** 전망
+2. **골드만삭스**: WTI 가격 **53달러** 전망
+3. **ABN암로**: 유사한 수준의 보수적 전망
+
+> "글로벌 원유 수요의 제한적 증가와 높은 재고 수준이 주요 요인입니다."
+
+### 결론
+전반적으로 **유가 하락 압력**이 지속될 것으로 예상됩니다."""
+
     if include_date:
         # 날짜 정보가 필요한 경우 (검색 기반 질문)
         return f"""당신은 친절하고 도움이 되는 AI 어시스턴트입니다.
@@ -288,15 +321,17 @@ def get_system_prompt(include_date: bool = True):
 
 사용자의 질문에 명확하고 간결하게 답변해주세요.
 한국어로 대화합니다.
-전문적이면서도 친근한 톤을 유지합니다."""
+전문적이면서도 친근한 톤을 유지합니다.
+{markdown_rules}"""
     else:
         # 날짜 정보가 필요 없는 경우 (인사, 자기소개, 개념 질문 등)
-        return """당신은 친절하고 도움이 되는 AI 어시스턴트입니다.
+        return f"""당신은 친절하고 도움이 되는 AI 어시스턴트입니다.
 
 사용자의 질문에 명확하고 간결하게 답변해주세요.
 한국어로 대화합니다.
 전문적이면서도 친근한 톤을 유지합니다.
-날짜나 시간 정보를 언급하지 않고 자연스럽게 답변하세요."""
+날짜나 시간 정보를 언급하지 않고 자연스럽게 답변하세요.
+{markdown_rules}"""
 
 SYSTEM_PROMPT = get_system_prompt(include_date=True)
 SYSTEM_PROMPT_SIMPLE = get_system_prompt(include_date=False)
@@ -609,13 +644,38 @@ async def generate_video(request: VideoGenerationRequest):
 
 @app.get("/health")
 async def health_check():
-    """상세 헬스 체크"""
+    return {"status": "healthy", "openai_configured": bool(os.getenv("OPENAI_API_KEY"))}
+
+
+@app.get("/trending")
+async def get_trending():
+    """
+    실시간 인기 검색어 조회 API
+    5분마다 자동 갱신되는 캐시된 데이터 반환
+    """
+    logger.info("🔥 실시간 검색어 조회 요청")
+    cache = trending_service.get_cached_keywords()
+
+    if not cache.get("keywords"):
+        # 캐시가 비어있으면 즉시 갱신 시도
+        logger.info("캐시가 비어있어 즉시 갱신 시도...")
+        await trending_service.update_cache()
+        cache = trending_service.get_cached_keywords()
+
+    if not cache.get("keywords"):
+        raise HTTPException(
+            status_code=503,
+            detail="현재 인기 검색어를 조회할 수 없습니다. 잠시 후 다시 시도해주세요."
+        )
+
     return {
-        "status": "healthy",
-        "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
+        "keywords": cache.get("keywords", []),
+        "updated_at": cache.get("updated_at"),
+        "source": cache.get("source", "signal.bz")
     }
 
 
+# [수정됨] 채팅 엔드포인트 - 링크 누락 문제 해결 + 실시간 검색어 지원
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
@@ -1028,15 +1088,23 @@ async def qa_chat(request: QaRequest):
             if is_greeting:
                 system_prompt = """당신은 뉴스 플랫폼 고객센터의 친절한 AI 상담원입니다.
 사용자의 인사에 친절하게 응답하고, 어떤 도움을 드릴 수 있는지 안내해주세요.
-한국어로 대화하며, 존댓말을 사용합니다."""
+한국어로 대화하며, 존댓말을 사용합니다.
+
+답변 형식:
+- 중요한 키워드는 **굵게** 표시하세요.
+- 도움을 드릴 수 있는 분야를 간단히 안내할 때는 줄바꿈으로 구분하세요."""
             else:
                 system_prompt = """당신은 뉴스 플랫폼 고객센터의 친절한 AI 상담원입니다.
 사용자에게 자신을 소개하고, 어떤 도움을 드릴 수 있는지 설명해주세요.
 - 뉴스 플랫폼의 고객센터 AI 상담원임을 명확히 알려주세요
 - 서비스 이용 관련 질문에 도움을 드릴 수 있다고 안내하세요
 - 영상 제작, 게시물 작성, 프로필/계정 관리 등 서비스 이용 관련 질문을 받을 수 있다고 설명하세요
-한국어로 대화하며, 존댓말을 사용합니다."""
+한국어로 대화하며, 존댓말을 사용합니다.
 
+답변 형식:
+- 중요한 키워드는 **굵게** 표시하세요.
+- 도움 가능한 분야를 나열할 때는 각 항목을 줄바꿈으로 구분하세요."""
+            
             messages = [{"role": "system", "content": system_prompt}]
             if request.conversation_history:
                 for msg in request.conversation_history:
@@ -1052,7 +1120,67 @@ async def qa_chat(request: QaRequest):
             reply = response.choices[0].message.content
             logger.info(f"{'인사말' if is_greeting else '자기소개'} 응답 생성 완료: {reply[:50]}...")
             return QaResponse(reply=reply)
-
+        
+        # ===== 서비스 관련 키워드 체크 (일반 질문 필터링) =====
+        # 서비스 이용과 관련된 키워드 목록
+        service_keywords = [
+            # 계정/인증 관련
+            '로그인', '로그아웃', '회원가입', '회원 가입', '비밀번호', '비번', '계정', '아이디', 
+            '인증', '본인인증', '이메일 인증', '휴대폰 인증', '탈퇴', '회원탈퇴', '회원 탈퇴',
+            # 프로필 관련
+            '프로필', '닉네임', '사진 변경', '프로필 사진', '자기소개', '내 정보', '정보 수정',
+            # 게시물/영상 관련
+            '게시물', '게시글', '글 작성', '글쓰기', '영상', '동영상', '업로드', '올리기',
+            '삭제', '수정', '편집', '저장', '임시저장', '발행', '공개', '비공개',
+            # 상호작용 관련
+            '좋아요', '댓글', '대댓글', '답글', '공유', '북마크', '스크랩', '저장',
+            # 설정 관련
+            '설정', '환경설정', '알림 설정', '개인정보', '보안', '언어 설정',
+            # 결제/멤버십 관련
+            '결제', '구매', '환불', '멤버십', '구독권', '이용권', '포인트',
+            # 고객센터 관련
+            '문의', '1:1 문의', '상담', '도움말', '고객센터', 'FAQ', '자주 묻는', 
+            '오류', '에러', '버그', '안됨', '안 됨', '안되요', '안 되요', '작동', '문제',
+            # 서비스 기능 관련
+            '검색', '필터', '정렬', '카테고리', '태그', '해시태그', '추천', '인기',
+            '피드', '타임라인', '홈', '탐색', '둘러보기'
+        ]
+        
+        # FAQ 질문에서 키워드 추출하여 추가
+        faq_keywords = []
+        if request.faq_data:
+            for faq in request.faq_data:
+                question = faq.get('question', '').lower()
+                # FAQ 질문에서 주요 단어 추출 (2글자 이상)
+                words = question.replace('?', '').replace('.', '').split()
+                faq_keywords.extend([w for w in words if len(w) >= 2])
+        
+        # 서비스 관련 질문인지 확인
+        all_service_keywords = service_keywords + faq_keywords
+        is_service_related = any(keyword in user_message_lower for keyword in all_service_keywords)
+        
+        # 일반적인 질문 패턴 감지 (서비스와 무관한 질문)
+        general_question_patterns = [
+            '뭐야', '뭐예요', '뭔가요', '무엇인가요', '무엇이야', '알려줘', '설명해', '찾아줘',
+            '어디', '언제', '왜', '어떻게', '누가', '무슨', '어떤',
+            '기사', '뉴스', '날씨', '주가', '환율', '정치', '경제', '사회', '문화', '스포츠',
+            '야당', '여당', '대통령', '국회', '선거', '투표',
+            '비트코인', '주식', '부동산', '금리', '물가',
+            '산불', '지진', '태풍', '홍수', '사고', '사건'
+        ]
+        
+        # 일반 질문 패턴이 있고 서비스 키워드가 없으면 일반 질문으로 판단
+        has_general_pattern = any(pattern in user_message_lower for pattern in general_question_patterns)
+        
+        if has_general_pattern and not is_service_related:
+            logger.info(f"일반 질문으로 판단하여 차단: {request.message[:50]}...")
+            return QaResponse(
+                reply="죄송합니다. 질문하신 내용은 서비스 이용과 관련된 내용이 아니어서 답변드리기 어렵습니다. "
+                      "저는 뉴스 플랫폼 고객센터 AI 상담원으로, 서비스 이용 관련 질문(계정, 게시물, 영상 업로드, 설정 등)에 대해 도움을 드리고 있습니다. "
+                      "더 많은 정보를 원하신다면 오른쪽 하단의 AI 비서를 이용해 주세요. "
+                      "서비스 이용 관련 추가 문의사항이 있으시면 '문의 작성'을 통해 문의해주시면 관리자가 확인 후 답변드리겠습니다."
+            )
+        
         # FAQ 데이터 로깅
         has_faq_data = request.faq_data and len(request.faq_data) > 0
         if has_faq_data:
@@ -1067,10 +1195,26 @@ async def qa_chat(request: QaRequest):
    - 서비스 이용 관련: 영상 제작, 게시물 작성, 프로필/계정, 로그인, 회원가입, 비밀번호 찾기, 문의하기, 계정 설정, 프로필 수정 등
    - 서비스 이용과 무관: 일반적인 개념 질문(야당이 뭐야, 산불 어디서 났어, 비트코인이 뭐야 등), 뉴스 질문, 정치/경제 일반 상식 등
 2. 서비스 이용과 관련된 질문이면 FAQ 정보를 참고하여 답변하세요.
-3. 서비스 이용과 무관한 일반적인 질문이면 "죄송합니다. 질문하신 내용에 대한 FAQ 정보를 찾을 수 없습니다. 서비스 이용 관련 질문만 답변해드릴 수 있습니다. 추가 문의사항이 있으시면 '문의 티켓 작성'을 통해 문의해주시면 관리자가 확인 후 답변드리겠습니다."라고 답변하세요.
+3. 서비스 이용과 무관한 일반적인 질문이면 "죄송합니다. 질문하신 내용에 대한 FAQ 정보를 찾을 수 없습니다. 서비스 이용 관련 질문만 답변해드릴 수 있습니다. 추가 문의사항이 있으시면 '문의 작성'을 통해 문의해주시면 관리자가 확인 후 답변드리겠습니다."라고 답변하세요.
 4. 한국어로 대화하며, 존댓말을 사용합니다.
-5. 답변은 명확하고 이해하기 쉽게 작성하세요.\n\n"""
+5. 답변은 명확하고 이해하기 쉽게 작성하세요.
 
+답변 형식 규칙 (반드시 지켜주세요):
+- 중요한 키워드, 메뉴명, 버튼명은 **굵게** 표시하세요.
+- 단계별 설명은 "**1단계:** 내용", "**2단계:** 내용" 형식으로 작성하세요.
+- 절대로 번호나 단계 표시 다음에 줄바꿈을 넣지 마세요. 반드시 같은 줄에 내용을 작성하세요.
+- 각 단계는 줄바꿈 한 번으로 구분하세요.
+
+답변 예시:
+**영상 제작** 방법을 안내해 드리겠습니다.
+
+**1단계:** **메인 페이지**에서 영상 제작 메뉴를 클릭하세요.
+**2단계:** **제목**과 **내용**을 입력해 주세요.
+**3단계:** 원하시는 **영상 스타일**을 선택하세요.
+**4단계:** **제작하기** 버튼을 클릭하면 AI가 영상을 생성합니다.
+
+추가 문의사항이 있으시면 말씀해 주세요!\n\n"""
+        
         if has_faq_data:
             system_prompt += "다음은 참고할 수 있는 FAQ 정보입니다:\n\n"
             for i, faq in enumerate(request.faq_data, 1):

@@ -67,4 +67,32 @@ public class AiController {
         
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 실시간 검색어 조회
+     */
+    @Operation(summary = "실시간 검색어 조회", description = "현재 실시간 인기 검색어를 조회합니다.")
+    @GetMapping("/trending")
+    public ResponseEntity<Map<String, Object>> getTrendingKeywords() {
+        log.info("실시간 검색어 조회 요청");
+
+        try {
+            Map<String, Object> trendingData = aiService.getTrendingKeywords();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", trendingData);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("실시간 검색어 조회 에러: {}", e.getMessage());
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
 }

@@ -10,6 +10,14 @@ from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 import media_tools 
 import openai
 
+# Pillow 10.0.0+ 호환성 패치: ANTIALIAS가 제거되어 LANCZOS로 대체
+try:
+    from PIL import Image
+    if not hasattr(Image, 'ANTIALIAS'):
+        Image.ANTIALIAS = Image.LANCZOS
+except ImportError:
+    pass
+
 # [1. 설정]
 IMAGEMAGICK_BINARY = r"D:\ImageMagick-7.1.2-Q16-HDRI\magick.exe"
 change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_BINARY})

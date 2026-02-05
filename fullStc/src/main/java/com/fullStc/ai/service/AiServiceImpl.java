@@ -151,4 +151,36 @@ public class AiServiceImpl implements AiService {
                 .conversationHistory(history)
                 .build();
     }
+
+    /**
+     * 실시간 검색어 조회
+     * Python FastAPI 서버의 /trending 엔드포인트 호출
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public java.util.Map<String, Object> getTrendingKeywords() {
+        log.info("실시간 검색어 조회 요청");
+
+        try {
+            String url = pythonServerUrl + "/trending";
+            log.debug("Python 서버 요청 URL: {}", url);
+
+            java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
+
+            if (response == null) {
+                log.warn("Python 서버로부터 빈 응답 수신");
+                return java.util.Map.of(
+                    "keywords", java.util.List.of(),
+                    "updated_at", null
+                );
+            }
+
+            log.info("실시간 검색어 조회 완료");
+            return response;
+
+        } catch (RestClientException e) {
+            log.error("Python 서버 통신 에러: {}", e.getMessage());
+            throw new RuntimeException("실시간 검색어 조회 중 오류가 발생했습니다.", e);
+        }
+    }
 }

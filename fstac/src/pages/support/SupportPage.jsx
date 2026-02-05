@@ -1,6 +1,7 @@
 // SupportPage.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import ReactMarkdown from 'react-markdown';
 import { getFaqs, getFaqById, createFaq, updateFaq, deleteFaq, searchFaqs } from '../../api/faqApi';
 import { sendQaMessage } from '../../api/qaApi';
 import { getMyInquiries, createInquiry, getInquiryById, getAllInquiries, updateInquiry, getInquiryByIdForAdmin } from '../../api/inquiryApi';
@@ -11,6 +12,14 @@ import apiClient from '../../api/axios';
 import chatIcon from '../../assets/images/chat-icon.png';
 import emailIcon from '../../assets/images/email.png'; 
 
+// 챗봇 메뉴 아이콘 이미지
+import profileIcon from '../../assets/images/profile.png';
+import videoIcon from '../../assets/images/video.png';
+import carIcon from '../../assets/images/car.png';
+import boardIcon from '../../assets/images/board.png';
+import questionIcon from '../../assets/images/question.png';
+import homeIcon from '../../assets/images/home.png';
+
 // 카테고리 정보
 const CATEGORIES = [
   { value: 'VIDEO', label: '영상제작' },
@@ -18,6 +27,112 @@ const CATEGORIES = [
   { value: 'ACCOUNT', label: '프로필/계정' },
   { value: 'ETC', label: '기타' }
 ];
+
+// 챗봇 버튼 메뉴 구조
+const CHATBOT_MENU = {
+  main: [
+    { id: 'account', label: '계정관리', iconImg: profileIcon },
+    { id: 'video', label: '영상제작', iconImg: videoIcon },
+    { id: 'drive', label: '드라이브모드', iconImg: carIcon },
+    { id: 'post', label: '게시물작성', iconImg: boardIcon },
+    { id: 'etc', label: '기타문의', iconImg: questionIcon },
+  ],
+  // =========================================
+  // 프로필/계정 (ACCOUNT) 카테고리 - 15개
+  // =========================================
+  account: [
+    { id: 'profile_change', label: '프로필 정보 변경', answer: '**프로필 정보 변경 방법**\n\n1. 상단 메뉴에서 **프로필** 또는 **내 정보** 메뉴를 클릭합니다.\n2. 프로필 수정 페이지로 이동합니다.\n3. 이름, 이메일, 프로필 사진 등 원하는 정보를 수정합니다.\n4. **저장** 버튼을 클릭하면 즉시 반영됩니다.' },
+    { id: 'password_change', label: '비밀번호 변경', answer: '**비밀번호 변경 방법**\n\n1. 프로필 설정 페이지에서 **비밀번호 변경** 메뉴를 선택합니다.\n2. 현재 비밀번호를 입력합니다.\n3. 새로운 비밀번호를 입력합니다.\n\n> 보안을 위해 비밀번호는 정기적으로 변경하시는 것을 권장합니다.' },
+    { id: 'password_forgot', label: '비밀번호를 잊어버렸어요', answer: '**비밀번호 찾기 방법**\n\n1. 로그인 화면에서 **비밀번호 찾기**를 클릭합니다.\n2. 가입 시 사용한 이메일을 입력합니다.\n3. 비밀번호 재설정 링크가 이메일로 발송됩니다.\n\n> 이메일이 오지 않으면 스팸함을 확인해주세요.' },
+    { id: 'my_posts', label: '내 게시물/댓글 확인', answer: '**내 활동 확인 방법**\n\n프로필 페이지의 **내 활동** 또는 **작성한 글** 메뉴에서 작성한 게시물과 댓글을 모두 확인하실 수 있습니다.\n\n날짜별, 카테고리별로 필터링하여 검색할 수도 있습니다.' },
+    { id: 'logout', label: '로그아웃 방법', answer: '**로그아웃 방법**\n\n1. 상단 메뉴 오른쪽의 프로필 아이콘을 클릭합니다.\n2. 드롭다운 메뉴가 나타납니다.\n3. **로그아웃** 버튼을 클릭합니다.\n\n> 보안을 위해 공용 컴퓨터 사용 시 반드시 로그아웃하시기 바랍니다.' },
+    { id: 'face_login_fail', label: '얼굴인식 로그인 실패', answer: '**얼굴인식 로그인 실패 해결**\n\n1. 프로필 수정에서 **얼굴 사진을 재등록**해주세요.\n2. 밝은 조명에서 얼굴 정면을 촬영합니다.\n3. 모자나 마스크는 벗은 상태에서 등록해주세요.\n\n> 등록된 사진과 현재 모습이 많이 다르면 인식이 어려울 수 있습니다.' },
+    { id: 'face_data', label: '얼굴 정보 저장 위치', answer: '**얼굴 정보 보안 안내**\n\n얼굴 정보는 **암호화**되어 안전하게 저장됩니다.\n\n회원 탈퇴 시 얼굴 정보도 함께 삭제되어 개인정보가 보호됩니다.' },
+    { id: 'social_login', label: '소셜 로그인 문제', answer: '**소셜 로그인(카카오/네이버/구글) 문제 해결**\n\n네트워크 오류로 인해 일시적으로 사용자 정보 조회에 실패했을 수 있습니다.\n\n1. 잠시 후 다시 로그인을 시도해주세요.\n2. 문제가 계속되면 **1:1 문의**를 남겨주세요.' },
+    { id: 'social_info', label: '소셜 로그인 시 저장 정보', answer: '**소셜 로그인 저장 정보 안내**\n\n소셜 로그인 시 저장되는 정보:\n- 닉네임\n- 이메일 정보\n\n> 비밀번호는 저장되지 않으며, 소셜 플랫폼의 보안 정책에 따라 안전하게 처리됩니다.' },
+    { id: 'withdraw', label: '회원 탈퇴', answer: '**회원 탈퇴 안내**\n\n회원 탈퇴 시 가입하신 사용자의 **모든 정보가 삭제**됩니다.\n\n삭제되는 정보:\n- 얼굴 정보\n- 작성한 게시글\n- 댓글\n- 기타 모든 데이터\n\n> ⚠️ 삭제된 데이터는 **복구가 불가능**합니다.' },
+    { id: 'nickname_change', label: '닉네임 변경', answer: '**닉네임 변경 방법**\n\n프로필 수정 페이지에서 닉네임을 변경할 수 있습니다.\n\n> 단, 이미 다른 사용자가 사용 중인 닉네임은 사용할 수 없습니다.' },
+    { id: 'profile_image', label: '프로필 이미지 변경', answer: '**프로필 이미지 변경 방법**\n\n1. 프로필 수정 페이지로 이동합니다.\n2. 새로운 이미지를 업로드합니다.\n\n> 지원 형식: JPG, PNG\n> 너무 큰 파일은 업로드가 제한될 수 있습니다.' },
+    { id: 'login_session', label: '로그인 상태가 자꾸 풀려요', answer: '**로그인 유지 문제 해결**\n\n보안을 위해 일정 시간이 지나면 자동으로 로그아웃됩니다.\n\n- 자주 사용하시는 기기라면 **로그인 유지** 옵션을 선택해주세요.\n- 브라우저 쿠키가 차단되어 있으면 로그인 유지가 되지 않을 수 있습니다.' },
+    { id: 'email_change', label: '이메일 변경', answer: '**이메일 변경 방법**\n\n프로필 수정 페이지에서 이메일을 변경할 수 있습니다.\n\n- 변경 시 **이메일 인증**이 필요합니다.\n- 이미 다른 계정에서 사용 중인 이메일은 사용할 수 없습니다.' },
+    { id: 'category_setting', label: '관심 카테고리 설정', answer: '**관심 카테고리 설정 방법**\n\n프로필 설정 또는 관심 카테고리 메뉴에서 원하는 뉴스 카테고리를 선택할 수 있습니다.\n\n> 선택한 카테고리의 뉴스가 우선적으로 표시됩니다.' },
+  ],
+  // =========================================
+  // 영상제작 (VIDEO) 카테고리 - 15개
+  // =========================================
+  video: [
+    { id: 'how_to_create', label: '영상 제작 방법', answer: '**영상 제작 방법**\n\n1. 메인 페이지에서 **영상 제작** 메뉴를 선택합니다.\n2. 영상 제작 페이지로 이동합니다.\n3. 제목과 내용을 입력합니다.\n4. 원하는 영상 스타일을 선택합니다.\n5. **제작하기** 버튼을 클릭합니다.\n\n> AI가 자동으로 영상을 생성해드립니다.' },
+    { id: 'create_time', label: '영상 제작 소요 시간', answer: '**영상 제작 소요 시간**\n\n영상 제작 시간은 영상 길이와 복잡도에 따라 다릅니다.\n\n- **1-3분 길이 영상**: 약 5-10분 소요\n\n> 제작이 완료되면 알림을 통해 확인하실 수 있습니다.' },
+    { id: 'video_delete', label: '영상 수정/삭제', answer: '**영상 수정 및 삭제**\n\n- 제작한 영상은 **수정할 수 없습니다**.\n- **삭제만 가능**합니다.\n\n영상 상세 페이지에서 삭제 버튼을 클릭하시면 됩니다.\n\n> ⚠️ 삭제된 영상은 복구할 수 없으니 신중하게 결정해주세요.' },
+    { id: 'file_format', label: '지원 파일 형식', answer: '**지원 파일 형식**\n\n- **MP4**\n- **MOV**\n- **AVI**\n\n> 최대 파일 크기: 500MB\n> 고화질 영상의 경우 제작 시간이 더 오래 걸릴 수 있습니다.' },
+    { id: 'video_error', label: '영상 제작 중 오류', answer: '**영상 제작 오류 해결**\n\n영상 제작 중 오류가 발생하면 제작이 중단됩니다.\n\n1. 같은 내용으로 다시 제작을 시도해 보세요.\n2. 계속 오류가 발생하면 고객센터로 문의해 주세요.\n\n> 오류 메시지를 함께 알려주시면 더 빠르게 해결할 수 있습니다.' },
+    { id: 'video_download', label: '영상 다운로드 방법', answer: '**영상 다운로드 방법**\n\n1. 제작이 완료된 영상의 상세 페이지로 이동합니다.\n2. **다운로드** 버튼을 클릭합니다.\n\n> 다운로드한 영상은 기기의 다운로드 폴더에 저장됩니다.' },
+    { id: 'video_cost', label: '영상 제작 비용', answer: '**영상 제작 비용 안내**\n\n현재 영상 제작 기능은 **무료**로 제공됩니다.\n\n> 향후 유료 기능이 추가될 경우 사전에 공지해드리겠습니다.' },
+    { id: 'video_subtitle', label: '자막 추가 가능 여부', answer: '**자막 기능 안내**\n\n현재는 **자동 자막 생성 기능을 지원하지 않습니다**.\n\n> 향후 업데이트를 통해 자막 기능이 추가될 예정입니다.' },
+    { id: 'video_resolution', label: '영상 해상도 설정', answer: '**영상 해상도 안내**\n\n영상 제작 시 기본 해상도는 **1080p**로 설정됩니다.\n\n> 고해상도 옵션은 현재 준비 중이며, 향후 업데이트를 통해 제공될 예정입니다.' },
+    { id: 'video_limit', label: '영상 제작 한도', answer: '**영상 제작 한도 안내**\n\n현재는 **일일 제작 한도가 없습니다**.\n\n> 다만 서버 부하를 고려하여 동시에 여러 영상을 제작하는 것은 권장하지 않습니다.' },
+    { id: 'video_bgm', label: '배경음악 추가', answer: '**배경음악 기능 안내**\n\n현재는 **배경음악 추가 기능을 지원하지 않습니다**.\n\n> 향후 업데이트를 통해 배경음악 라이브러리가 제공될 예정입니다.' },
+    { id: 'video_refund', label: '영상 제작 실패 시 환불', answer: '**환불 안내**\n\n영상 제작은 **무료 서비스**이므로 환불 대상이 아닙니다.\n\n제작 실패 시:\n1. 같은 내용으로 다시 제작을 시도해 보세요.\n2. 또는 고객센터로 문의해 주세요.' },
+    { id: 'video_share', label: '영상 공유 방법', answer: '**영상 공유 방법**\n\n1. 제작한 영상의 상세 페이지로 이동합니다.\n2. **공유** 버튼을 클릭합니다.\n3. 공유 링크를 복사합니다.\n\n> 생성된 링크를 다른 사람과 공유할 수 있습니다.' },
+    { id: 'video_template', label: '템플릿 선택', answer: '**템플릿 기능 안내**\n\n현재는 **기본 템플릿만 제공**됩니다.\n\n> 향후 다양한 템플릿이 추가될 예정입니다.\n> 템플릿 선택 기능은 영상 제작 페이지에서 확인하실 수 있습니다.' },
+    { id: 'video_cancel', label: '영상 제작 취소', answer: '**영상 제작 취소 안내**\n\n영상 제작이 시작되면 **취소할 수 없습니다**.\n\n- 제작이 완료되기 전까지는 대기 상태로 유지됩니다.\n- 완료되면 알림을 받으실 수 있습니다.' },
+  ],
+  // =========================================
+  // 드라이브 모드 (DRIVE) 카테고리 - 15개
+  // =========================================
+  drive: [
+    { id: 'how_to_use', label: '드라이브 모드 사용법', answer: '**드라이브 모드 사용법**\n\n드라이브 모드는 운전 중에도 안전하게 뉴스를 들을 수 있는 기능입니다.\n\n1. 메인 페이지에서 **드라이브 모드**를 선택합니다.\n2. 플레이리스트를 선택합니다.\n3. 음성 명령으로 조작할 수 있습니다.' },
+    { id: 'playlist_slow', label: '플레이리스트 로딩이 느려요', answer: '**플레이리스트 로딩 지연 안내**\n\n선택하신 주제에 맞는 뉴스를 모아 음성으로 만드는 시간이 필요합니다.\n\n- 보통 **몇 초에서 10초** 정도 걸립니다.\n- 네트워크 상황에 따라 다소 달라질 수 있습니다.' },
+    { id: 'playlist_stuck', label: '플레이리스트 준비 중 멈춤', answer: '**플레이리스트 멈춤 해결**\n\n최대 **1분 정도**까지는 기다려 보세요.\n\n그래도 진행이 없으면:\n1. 화면을 닫습니다.\n2. 같은 플레이리스트를 다시 선택해 보세요.\n\n> 자주 그렇다면 Wi-Fi·데이터 연결과 앱 최신 버전을 확인해 보세요.' },
+    { id: 'playback_stop', label: '재생 중 끊김', answer: '**재생 끊김 해결**\n\n네트워크가 잠깐 불안정하거나 앱이 백그라운드로 갈 때 끊길 수 있습니다.\n\n해결 방법:\n1. 같은 플레이리스트를 다시 선택합니다.\n2. 또는 히스토리에서 해당 플레이리스트를 골라 다시 재생합니다.\n\n> 자주 반복되면 연결 상태와 앱 버전을 확인해 주세요.' },
+    { id: 'voice_not_recognized', label: '음성 인식 실패', answer: '**음성 인식 실패 해결**\n\n- 조용한 곳에서 마이크에 가깝게, **짧게** 말해 보세요.\n- 차량·블루투스 소음이 크면 **화면 버튼**으로 조작해 보세요.' },
+    { id: 'command_not_understood', label: '명령어를 이해 못해요', answer: '**명령어 인식 개선**\n\n다음과 같은 **짧은 표현**을 사용해 보세요:\n- "일시정지"\n- "재생"\n- "다음 기사"\n- "10초 앞으로"\n- "도움말"\n\n> 문장이 길거나 다른 표현이면 인식이 어려울 수 있습니다.' },
+    { id: 'continue_listening', label: '이어서 듣기', answer: '**이어서 듣기 안내**\n\n이전에 들으시던 플레이리스트는 **히스토리**에 남아 있습니다.\n\n1. 드라이브 모드에서 히스토리 탭을 엽니다.\n2. 해당 플레이리스트를 선택합니다.\n\n> 처음부터 다시 들으실 수 있습니다.' },
+    { id: 'history', label: '이전 뉴스 다시 듣기', answer: '**히스토리 기능 안내**\n\n네, **히스토리**에서 들었던 플레이리스트를 선택하시면 해당 플레이리스트를 처음부터 다시 재생할 수 있습니다.' },
+    { id: 'tts_error', label: '음성 생성 오류', answer: '**음성 생성 오류 해결**\n\n1. 잠시 뒤 같은 플레이리스트를 다시 선택해 보세요.\n2. 계속되면 앱을 완전히 종료했다가 다시 켜 보세요.\n\n> 같은 현상이 반복되면 고객센터로 문의해 주세요.' },
+    { id: 'connection_error', label: '연결 문제 오류', answer: '**연결 문제 해결**\n\n네트워크가 불안정한 상태입니다.\n\n1. Wi-Fi나 데이터 연결을 확인합니다.\n2. 통신이 안정된 곳에서 다시 시도해 보세요.' },
+    { id: 'playlist_topics', label: '플레이리스트 주제', answer: '**플레이리스트 주제 안내**\n\n다양한 카테고리별 플레이리스트를 제공합니다:\n- 정치\n- 경제\n- 사회\n- IT/과학\n- 스포츠\n- 국제\n\n> 관심 카테고리를 설정하시면 해당 주제의 플레이리스트가 우선 표시됩니다.' },
+    { id: 'voice_commands', label: '음성 명령 목록', answer: '**음성 명령 목록**\n\n사용 가능한 명령:\n- "일시정지"\n- "재생"\n- "다음 기사"\n- "이전 기사"\n- "10초 앞으로"\n- "10초 뒤로"\n- "도움말"\n\n> 짧고 명확하게 말씀하시면 더 잘 인식됩니다.' },
+    { id: 'background_play', label: '백그라운드 재생', answer: '**백그라운드 재생 안내**\n\n네, 드라이브 모드는 **백그라운드에서도 계속 재생**됩니다.\n\n> 다만 일부 기기나 브라우저에서는 백그라운드 재생이 제한될 수 있습니다.' },
+    { id: 'playlist_length', label: '플레이리스트 길이', answer: '**플레이리스트 길이 안내**\n\n플레이리스트는 선택하신 주제의 최신 뉴스들을 모아 약 **10-15분 분량**으로 구성됩니다.\n\n> 재생 중에도 언제든지 다음 기사로 넘어가거나 일시정지할 수 있습니다.' },
+    { id: 'audio_quality', label: '음성 품질 문제', answer: '**음성 품질 개선**\n\n네트워크 상태가 불안정하거나 서버 부하가 있을 때 음성 품질이 떨어질 수 있습니다.\n\n해결 방법:\n1. 잠시 후 다시 시도합니다.\n2. Wi-Fi 연결이 안정적인 환경에서 사용해 보세요.' },
+  ],
+  // =========================================
+  // 게시물작성 (POST) 카테고리 - 20개
+  // =========================================
+  post: [
+    { id: 'how_to_write', label: '게시물 작성 방법', answer: '**게시물 작성 방법**\n\n1. 상단 메뉴에서 **게시판**을 선택합니다.\n2. 또는 메인 페이지의 **게시글 작성** 버튼을 클릭합니다.\n3. 일반 게시판과 토론 게시판 중 선택합니다.\n4. 제목과 내용을 입력합니다.\n5. 파일을 첨부할 수 있습니다.' },
+    { id: 'file_attach', label: '이미지/파일 첨부', answer: '**파일 첨부 안내**\n\n게시물 작성 시 파일 첨부 기능을 통해 이미지, 문서 등 다양한 파일을 첨부하실 수 있습니다.\n\n- **최대 5개**까지 첨부 가능\n- 각 파일은 **최대 10MB**까지 업로드 가능' },
+    { id: 'edit_delete', label: '게시물 수정/삭제', answer: '**게시물 수정 및 삭제**\n\n본인이 작성한 게시물은 게시물 상세 페이지에서 **수정** 및 **삭제** 버튼을 통해 수정하거나 삭제할 수 있습니다.\n\n> 다만 댓글이 달린 게시물의 경우 삭제 시 주의가 필요합니다.' },
+    { id: 'board_type', label: '일반/토론 게시판 차이', answer: '**게시판 종류 안내**\n\n- **일반 게시판**: 자유롭게 의견을 나눌 수 있는 공간\n- **토론 게시판**: 특정 주제에 대해 찬반 의견을 나누는 공간\n\n> 토론 게시판 작성 시에는 토론 주제를 반드시 입력해야 합니다.' },
+    { id: 'comment_not_shown', label: '댓글이 안 보여요', answer: '**댓글 표시 문제 해결**\n\n네트워크 문제로 댓글 등록이 실패했을 수 있습니다.\n\n1. 새로고침 후 댓글이 보이는지 확인합니다.\n2. 안 보이면 다시 작성해주세요.\n\n> 부적절한 내용의 댓글은 자동으로 필터링될 수 있습니다.' },
+    { id: 'like_not_working', label: '좋아요가 안 눌려요', answer: '**좋아요 버튼 문제 해결**\n\n- **로그인 상태**에서만 좋아요를 누를 수 있습니다.\n- 같은 게시글에 이미 좋아요를 누르셨다면 다시 누르면 **좋아요가 취소**됩니다.' },
+    { id: 'vote_not_working', label: '토론 투표가 안 돼요', answer: '**토론 투표 문제 해결**\n\n- 토론 게시글의 투표는 **한 번만** 참여할 수 있습니다.\n- 이미 투표하셨다면 변경이 불가능합니다.\n- 로그인 상태를 확인해주세요.' },
+    { id: 'video_upload', label: '동영상 업로드', answer: '**동영상 업로드 안내**\n\n현재는 **이미지와 문서 파일만** 첨부 가능합니다.\n\n> 동영상 업로드 기능은 향후 업데이트를 통해 제공될 예정입니다.' },
+    { id: 'search_post', label: '게시물 검색', answer: '**게시물 검색 방법**\n\n게시판 페이지 상단의 **검색창**에 키워드를 입력하시면 제목과 내용에서 검색됩니다.\n\n> 검색 결과는 최신순으로 정렬되어 표시됩니다.' },
+    { id: 'reply', label: '대댓글 작성', answer: '**대댓글 작성 방법**\n\n네, 댓글에 대댓글을 달 수 있습니다.\n\n댓글 옆의 **답글** 버튼을 클릭하시면 대댓글을 작성할 수 있습니다.' },
+    { id: 'link_attach', label: '링크 첨부', answer: '**링크 첨부 방법**\n\n게시물 내용에 직접 URL을 입력하시면 **자동으로 링크로 변환**됩니다.\n\n> 클릭하면 해당 페이지로 이동할 수 있습니다.' },
+    { id: 'restore_post', label: '삭제된 게시물 복구', answer: '**삭제 복구 안내**\n\n삭제된 게시물은 **복구할 수 없습니다**.\n\n삭제하기 전에 신중하게 결정해주세요.\n\n> 댓글이 달린 게시물의 경우 삭제 전에 댓글 작성자에게 알림이 전송됩니다.' },
+    { id: 'char_limit', label: '글자 수 제한', answer: '**글자 수 제한 안내**\n\n- **제목**: 최대 255자\n- **내용**: 최대 10,000자\n\n> 내용이 길 경우 여러 개의 게시물로 나누어 작성하는 것을 권장합니다.' },
+    { id: 'hashtag', label: '해시태그 추가', answer: '**해시태그 기능 안내**\n\n현재는 **해시태그 기능을 지원하지 않습니다**.\n\n> 향후 업데이트를 통해 해시태그 기능이 추가될 예정입니다.' },
+    { id: 'private_post', label: '비공개 게시물', answer: '**비공개 게시물 안내**\n\n현재는 **모든 게시물이 공개**됩니다.\n\n> 비공개 게시물 기능은 향후 업데이트를 통해 제공될 예정입니다.' },
+    { id: 'image_not_shown', label: '이미지가 안 보여요', answer: '**이미지 표시 문제 해결**\n\n이미지 파일 형식이 지원되지 않거나 파일이 손상되었을 수 있습니다.\n\n- 지원 형식: **JPG, PNG, GIF**\n- 파일 크기가 **10MB를 초과**하면 업로드되지 않습니다.' },
+    { id: 'draft_save', label: '임시 저장', answer: '**임시 저장 안내**\n\n현재는 **임시 저장 기능을 지원하지 않습니다**.\n\n작성 중인 내용은 브라우저의 자동 저장 기능을 활용하시거나, 별도로 복사해 두시는 것을 권장합니다.' },
+    { id: 'quote', label: '인용 기능', answer: '**인용 기능 안내**\n\n현재는 **인용 기능을 지원하지 않습니다**.\n\n다른 게시물을 참고하고 싶으시면 링크를 첨부하시거나 내용을 직접 인용해 주세요.' },
+    { id: 'emoji', label: '이모지 사용', answer: '**이모지 사용 안내**\n\n네, 게시물 제목과 내용에 **이모지를 사용**할 수 있습니다.\n\n> 키보드의 이모지 입력 기능을 사용하시면 됩니다.' },
+    { id: 'file_download', label: '첨부파일 다운로드', answer: '**첨부파일 다운로드**\n\n게시물에 첨부된 파일은 게시물 상세 페이지에서 다운로드할 수 있습니다.\n\n> 파일명을 클릭하시면 다운로드가 시작됩니다.' },
+  ],
+  // =========================================
+  // 기타 (ETC) 카테고리 - 5개
+  // =========================================
+  etc: [
+    { id: 'ai_difference', label: 'AI 챗봇 차이점', answer: '**고객센터 AI vs AI 비서**\n\n- **고객센터 AI**: 서비스 이용 관련 FAQ와 문의사항에 특화\n- **AI 비서** (오른쪽 하단): 실시간 뉴스 검색, 일반 정보 검색 등 다양한 기능 제공\n\n> 서비스 이용 문의는 고객센터 AI를, 뉴스나 일반 정보가 필요하시면 AI 비서를 이용해주세요.' },
+    { id: 'faq_qa', label: 'FAQ와 Q&A 사용법', answer: '**FAQ와 Q&A 사용법**\n\n1. **FAQ** (자주 묻는 질문)\n   - 카테고리별 FAQ 버튼을 클릭하면 즉시 미리 정의된 답변을 확인\n   - 빠르고 정확한 정보를 원할 때 사용\n\n2. **Q&A** (질의응답)\n   - 채팅창에 궁금한 내용을 자유롭게 입력\n   - GPT-4o-mini AI가 FAQ 데이터베이스를 참고하여 답변' },
+    { id: 'ticket', label: '챗봇으로 해결 안 될 때', answer: '**문의 티켓 작성**\n\n챗봇으로 해결되지 않는 문제나 추가 문의가 필요한 경우:\n\n1. **문의 티켓 작성** 버튼을 클릭합니다.\n2. 문의 내용을 상세히 작성합니다.\n3. 관리자가 확인 후 **24시간 이내**에 답변드립니다.\n\n> 문의 티켓은 **내 문의 내역**에서 확인하실 수 있습니다.' },
+    { id: 'error_report', label: '오류 발생 시', answer: '**오류 신고 방법**\n\n오류 발생 시 다음 정보를 포함하여 문의해주시면 빠르게 해결해드릴 수 있습니다:\n\n- 발생한 오류 메시지\n- 오류가 발생한 페이지\n- 사용 중이던 브라우저 및 버전\n- 오류 발생 시간\n\n> 고객센터 문의 티켓을 통해 문의해주시면 **24시간 이내**에 답변드리겠습니다.' },
+    { id: 'privacy_policy', label: '개인정보 보호', answer: '**개인정보 보호 안내**\n\n저희는 **개인정보보호법**을 준수하며 사용자의 개인정보를 안전하게 보호합니다.\n\n- 비밀번호는 **암호화**되어 저장\n- 이메일 주소는 뉴스레터 발송 외에는 제3자에게 제공되지 않음' },
+  ],
+};
 
 const SupportPage = () => {
   const { user } = useSelector((state) => state.auth);
@@ -46,6 +161,10 @@ const SupportPage = () => {
   const [sessionId, setSessionId] = useState(null);
   const [qaLoading, setQaLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  
+  // 챗봇 버튼 메뉴 상태
+  const [menuLevel, setMenuLevel] = useState('main'); // 'main' | 'account' | 'video' | 'drive' | 'post' | 'etc'
+  const [menuHistory, setMenuHistory] = useState([]); // 뒤로가기용 히스토리
 
   // 문의 관련 상태
   const [inquiries, setInquiries] = useState([]);
@@ -78,9 +197,10 @@ const SupportPage = () => {
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // 자동 스크롤 기능 비활성화
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // }, [messages]);
 
   const loadFaqs = async () => {
     setFaqLoading(true);
@@ -151,6 +271,38 @@ const SupportPage = () => {
     } finally {
       setQaLoading(false);
     }
+  };
+
+  // 챗봇 메뉴 버튼 클릭 핸들러
+  const handleMenuClick = (menuItem) => {
+    if (CHATBOT_MENU[menuItem.id]) {
+      // 하위 메뉴가 있으면 해당 메뉴로 이동
+      setMenuHistory(prev => [...prev, menuLevel]);
+      setMenuLevel(menuItem.id);
+    } else if (menuItem.answer) {
+      // 답변이 있으면 채팅에 표시
+      setMessages(prev => [
+        ...prev,
+        { role: 'user', content: menuItem.label },
+        { role: 'assistant', content: menuItem.answer }
+      ]);
+      // 메뉴를 메인으로 초기화
+      setMenuLevel('main');
+      setMenuHistory([]);
+    }
+  };
+
+  // 챗봇 메뉴 뒤로가기 핸들러
+  const handleMenuBack = () => {
+    const prev = menuHistory[menuHistory.length - 1] || 'main';
+    setMenuHistory(h => h.slice(0, -1));
+    setMenuLevel(prev);
+  };
+
+  // 챗봇 메뉴 초기화 (처음으로)
+  const handleMenuReset = () => {
+    setMenuLevel('main');
+    setMenuHistory([]);
   };
 
   // ... (문의 생성, 조회, 답변 등 기존 로직 유지 - 코드 길이를 위해 생략하지 않고 기능 보존)
@@ -432,28 +584,135 @@ const SupportPage = () => {
         {activeTab === 'qa' && (
           <div className="max-w-4xl mx-auto animate-fadeIn">
             <BackButton /> {/* 뒤로가기 버튼 */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[600px]">
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[700px]">
               <div className="p-4 bg-slate-900 text-white font-medium flex items-center gap-3">
                  {/* 헤더에도 작은 아이콘 넣기 */}
                  {chatIcon && <img src={chatIcon} className="w-8 h-8 object-contain bg-white rounded-full p-1"/>}
                  <span>AI 상담원</span>
               </div>
               <div className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
+                {/* 환영 메시지 & 버튼 메뉴 (대화가 없을 때) */}
                 {messages.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    {chatIcon && <img src={chatIcon} className="w-20 h-20 object-contain mx-auto mb-4 opacity-50"/>}
-                    <h4 className="text-lg font-semibold text-gray-700 mb-2">안녕하세요!</h4>
-                    <p>AI 상담원이 대기 중입니다.</p>
-                  </div>
-                ) : (
-                  messages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm
-                        ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none'}`}>
-                        {msg.content}
+                  <div className="space-y-3">
+                    {/* 환영 메시지 - 채팅 버블 형식 */}
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] bg-white border border-gray-200 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
+                        <p className="text-sm text-gray-800 leading-relaxed">
+                          안녕하세요! 저희 뉴스 플랫폼 고객센터에 오신 것을 환영합니다.
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">어떤 도움을 드릴 수 있을까요?</p>
+                        
+                        {/* 뒤로가기 버튼 (메인이 아닐 때) */}
+                        {menuLevel !== 'main' && (
+                          <button
+                            onClick={handleMenuBack}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium mt-3 transition-colors"
+                          >
+                            <span>←</span>
+                            <span>뒤로가기</span>
+                          </button>
+                        )}
+                        
+                        {/* 메뉴 버튼 - 가로 나열, 글자 크기에 맞춤 */}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {CHATBOT_MENU[menuLevel]?.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => handleMenuClick(item)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-400 rounded-full text-sm transition-all whitespace-nowrap"
+                            >
+                              {item.iconImg ? <img src={item.iconImg} alt="" className="w-4 h-4 object-contain" /> : item.icon && <span className="text-sm">{item.icon}</span>}
+                              <span className="text-gray-700 hover:text-blue-600">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <p className="text-xs text-gray-400 mt-3">
+                          필요한 부분을 말씀해 주시면 최선을 다해 도와드리겠습니다!
+                        </p>
                       </div>
                     </div>
-                  ))
+                    
+                    {/* 또는 직접 질문 안내 */}
+                    <div className="text-center">
+                      <span className="text-xs text-gray-400">── 또는 직접 질문해주세요 ──</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm
+                          ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none'}`}>
+                          {msg.role === 'assistant' ? (
+                            <div className="qa-markdown-content">
+                              <ReactMarkdown
+                                components={{
+                                  // 굵은 글씨 스타일
+                                  strong: ({node, ...props}) => <strong className="font-semibold text-blue-600" {...props} />,
+                                  // 리스트 스타일 - 간격 줄임
+                                  ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 my-2" {...props} />,
+                                  ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-2" {...props} />,
+                                  li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                                  // 문단 스타일
+                                  p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                                }}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            </div>
+                          ) : (
+                            msg.content
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* 대화 후 메뉴 버튼 (로딩 중 아닐 때) - 채팅 버블 형식 */}
+                    {!qaLoading && (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] bg-white border border-gray-200 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
+                          <p className="text-xs text-gray-500 mb-2">다른 도움이 필요하신가요?</p>
+                          
+                          {/* 뒤로가기 / 처음으로 버튼 */}
+                          {(menuLevel !== 'main' || menuHistory.length > 0) && (
+                            <div className="flex gap-2 mb-2">
+                              {menuLevel !== 'main' && (
+                                <button
+                                  onClick={handleMenuBack}
+                                  className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-full transition-colors"
+                                >
+                                  ← 뒤로
+                                </button>
+                              )}
+                              {menuHistory.length > 0 && (
+                                <button
+                                  onClick={handleMenuReset}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 border border-gray-200 rounded-full transition-colors"
+                                >
+                                  <img src={homeIcon} alt="" className="w-3.5 h-3.5 object-contain" /> 처음으로
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* 메뉴 버튼 - 가로 나열, 글자 크기에 맞춤 */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {CHATBOT_MENU[menuLevel]?.map((item) => (
+                              <button
+                                key={item.id}
+                                onClick={() => handleMenuClick(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-400 rounded-full text-xs transition-all whitespace-nowrap"
+                              >
+                                {item.iconImg ? <img src={item.iconImg} alt="" className="w-3.5 h-3.5 object-contain" /> : item.icon && <span className="text-xs">{item.icon}</span>}
+                                <span className="text-gray-700 hover:text-blue-600">{item.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
                 {qaLoading && <div className="text-sm text-gray-500 px-4">답변 작성 중...</div>}
                 <div ref={messagesEndRef} />

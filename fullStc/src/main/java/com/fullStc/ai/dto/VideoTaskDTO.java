@@ -1,5 +1,6 @@
 package com.fullStc.ai.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -17,8 +18,13 @@ public class VideoTaskDTO {
     private String status;
     private String videoUrl;
     private String imgUrl;
+
+    @JsonProperty("isVipAuto")
     private boolean isVipAuto;
+
+    @JsonProperty("isMainHot")
     private boolean isMainHot;
+
     private LocalDateTime regDate;
     private LocalDateTime modDate;
 }
