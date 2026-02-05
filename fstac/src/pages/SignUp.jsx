@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUp, getCategories } from '../api/authApi';
+import { convertCategoriesToDisplayNames, convertDisplayNamesToCategories } from '../api/categoryApi';
 import SignUpForm from '../components/auth/SignUpForm';
 
 const SignUp = () => {
@@ -21,11 +22,13 @@ const SignUp = () => {
     const loadCategories = async () => {
       try {
         const categories = await getCategories();
-        setAvailableCategories(categories);
+        // 서버에서 받은 영문 카테고리를 한글로 변환
+        const koreanCategories = convertCategoriesToDisplayNames(categories);
+        setAvailableCategories(koreanCategories);
       } catch (err) {
         console.error('카테고리 목록 로드 실패:', err);
         // 기본 카테고리 목록 설정
-        setAvailableCategories(['정치', '경제', '엔터', 'IT/과학', '스포츠', '국제']);
+        setAvailableCategories(['정치', '경제', '문화', 'IT/과학', '사회', '국제']);
       }
     };
     loadCategories();
@@ -110,11 +113,13 @@ const SignUp = () => {
 
     setIsLoading(true);
     try {
+      // 한글 카테고리를 영문으로 변환하여 서버에 전송
+      const englishCategories = convertDisplayNamesToCategories(selectedCategories);
       await signUp({
         email,
         password,
         nickname,
-        categories: selectedCategories, // 선택한 카테고리 전송
+        categories: englishCategories, // 영문 카테고리로 변환하여 전송
       });
       // 회원가입 성공 시 로그인 페이지로 이동
       navigate('/login', { state: { message: '회원가입이 완료되었습니다. 로그인해주세요.' } });

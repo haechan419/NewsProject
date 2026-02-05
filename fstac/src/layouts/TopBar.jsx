@@ -43,8 +43,7 @@ const TopBar = () => {
       {/* 1. 왼쪽: NAVER whale 로고 박스 */}
       <div className="logo-area" onClick={() => navigate('/')}>
         <div className="logo-box">
-          <span>NAVER</span>
-          <strong>whale</strong>
+          <img src="/logo.png" className="logo-img" alt="News Pulse logo"/>
         </div>
       </div>
 

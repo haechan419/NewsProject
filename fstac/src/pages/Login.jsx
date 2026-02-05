@@ -70,6 +70,9 @@ const Login = () => {
           window.history.replaceState({}, '', '/login');
 
           if (fetchUserInfoAsync.fulfilled.match(result)) {
+            // 소셜 로그인 성공 알림
+            const nickname = result.payload?.nickname || '사용자';
+            alert(`로그인 성공! ${nickname}님 환영합니다!`);
             // 즉시 홈으로 이동
             navigate('/', { replace: true });
           } else {
@@ -77,6 +80,10 @@ const Login = () => {
             setTimeout(async () => {
               const retryResult = await dispatch(fetchUserInfoAsync());
               window.history.replaceState({}, '', '/login');
+              if (fetchUserInfoAsync.fulfilled.match(retryResult)) {
+                const nickname = retryResult.payload?.nickname || '사용자';
+                alert(`로그인 성공! ${nickname}님 환영합니다!`);
+              }
               navigate('/', { replace: true });
             }, 1000);
           }
@@ -126,7 +133,13 @@ const Login = () => {
       const result = await dispatch(loginAsync({ email, password }));
       if (loginAsync.fulfilled.match(result)) {
         // 사용자 정보 조회 후 홈으로 이동
-        await dispatch(fetchUserInfoAsync());
+        const userResult = await dispatch(fetchUserInfoAsync());
+        if (fetchUserInfoAsync.fulfilled.match(userResult)) {
+          const nickname = userResult.payload?.nickname || '사용자';
+          alert(`로그인 성공! ${nickname}님 환영합니다!`);
+        } else {
+          alert('로그인 성공!');
+        }
         navigate('/');
       }
     } catch (err) {
@@ -332,9 +345,11 @@ const Login = () => {
           dispatch(setCredentials({ user: loginResponse.user }));
 
           // 사용자 정보 조회
-          await dispatch(fetchUserInfoAsync());
+          const userResult = await dispatch(fetchUserInfoAsync());
 
+          const nickname = loginResponse.user?.nickname || userResult.payload?.nickname || '사용자';
           setFaceRecognitionMessage('로그인 성공!');
+          alert(`로그인 성공! ${nickname}님 환영합니다!`);
 
           stopCamera();
 

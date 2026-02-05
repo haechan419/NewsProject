@@ -44,7 +44,7 @@ public class AiController {
             
         } catch (Exception e) {
             log.error("AI 채팅 에러: {}", e.getMessage());
-
+            
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("error", e.getMessage());

@@ -7,11 +7,11 @@ import java.util.Collection;
 
 public interface VideoTaskRepository extends JpaRepository<VideoTask, Long> {
     void deleteAllByStatus(String status);
-
     boolean existsByMemberIdAndStatusIn(Long memberId, Collection<String> statuses);
-
-    // member 객체 내부의 id를 참조하도록 메서드명을 맞췄습니다
+    
+    // [추가] 취소 처리를 위해 특정 상태의 작업 리스트를 가져오는 메서드
+    List<VideoTask> findByMemberIdAndStatusIn(Long memberId, Collection<String> statuses);
+    
     List<VideoTask> findByMemberIdAndStatusInOrderByRegDateDesc(Long memberId, Collection<String> statuses);
-
     List<VideoTask> findByMemberIdOrderByRegDateDesc(Long memberId);
 }

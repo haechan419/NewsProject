@@ -48,11 +48,10 @@ public class VideoTask {
     private boolean isMainHot;
 
     @CreatedDate
-    @Column(name = "regdate", updatable = false)
+    @Column(updatable = false)
     private LocalDateTime regDate;
 
     @LastModifiedDate
-    @Column(name = "moddate")
     private LocalDateTime modDate;
 
     public void changeStatus(String status) {

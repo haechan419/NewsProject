@@ -11,6 +11,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 영상 파일 서빙을 위한 경로 매핑
         registry.addResourceHandler("/upload/**")
-                .addResourceLocations("file:///D:/NewsProject-master/NewsProject-master/fullStc/upload/");
+                .addResourceLocations("file:///D:/1teamnews/fullStc/upload/");
     }
 }
