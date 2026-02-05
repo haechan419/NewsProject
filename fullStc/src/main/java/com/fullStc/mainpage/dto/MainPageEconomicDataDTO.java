@@ -15,12 +15,6 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MainPageEconomicDataDTO {
-    private String kospi;
-    private String kospiChange;
-    private String kosdaq;
-    private String kosdaqChange;
-    private String kospi200;
-    private String kospi200Change;
     private String dollar;
     private String dollarChange;
     private Instant updatedAt;

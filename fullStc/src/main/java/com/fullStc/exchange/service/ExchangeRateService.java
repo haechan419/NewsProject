@@ -15,4 +15,10 @@ public interface ExchangeRateService {
 
     // 특정 통화의 환율 조회
     ExchangeRateDTO getExchangeRateByCurrency(String curUnit);
+
+    // 일일 기본 데이터 수집 (API 사용, DB 저장)
+    void fetchDailyBaseDataFromApi(LocalDate searchDate);
+
+    // 실시간 데이터 수집 (크롤링만 사용, Redis에만 저장)
+    void fetchRealtimeDataFromCrawler(LocalDate searchDate);
 }

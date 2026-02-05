@@ -18,6 +18,8 @@ import json
 from pathlib import Path
 import shutil
 from datetime import datetime
+from search_service import SearchService
+from trending_service import trending_service
 
 # 사용자 정의 모듈 임포트
 try:
@@ -111,12 +113,18 @@ search_service = SearchService(client)
 # 서버 시작 시 영상 엔진 자동 가동
 @app.on_event("startup")
 async def startup_event():
+    logger.info("🚀 FastAPI 앱 가동 시작")
+
+    # 영상 제작 엔진 가동 (Thread)
     if run_engine:
-        # 영상 제작은 시간이 걸리므로 별도 스레드(Thread)에서 실행
         video_thread = threading.Thread(target=run_engine, daemon=True)
         video_thread.start()
-        logger.info("[System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
 
+    # 실시간 검색어 백그라운드 갱신 시작 (asyncio)
+    import asyncio
+    asyncio.create_task(trending_service.start_background_update())
+    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
 # 생존 확인 엔드포인트
 @app.get("/")
 async def root():
@@ -629,31 +637,8 @@ async def root():
 
 @app.post("/generate_video")
 async def generate_video(request: VideoGenerationRequest):
-    """
-    자바 Spring Boot로부터 영상 제작 요청을 수신하여 엔진 가동
-    """
-    logger.info(f"🚀 [영상 요청 수신] vno: {request.vno}, 모드: {request.videoMode}")
-    logger.info(f"📝 [본문 내용]: {request.rawText[:50]}...")
+    logger.info(f"🚀 [영상 요청 수신] vno: {request.vno}")
 
-    try:
-        # ★ 핵심: 실제 영상 제작 엔진(video_worker)을 백그라운드 스레드에서 실행
-        if run_engine:
-            # 제작 로직이 끝날 때까지 기다리지 않고 즉시 응답을 주기 위해 Thread 사용
-            task_thread = threading.Thread(target=run_engine)
-            task_thread.start()
-            logger.info(f"[엔진 가동] vno {request.vno} 제작을 위해 백그라운드 엔진을 실행했습니다.")
-        else:
-            logger.error("[Error] 영상 엔진(run_engine)이 로드되지 않았습니다.")
-            raise HTTPException(status_code=500, detail="Video engine not found")
-
-        return {
-            "status": "success",
-            "message": f"Task {request.vno} received and processing started",
-            "vno": request.vno
-        }
-    except Exception as e:
-        logger.error(f"[Error] [영상 요청 에러]: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():

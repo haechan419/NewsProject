@@ -58,3 +58,60 @@ edge-tts
 # Brief Delivery PDF
 reportlab>=4.0.0
 qrcode[pil]>=7.0
+
+# FastAPI Server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# OpenAI
+openai==1.12.0
+
+# Env / Config
+python-dotenv==1.0.0
+
+# Data Validation
+pydantic==2.5.3
+
+# Image Processing
+pillow==10.2.0
+
+# Data Science & Math
+numpy==1.26.3
+pandas==2.2.0
+scikit-learn==1.4.0
+scipy==1.16.3
+
+# Database
+PyMySQL==1.1.0
+mysql-connector-python
+
+# HTTP / Web Scraping
+requests==2.31.0
+beautifulsoup4==4.14.3
+
+# Scheduler
+schedule==1.2.1
+
+# Web Search (Tavily API)
+tavily-python==0.5.0
+
+# Financial Data
+yfinance==1.1.0
+finance-datareader==0.9.101
+
+# Visualization (optional, used by FinanceDataReader)
+plotly==6.5.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Drive Mode / AI
+langchain>=0.1.0
+langchain-openai>=0.0.5
+python-multipart>=0.0.6
+
+# Media / TTS
+moviepy==1.0.3
+edge-tts

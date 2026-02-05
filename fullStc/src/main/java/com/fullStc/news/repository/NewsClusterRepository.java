@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -118,4 +119,9 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
         order by c.imageNextRetryAt asc
     """)
         List<NewsCluster> findRetryDue(@Param("now") Instant now);
+
+        @Query("SELECT c FROM NewsCluster c WHERE c.category = :category " +
+       "AND c.clusterSummary IS NOT NULL AND c.clusterSummary <> '' " +
+       "ORDER BY c.id DESC")
+       List<NewsCluster> findTopHotClusters(@Param("category") String category, org.springframework.data.domain.Pageable pageable);
 }

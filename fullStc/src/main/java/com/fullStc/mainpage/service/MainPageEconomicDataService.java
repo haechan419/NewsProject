@@ -68,12 +68,6 @@ public class MainPageEconomicDataService {
             
             // 더미 데이터 (실제로는 API 응답을 파싱)
             MainPageEconomicDataDTO data = MainPageEconomicDataDTO.builder()
-                    .kospi("5,170.81")
-                    .kospiChange("+85.96")
-                    .kosdaq("1,133.52")
-                    .kosdaqChange("+50.93")
-                    .kospi200("758.72")
-                    .kospi200Change("+13.59")
                     .dollar("1,350.00")
                     .dollarChange("+5.00")
                     .updatedAt(Instant.now())
@@ -81,12 +75,6 @@ public class MainPageEconomicDataService {
 
             // DB에 저장
             MainPageEconomicData entity = MainPageEconomicData.builder()
-                    .kospi(data.getKospi())
-                    .kospiChange(data.getKospiChange())
-                    .kosdaq(data.getKosdaq())
-                    .kosdaqChange(data.getKosdaqChange())
-                    .kospi200(data.getKospi200())
-                    .kospi200Change(data.getKospi200Change())
                     .dollar(data.getDollar())
                     .dollarChange(data.getDollarChange())
                     .updatedAt(data.getUpdatedAt())
@@ -107,12 +95,6 @@ public class MainPageEconomicDataService {
             }
             // 캐시도 없으면 기본값 반환
             return MainPageEconomicDataDTO.builder()
-                    .kospi("0")
-                    .kospiChange("0")
-                    .kosdaq("0")
-                    .kosdaqChange("0")
-                    .kospi200("0")
-                    .kospi200Change("0")
                     .dollar("0")
                     .dollarChange("0")
                     .updatedAt(Instant.now())
@@ -140,12 +122,6 @@ public class MainPageEconomicDataService {
      */
     private MainPageEconomicDataDTO convertToDTO(MainPageEconomicData entity) {
         return MainPageEconomicDataDTO.builder()
-                .kospi(entity.getKospi())
-                .kospiChange(entity.getKospiChange())
-                .kosdaq(entity.getKosdaq())
-                .kosdaqChange(entity.getKosdaqChange())
-                .kospi200(entity.getKospi200())
-                .kospi200Change(entity.getKospi200Change())
                 .dollar(entity.getDollar())
                 .dollarChange(entity.getDollarChange())
                 .updatedAt(entity.getUpdatedAt())
