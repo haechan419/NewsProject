@@ -73,6 +73,7 @@ export function DriveModePage({ userId = 1, onClose }) {
     demoAudioLevel, setDemoAudioLevel,
     demoCommandKey, setDemoCommandKey,
     useDemoFallback, setUseDemoFallback,
+    useDemoByChoice, setUseDemoByChoice,
   } = state;
   const {
     COMMAND_COOLDOWN,
@@ -108,6 +109,7 @@ export function DriveModePage({ userId = 1, onClose }) {
     demoLevelIntervalRef,
     demoLevelPhaseRef,
     demoKeyPressedThisSessionRef,
+    longPressJustFiredRef,
   } = refs;
 
   // Ref 동기화
@@ -120,23 +122,18 @@ export function DriveModePage({ userId = 1, onClose }) {
 
   // 데모 모드 키보드 이벤트 (1~6): 숫자 키를 누른 뒤 마이크를 떼면 해당 명령 실행
   useEffect(() => {
-    if (!demoVoice && !useDemoFallback) return;
+    if (!demoVoice && !useDemoFallback && !useDemoByChoice) return;
     const onKey = (e) => {
       const k = parseInt(e.key);
       const maxKey = showPlaylistSelection ? 6 : 5;
       if (k >= 1 && k <= maxKey) {
         demoKeyPressedThisSessionRef.current = true;
         setDemoCommandKey(k);
-        if (demoVoice) {
-          const entries = showPlaylistSelection ? DEMO_MP3_ENTRIES_SELECTION : DEMO_MP3_ENTRIES_PLAYBACK;
-          const entry = entries.find(ent => ent.key === k);
-          console.log(`[데모 모드] 명령 ${k} 선택: ${entry?.label || "알 수 없음"}`);
-        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [demoVoice, useDemoFallback, showPlaylistSelection]);
+  }, [demoVoice, useDemoFallback, useDemoByChoice, showPlaylistSelection]);
 
   // 데모 모드 오디오 레벨 애니메이션
   useEffect(() => {
@@ -167,12 +164,10 @@ export function DriveModePage({ userId = 1, onClose }) {
   const { isRecording, audioLevel, startRecording, stopRecording } = usePushToTalk({
     maxDuration: 10000,
     onRecordingStart: () => {
-      console.log("[Push-to-Talk] 녹음 시작");
       setStatus("recording");
       setStatusMessage("말씀해주세요... (말이 멈추면 자동 종료)");
       if (isPlaying && !isPaused && currentNewsId) setVolume(0.2);
     },
-    onRecordingEnd: () => console.log("[Push-to-Talk] 녹음 종료"),
   });
 
   // 오디오 재생 훅
@@ -755,6 +750,7 @@ export function DriveModePage({ userId = 1, onClose }) {
     if (!isMountedRef.current) return;
     if (isProcessingCommandRef.current) return;
     processVoiceCommand.lastFilename = filename;
+    isProcessingCommandRef.current = true;
 
     try {
       const result = await driveApi.analyzeVoiceCommand(audioBlob, userId, filename);
@@ -816,7 +812,7 @@ export function DriveModePage({ userId = 1, onClose }) {
         }
       } else {
         const isSttFailure = result.message && (result.message.includes("음성을 인식하지 못했습니다") || result.message.includes("인식하지 못했습니다"));
-        
+
         if (isSttFailure) {
           setStatusMessage(result.message || "음성을 인식하지 못했습니다. 더 명확하게 말씀해주세요.");
           handleCommand("STT_FAILED");
@@ -834,7 +830,7 @@ export function DriveModePage({ userId = 1, onClose }) {
     } catch (error) {
       setStatus("error");
       setRecognizedText(null);
-      
+
       if (error.message && error.message.includes("네트워크")) {
         setStatusMessage("네트워크 연결을 확인 중입니다...");
         const retryCount = commandRetryCountRef.current;
@@ -1184,6 +1180,7 @@ export function DriveModePage({ userId = 1, onClose }) {
       // 녹음 정지
       if (demoVoice && demoRecording) setDemoRecording(false);
       if (useDemoFallback) setUseDemoFallback(false);
+      if (useDemoByChoice) setUseDemoByChoice(false);
       if (isRecording) stopRecording().catch(() => {});
       
       // 재생 상태 초기화 (playback_state 삭제)
@@ -1216,6 +1213,13 @@ export function DriveModePage({ userId = 1, onClose }) {
     }
   };
 
+  // "?" 버튼: 항상 표시 (데모 진입용)
+  const showNumberKeyChoice = true;
+  const onNumberKeyChoiceClick = () => {
+    if (useDemoByChoice) return; // 이미 데모 모드면 동작 없음
+    setUseDemoByChoice(true);
+  };
+
   // 데모/폴백: 마이크 뗄 때는 실행하지 않음. (번호키 누른 뒤 마이크를 다시 누를 때 실행)
   // 첫 번째 마이크 누른 뒤 ~ 두 번째 마이크 누를 때까지 파장 유지를 위해 demoRecording은 유지
   const handleDemoMicUp = async () => {
@@ -1225,7 +1229,12 @@ export function DriveModePage({ userId = 1, onClose }) {
 
   // 마이크 버튼 클릭 핸들러 (데모/폴백: 1회 누름 → 번호키 → 마이크 다시 누름 시 명령 실행)
   const handleMicrophoneButtonClick = async () => {
-    const useDemoFlow = demoVoice || useDemoFallback;
+    // 길게 누름으로 데모 진입 직후 지연 호출된 클릭이 녹음을 시작하지 않도록
+    if (longPressJustFiredRef.current) {
+      longPressJustFiredRef.current = false;
+      return;
+    }
+    const useDemoFlow = demoVoice || useDemoFallback || useDemoByChoice;
     if (useDemoFlow) {
       // 번호키를 이미 누른 뒤 마이크를 다시 누른 경우 → 데모 MP3로 processVoiceCommand 호출 (두 번째 클릭이 여기서 처리됨)
       if (demoKeyPressedThisSessionRef.current) {
@@ -1263,7 +1272,7 @@ export function DriveModePage({ userId = 1, onClose }) {
 
     if (!isRecording) {
       setStatus("recording");
-      setStatusMessage("말씀해주세요... (말이 멈추면 자동 종료)");
+      setStatusMessage("말씀해주세요... (한 번 더 누르면 종료)");
       setRecognizedText(null);
       try {
         await startRecording();
@@ -1278,7 +1287,7 @@ export function DriveModePage({ userId = 1, onClose }) {
           console.warn("[Push-to-Talk] 마이크 없음. 데모 모드로 전환합니다.");
           setUseDemoFallback(true);
           setStatus("recording");
-          setStatusMessage("말씀해주세요...");
+          setStatusMessage("말씀해주세요... (한 번 더 누르면 종료)");
           setRecognizedText(null);
           setDemoRecording(true);
           if (isPlaying && !isPaused && currentNewsId) setVolume(0.2);
@@ -1301,7 +1310,7 @@ export function DriveModePage({ userId = 1, onClose }) {
 
   // 마이크 버튼 떼기 핸들러
   const handleMicrophoneButtonUp = async () => {
-    if (demoVoice || useDemoFallback) {
+    if (demoVoice || useDemoFallback || useDemoByChoice) {
       await handleDemoMicUp();
       return;
     }
@@ -1335,11 +1344,10 @@ export function DriveModePage({ userId = 1, onClose }) {
           setTimeout(() => { setStatus("idle"); setStatusMessage(""); }, 2000);
           return;
         }
-        
-        isProcessingCommandRef.current = true;
+
         lastCommandTimeRef.current = now;
-        await processVoiceCommand(audioBlob);
-        isProcessingCommandRef.current = false;
+        // MP3 데모와 동일하게 (blob, filename) 전달 — 데모: processVoiceCommand(blob, entry.file)
+        await processVoiceCommand(audioBlob, 'voice.webm');
       } catch (error) {
         isProcessingCommandRef.current = false;
         setStatus("error");
@@ -1908,6 +1916,8 @@ export function DriveModePage({ userId = 1, onClose }) {
         onHistoryClose={() => setIsHistoryPanelCollapsed(true)}
         onMicrophoneButtonClick={handleMicrophoneButtonClick}
         onMicrophoneButtonUp={handleMicrophoneButtonUp}
+        showNumberKeyChoice={showNumberKeyChoice}
+        onNumberKeyChoiceClick={onNumberKeyChoiceClick}
         audioLevel={demoRecording ? demoAudioLevel : audioLevel}
         isRecording={isRecording || demoRecording}
         statusMessage={statusMessage}
@@ -1929,6 +1939,8 @@ export function DriveModePage({ userId = 1, onClose }) {
       onHistoryItemDelete={deleteHistory}
       onMicrophoneButtonClick={handleMicrophoneButtonClick}
       onMicrophoneButtonUp={handleMicrophoneButtonUp}
+      showNumberKeyChoice={showNumberKeyChoice}
+      onNumberKeyChoiceClick={onNumberKeyChoiceClick}
       audioLevel={demoRecording ? demoAudioLevel : audioLevel}
       isRecording={isRecording || demoRecording}
       statusMessage={statusMessage}

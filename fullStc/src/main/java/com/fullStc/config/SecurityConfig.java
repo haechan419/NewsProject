@@ -88,6 +88,7 @@ public class SecurityConfig {
                         "/api/market/**",  // 금융 시장 데이터 API
                         "/api/exchange-rate/**",  // 환율 API
                         "/api/drive/**",  // 드라이브 모드 API
+                        "/api/brief-delivery/**",  // 브리핑 배송 API
                         "/api/images/**",
                         "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
 
@@ -152,6 +153,8 @@ public class SecurityConfig {
             auth.requestMatchers("/api/market/**").permitAll();
             // 드라이브 모드 API는 인증 없이 접근 가능
             auth.requestMatchers("/api/drive/**").permitAll();
+            // 브리핑 배송 API는 인증 없이 접근 가능
+            auth.requestMatchers("/api/brief-delivery/**").permitAll();
             // OAuth2 경로 허용
             auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
             // /login 경로 허용 (OAuth2 에러 리다이렉트용)

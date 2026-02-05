@@ -77,6 +77,10 @@ app.add_middleware(
 from drive.router import router as drive_router
 app.include_router(drive_router)
 
+# 브리핑 배송 라우터
+from brief_delivery.router import router as brief_delivery_router
+app.include_router(brief_delivery_router)
+
 # 환율 API 클라이언트 임포트
 try:
     from exchange_rate import ExchangeRateClient, ExchangeRate

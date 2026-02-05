@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { getPlaylistImage } from "../utils/playlistImages";
 import { formatNewsTitleWithCategory } from "../utils/categoryUtils";
-import { CloseIcon, PlayIcon, MicrophoneIcon, HistoryIcon } from "./Icons";
+import { CloseIcon, PlayIcon, HistoryIcon } from "./Icons";
 import { VoiceVisualizer } from "./VoiceVisualizer";
+import { MicButtonWithLongPress } from "./MicButtonWithLongPress";
 
 /**
  * @param {Object[]} playlists - 플레이리스트 목록
@@ -16,6 +17,8 @@ import { VoiceVisualizer } from "./VoiceVisualizer";
  * @param {Function} onHistoryItemDelete - 히스토리 항목 삭제
  * @param {Function} onMicrophoneButtonClick - 마이크 버튼 누름 (음성/시연)
  * @param {Function} onMicrophoneButtonUp - 마이크 버튼 뗌
+ * @param {boolean} [showNumberKeyChoice] - 번호키로 선택 링크 표시 여부 (데모 + 마이크 사용 가능 시)
+ * @param {Function} [onNumberKeyChoiceClick] - 번호키로 선택 클릭 시
  * @param {number} audioLevel - 음성 레벨 (파장용)
  * @param {boolean} isRecording - 녹음/시연 인식 중 여부
  * @param {string} statusMessage - 상태 메시지
@@ -33,6 +36,8 @@ export function PlaylistSelection({
   onHistoryItemDelete,
   onMicrophoneButtonClick,
   onMicrophoneButtonUp,
+  showNumberKeyChoice = false,
+  onNumberKeyChoiceClick,
   audioLevel = -60,
   isRecording = false,
   statusMessage = "",
@@ -40,8 +45,11 @@ export function PlaylistSelection({
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [baseRotation, setBaseRotation] = useState(0); // 링 전체 회전 (다음/이전 시 원이 도는 효과)
+  const [isAnimating, setIsAnimating] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+  const stageRef = useRef(null);
 
   const toggleHistoryPanel = () => {
     const next = !showHistoryPanel;
@@ -57,13 +65,39 @@ export function PlaylistSelection({
   };
 
   const goPrev = () => {
-    if (playlists.length === 0) return;
-    setSelectedIndex((i) => (i > 0 ? i - 1 : playlists.length - 1));
+    if (playlists.length === 0 || isAnimating) return;
+    const n = playlists.length;
+    setIsAnimating(true);
+    setBaseRotation(26); // 링이 반시계로 한 칸 돌아가는 느낌 (RING_ANGLE_STEP과 동일)
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (stageRef.current) stageRef.current.style.transition = "none";
+        setBaseRotation(0);
+        setSelectedIndex((i) => (i - 1 + n) % n);
+        requestAnimationFrame(() => {
+          if (stageRef.current) stageRef.current.style.transition = "";
+          setIsAnimating(false);
+        });
+      });
+    }, 320);
   };
 
   const goNext = () => {
-    if (playlists.length === 0) return;
-    setSelectedIndex((i) => (i < playlists.length - 1 ? i + 1 : 0));
+    if (playlists.length === 0 || isAnimating) return;
+    const n = playlists.length;
+    setIsAnimating(true);
+    setBaseRotation(-26); // 링이 시계로 한 칸 돌아가는 느낌
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (stageRef.current) stageRef.current.style.transition = "none";
+        setBaseRotation(0);
+        setSelectedIndex((i) => (i + 1) % n);
+        requestAnimationFrame(() => {
+          if (stageRef.current) stageRef.current.style.transition = "";
+          setIsAnimating(false);
+        });
+      });
+    }, 320);
   };
 
   const handleTouchStart = (e) => {
@@ -97,9 +131,37 @@ export function PlaylistSelection({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedIndex, playlists]);
 
+  // 로딩/빈 목록에서도 "?"·닫기 버튼 표시 (새로고침 후 데모 사용 가능)
+  const topBarButtons = (
+    <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+      {showNumberKeyChoice && onNumberKeyChoiceClick && (
+        <button
+          type="button"
+          onClick={onNumberKeyChoiceClick}
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 text-lg font-medium transition-colors focus:outline-none focus:ring-0"
+          aria-label="도움말"
+          title="도움말"
+        >
+          ?
+        </button>
+      )}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/[0.06] border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          title="드라이브 모드 종료"
+          aria-label="닫기"
+        >
+          <CloseIcon size={20} />
+        </button>
+      )}
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
+      <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
+        {topBarButtons}
         <div className="flex flex-col items-center justify-center gap-6 p-8 max-w-sm mx-auto">
           <div className="relative">
             <div className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center">
@@ -124,7 +186,8 @@ export function PlaylistSelection({
 
   if (!playlists || playlists.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-y-auto p-4">
+      <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-y-auto p-4">
+        {topBarButtons}
         <div className="text-white text-lg mb-4">플레이리스트가 없습니다</div>
         {onClose && (
           <button
@@ -138,14 +201,19 @@ export function PlaylistSelection({
     );
   }
 
-  // 카드 배치·전환: 겹친 스택 + 기울임 + 중앙 기준 슬라이드 (드라이브 모드용)
+  // 카드 배치: 입체 원 하나 위에 배치, 선택 카드만 앞으로 (맨 앞·맨 뒤 연결)
   const CARD_WIDTH = 260;
   const CARD_HEIGHT = 320;
-  const CARD_STEP = 160; // 겹침 강조 (STEP < WIDTH)
+  const RING_RADIUS = 300;
+  const RING_ANGLE_STEP = 26;
+  const RING_FRONT_POP = 36;
+  const RING_SLOTS_HALF = 3; // 한쪽에 보일 슬롯 수 → 원 위에 -3..0..3 슬롯, 링 연결
+  const STAGE_WIDTH = 920; // 회전한 카드가 잘리지 않도록 스테이지 넓게
+  const STAGE_HEIGHT = 420;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-y-auto p-4 md:p-6 flex flex-col">
-      <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col min-h-0">
+      <div className="w-full flex-1 flex flex-col min-h-0">
         {/* 헤더: 툴바 하나로 묶어 시각적 정리 */}
         <div className="flex items-center justify-between mb-4 md:mb-6 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -173,20 +241,17 @@ export function PlaylistSelection({
                 </button>
               )}
               {onMicrophoneButtonClick && onMicrophoneButtonUp && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onMicrophoneButtonClick(); }}
-                  onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); onMicrophoneButtonUp(); }}
-                  onTouchStart={(e) => { e.stopPropagation(); onMicrophoneButtonClick(); }}
-                  onTouchEnd={(e) => { e.stopPropagation(); onMicrophoneButtonUp(); }}
+                <MicButtonWithLongPress
+                  isRecording={isRecording}
+                  onMicrophoneButtonClick={onMicrophoneButtonClick}
+                  onMicrophoneButtonUp={onMicrophoneButtonUp}
+                  showNumberKeyChoice={showNumberKeyChoice}
+                  onNumberKeyChoiceClick={onNumberKeyChoiceClick}
+                  enableLongPressForDemo={false}
                   className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all flex-shrink-0 ${
                     isRecording ? "bg-sky-500/30 text-sky-300 animate-pulse" : "text-slate-300 hover:text-white hover:bg-white/5"
                   }`}
-                  title="음성 명령"
-                  aria-label="마이크"
-                >
-                  <MicrophoneIcon size={20} color="currentColor" />
-                </button>
+                />
               )}
               {onRefresh && (
                 <button
@@ -200,6 +265,17 @@ export function PlaylistSelection({
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M3 21V15M21 3v6M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
                   </svg>
+                </button>
+              )}
+              {showNumberKeyChoice && onNumberKeyChoiceClick && (
+                <button
+                  type="button"
+                  onClick={onNumberKeyChoiceClick}
+                  className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors text-slate-300 hover:text-white hover:bg-white/5 text-lg font-medium focus:outline-none focus:ring-0"
+                  aria-label="도움말"
+                  title="도움말"
+                >
+                  ?
                 </button>
               )}
             </div>
@@ -216,34 +292,34 @@ export function PlaylistSelection({
           </div>
         </div>
 
-        {/* 음성 인식 중: 파장 표시 */}
-        {(onMicrophoneButtonClick && isRecording) && (
-          <div className="mb-4 w-full max-w-md mx-auto space-y-2">
-            <VoiceVisualizer audioLevel={audioLevel} isActive={isRecording} />
-            {statusMessage && (
-              <p className="text-center text-sm text-white/80">{statusMessage}</p>
-            )}
-          </div>
-        )}
-        {/* 상태 메시지: 녹음 중이 아닐 때도 표시 (예: "해당 카테고리의 뉴스가 없습니다.") */}
-        {statusMessage && !isRecording && (
-          <div className="mb-4 w-full max-w-md mx-auto">
-            <p className="text-center text-sm text-amber-200/95 px-2 py-2 rounded-lg bg-amber-500/10 border border-amber-400/20">
-              {statusMessage}
-            </p>
-          </div>
-        )}
-        {/* 인식된 텍스트: 녹음 종료 후 API 응답으로 표시 (3초 후 자동 제거) */}
-        {recognizedText && (
-          <p className="text-center text-sm text-sky-300/95 mb-2 px-2">"{recognizedText}"</p>
-        )}
+        {/* 음성 인식·상태·인식 텍스트: 원래 높이에 고정 영역으로 카드가 안 밀리게 */}
+        <div className="min-h-[96px] flex flex-col justify-start mb-2 flex-shrink-0">
+          {(onMicrophoneButtonClick && isRecording) && (
+            <div className="w-full max-w-md mx-auto space-y-2">
+              <VoiceVisualizer audioLevel={audioLevel} isActive={isRecording} />
+              {statusMessage && (
+                <p className="text-center text-sm text-white/80">{statusMessage}</p>
+              )}
+            </div>
+          )}
+          {statusMessage && !isRecording && (
+            <div className="w-full max-w-md mx-auto">
+              <p className="text-center text-sm text-amber-200/95 px-2 py-2 rounded-lg bg-amber-500/10 border border-amber-400/20">
+                {statusMessage}
+              </p>
+            </div>
+          )}
+          {recognizedText && (
+            <p className="text-center text-sm text-sky-300/95 px-2">"{recognizedText}"</p>
+          )}
+        </div>
 
-        {/* 메인: 큰 화면에서 세로 중앙에 오도록 flex-1 + justify-center */}
+        {/* 메인: 카드 영역은 항상 가운데 고정, 히스토리는 열리면 왼쪽에 겹쳐서 표시 */}
         <div className="flex-1 flex flex-col justify-center gap-4 md:gap-6 min-h-0 py-4 md:py-0">
-          {/* 상단 행: [히스토리 패널(열릴 때만)] + [카드 영역] */}
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-0">
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {/* 히스토리: 열리면 왼쪽에 절대 위치로 겹침 → 카드 영역 안 밀림 */}
             {showHistoryPanel && (
-              <div className="w-full md:w-64 lg:w-72 flex-shrink-0 flex flex-col rounded-xl border border-white/10 bg-slate-800/50 min-h-0 max-h-[50vh] md:max-h-[min(420px,70vh)] overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 z-10 w-64 lg:w-72 flex flex-col rounded-xl border border-white/10 bg-slate-800/95 backdrop-blur-sm min-h-0 max-h-[50vh] md:max-h-[min(420px,70vh)] overflow-hidden shadow-xl">
                 <div className="flex items-center justify-between py-2.5 px-4 flex-shrink-0 border-b border-white/10">
                   <h3 className="text-sm font-medium text-white/90">청취 히스토리</h3>
                   <div className="flex items-center gap-1">
@@ -356,55 +432,83 @@ export function PlaylistSelection({
               </div>
             )}
 
-            {/* 카드 영역: 히스토리 닫으면 넓게, 열면 오른쪽에 (재생 화면과 동일) */}
+            {/* 카드 영역: 항상 가운데 고정 (히스토리는 왼쪽에 겹침), 살짝 아래로 */}
             <div
-              className="relative flex-1 min-w-0 flex flex-col items-center justify-start"
-              style={{ minHeight: CARD_HEIGHT + 80 }}
+              className="relative flex-1 min-w-0 flex flex-col items-center justify-start pt-10 md:pt-16"
+              style={{ minHeight: STAGE_HEIGHT + 80 }}
             >
               <div
                 className="relative w-full overflow-hidden touch-pan-y select-none flex justify-center"
-                style={{ minHeight: CARD_HEIGHT }}
+                style={{ minHeight: STAGE_HEIGHT, perspective: "1400px" }}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
               >
+                {/* 링 전체 회전 (다음/이전 시 원이 도는 효과) */}
                 <div
-                  className="relative transition-transform duration-300 ease-out will-change-transform"
+                  ref={stageRef}
+                  className="relative"
                   style={{
-                    width: Math.max(1, playlists.length - 1) * CARD_STEP + CARD_WIDTH,
-                    height: CARD_HEIGHT,
-                    transform: `translateX(calc(50% - ${selectedIndex * CARD_STEP + CARD_WIDTH / 2}px))`,
+                    transform: `translate3d(0,0,0) rotateY(${baseRotation}deg)`,
+                    transition: "transform 0.32s cubic-bezier(0.33, 1, 0.68, 1)",
+                    transformStyle: "preserve-3d",
+                    willChange: isAnimating ? "transform" : "auto",
                   }}
                 >
-                  {playlists.map((playlist, index) => {
-                    const offset = index - selectedIndex;
-                    const isSelected = offset === 0;
-                    const scale = isSelected ? 1 : 0.82;
-                    const zIndex = 50 + (playlists.length - Math.abs(offset));
-                    const opacity = isSelected ? 1 : Math.max(0.5, 0.85 - Math.abs(offset) * 0.15);
+                  {/* 원 위에 슬롯 배치: 슬롯은 -3..0..3, 링이라 맨 앞·맨 뒤 연결 */}
+                  <div
+                    className="relative"
+                    style={{
+                      width: STAGE_WIDTH,
+                      height: STAGE_HEIGHT,
+                      transformStyle: "preserve-3d",
+                    }}
+                  >
+                  {(() => {
+                    const n = playlists.length;
+                    if (n === 0) return null;
+                    const cardLeft = (STAGE_WIDTH - CARD_WIDTH) / 2;
+                    const cardTop = (STAGE_HEIGHT - CARD_HEIGHT) / 2;
+                    const slots = [];
+                    for (let slotOffset = -RING_SLOTS_HALF; slotOffset <= RING_SLOTS_HALF; slotOffset++) {
+                      const index = ((selectedIndex + slotOffset) % n + n) % n;
+                      slots.push({ slotOffset, index, playlist: playlists[index] });
+                    }
+                    return slots.map(({ slotOffset, index, playlist }) => {
+                      const isSelected = slotOffset === 0;
+                      const angle = slotOffset * RING_ANGLE_STEP;
+                      const z = isSelected ? RING_RADIUS + RING_FRONT_POP : RING_RADIUS;
+                      const zIndex = 50 + (RING_SLOTS_HALF - Math.abs(slotOffset));
+                      const opacity = isSelected ? 1 : Math.max(0.5, 0.92 - Math.abs(slotOffset) * 0.12);
 
-                    return (
-                      <div
-                        key={playlist.id || index}
-                        className="absolute cursor-pointer transition-all duration-300 ease-out rounded-2xl overflow-hidden"
-                        style={{
-                          left: index * CARD_STEP,
-                          top: 0,
-                          width: CARD_WIDTH,
-                          height: CARD_HEIGHT,
-                          transform: `scale(${scale})`,
-                          transformOrigin: "center center",
-                          zIndex,
-                          opacity,
-                        }}
-                        onClick={() => handleSelect(playlist, index)}
-                      >
+                      return (
                         <div
-                          className={`w-full h-full rounded-2xl overflow-hidden flex flex-col transition-all duration-300 ${
-                            isSelected
-                              ? "ring-2 ring-amber-400/60 shadow-[0_0_24px_rgba(251,191,36,0.15)]"
-                              : "ring-1 ring-white/[0.06] shadow-lg shadow-black/20"
-                          }`}
+                          key={`${slotOffset}-${playlist.id ?? index}`}
+                          className="absolute cursor-pointer transition-all duration-300 ease-out rounded-2xl overflow-visible"
+                          style={{
+                            left: cardLeft,
+                            top: cardTop,
+                            width: CARD_WIDTH,
+                            height: CARD_HEIGHT,
+                            transform: `rotateY(${angle}deg) translateZ(${z}px)`,
+                            transformOrigin: "center center",
+                            transformStyle: "preserve-3d",
+                            backfaceVisibility: "hidden",
+                            zIndex,
+                            opacity,
+                          }}
+                          onClick={() => handleSelect(playlist, index)}
                         >
+                          <div
+                            className={`w-full h-full rounded-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+                              isSelected
+                                ? "ring-2 ring-amber-400/60 shadow-[0_0_24px_rgba(251,191,36,0.15)]"
+                                : "ring-1 ring-white/[0.06] shadow-lg shadow-black/20"
+                            }`}
+                            style={{
+                              transform: `rotateY(${-angle}deg)`,
+                              transformStyle: "preserve-3d",
+                            }}
+                          >
                           <div className="flex-1 min-h-0 relative flex items-center justify-center p-3 bg-slate-800/80">
                             <img
                               src={getPlaylistImage(playlist.id)}
@@ -424,9 +528,11 @@ export function PlaylistSelection({
                             <p className="text-[11px] text-slate-500 mt-1">약 {playlist.expectedCount || 5}개</p>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                        </div>
+                      );
+                    });
+                  })()}
+                  </div>
                 </div>
               </div>
 
@@ -436,7 +542,8 @@ export function PlaylistSelection({
                   <button
                     type="button"
                     onClick={goPrev}
-                    className="w-11 h-11 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white transition-colors"
+                    disabled={isAnimating}
+                    className="w-11 h-11 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
                     aria-label="이전 카드"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -456,7 +563,8 @@ export function PlaylistSelection({
                   <button
                     type="button"
                     onClick={goNext}
-                    className="w-11 h-11 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white transition-colors"
+                    disabled={isAnimating}
+                    className="w-11 h-11 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
                     aria-label="다음 카드"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>

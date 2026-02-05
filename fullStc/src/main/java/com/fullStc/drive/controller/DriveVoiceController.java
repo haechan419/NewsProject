@@ -88,7 +88,7 @@ public class DriveVoiceController {
         try {
             // 1단계: STT (Python 서버로 오디오 전송)
             String rawText = voiceProcessingService.transcribeAudio(audioFile, userId);
-            
+
             if (rawText == null || rawText.trim().isEmpty()) {
                 return ResponseEntity.ok(CommandIntentResponse.builder()
                         .intent(null)
@@ -98,24 +98,22 @@ public class DriveVoiceController {
                         .rawText(null) // STT 실패
                         .build());
             }
-            
+
             log.info("STT 변환 결과: {}", rawText);
-            
+
             // 2단계: Intent 분석 (기존 로직 재사용)
             CommandIntentResponse intentResponse = driveModeService.analyzeCommand(rawText, userId);
-            // STT 결과(rawText)를 응답에 포함
             intentResponse.setRawText(rawText);
-            
+
             // 3단계: 로컬에서 처리되지 않으면 Python 서버로 전달
             if (!intentResponse.getProcessedLocally() && intentResponse.getIntent() == null) {
                 CommandIntentResponse complexResponse = voiceProcessingService.analyzeComplexCommand(rawText, userId);
-                // STT 결과 유지
                 complexResponse.setRawText(rawText);
                 intentResponse = complexResponse;
             }
-            
+
             return ResponseEntity.ok(intentResponse);
-            
+
         } catch (Exception e) {
             log.error("음성 명령 분석 실패: {}", e.getMessage(), e);
             return ResponseEntity.ok(CommandIntentResponse.builder()

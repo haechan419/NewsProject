@@ -1,0 +1,517 @@
+/* FAB: right 40px, bottom 100px */
+.floating-brief-delivery-fab {
+  position: fixed;
+  bottom: 100px;
+  right: 40px;
+  z-index: 9998;
+  width: 60px;
+  height: 60px;
+}
+
+/* Main FAB button 60×60 */
+.floating-brief-delivery-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #3e5c46;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.floating-brief-delivery-btn:hover {
+  transform: scale(1.08);
+  background-color: #2c4232;
+}
+
+/* 펼쳤을 때 메인 버튼 = X (노란색) */
+.floating-brief-delivery-btn-close {
+  background-color: #eab308;
+  color: #fff;
+}
+
+.floating-brief-delivery-btn-close:hover {
+  background-color: #ca8a04;
+}
+
+.floating-brief-delivery-x {
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.floating-brief-delivery-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+/* 위에 나오는 보조 버튼 (마이크, 채팅) — 메인 60px과 세로축 정렬(right: 6px로 중앙 맞춤) */
+.floating-brief-delivery-fab-item {
+  position: absolute;
+  right: 6px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.floating-brief-delivery-fab-mic {
+  bottom: 68px;  /* 60(메인) + 8px 간격 */
+}
+
+.floating-brief-delivery-fab-chat {
+  bottom: 124px; /* 68 + 48 + 8 */
+}
+
+.floating-brief-delivery-fab-item:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.floating-brief-delivery-fab-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.floating-brief-delivery-fab-chat .floating-brief-delivery-fab-icon {
+  transform: scaleX(-1);
+}
+
+/* ========== 패널 (브리핑 예약 — 아이콘 옆에 표시) ========== */
+.floating-brief-delivery-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 110px;  /* FAB(40+60) + 간격(10px) = 아이콘 열 오른쪽, 패널은 아이콘 왼쪽에 표시 */
+  width: calc(100vw - 140px);
+  max-width: 400px;
+  max-height: calc(100vh - 140px);
+  background: #fafbfc;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: brief-delivery-slide-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+}
+
+@keyframes brief-delivery-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 헤더: 심플한 상단바 (챗봇 느낌 제거) */
+.brief-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.brief-panel-head-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brief-panel-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.brief-panel-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.brief-panel-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: #5f6368;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.brief-panel-close:hover {
+  background: #f1f3f4;
+  color: #1a1a1a;
+}
+
+.brief-panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.brief-panel-help-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: #5f6368;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.brief-panel-help-btn:hover {
+  background: #f1f3f4;
+  color: #1a1a1a;
+}
+
+/* 본문 */
+.brief-panel-body {
+  padding: 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.brief-panel-hint {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.brief-panel-notice {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #5f6368;
+  line-height: 1.5;
+}
+
+/* ----- 음성 모드 (채팅 패널과 높이 맞춤) ----- */
+.brief-panel-mic {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.brief-panel-mic-desc {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.brief-panel-mic-example {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #80868b;
+}
+
+.brief-number-choice {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 13px;
+  color: #5f6368;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.brief-number-choice:hover {
+  color: #3e5c46;
+}
+
+/* 녹음 버튼: 채팅 패널과 높이 맞춤 */
+.brief-record-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 20px;
+  background: #fff;
+  border: 2px dashed #dadce0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.brief-record-btn:hover {
+  border-color: #3e5c46;
+  background: #f8faf8;
+  box-shadow: 0 4px 12px rgba(62, 92, 70, 0.08);
+}
+
+.brief-record-btn--recording {
+  border-style: solid;
+  border-color: #ea4335;
+  background: #fef7f6;
+  animation: brief-record-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes brief-record-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 67, 53, 0.25); }
+  50% { box-shadow: 0 0 0 12px rgba(234, 67, 53, 0); }
+}
+
+.brief-record-btn-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #3e5c46;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.brief-record-btn:hover .brief-record-btn-circle {
+  background: #2d4532;
+  transform: scale(1.04);
+}
+
+.brief-record-btn--recording .brief-record-btn-circle {
+  background: #ea4335;
+}
+
+.brief-record-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.brief-record-pulse {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(234, 67, 53, 0.4);
+  animation: brief-pulse 1.2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes brief-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.brief-record-btn {
+  position: relative;
+}
+
+.brief-record-btn-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5f6368;
+}
+
+.brief-record-btn--recording .brief-record-btn-label {
+  color: #ea4335;
+}
+
+/* 로딩 */
+.brief-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e8eaed;
+}
+
+.brief-loading-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.brief-loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3e5c46;
+  animation: brief-loading-bounce 0.6s ease-in-out infinite alternate;
+}
+
+.brief-loading-dot:nth-child(2) { animation-delay: 0.15s; }
+.brief-loading-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes brief-loading-bounce {
+  from { transform: translateY(0); opacity: 0.5; }
+  to { transform: translateY(-6px); opacity: 1; }
+}
+
+.brief-loading-text {
+  margin: 0;
+  font-size: 14px;
+  color: #5f6368;
+}
+
+/* ----- 텍스트 모드 ----- */
+.brief-panel-text {
+  margin-bottom: 20px;
+}
+
+.brief-panel-text-desc {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.brief-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brief-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #202124;
+  background: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.brief-input::placeholder {
+  color: #9aa0a6;
+}
+
+.brief-input:focus {
+  outline: none;
+  border-color: #3e5c46;
+  box-shadow: 0 0 0 3px rgba(62, 92, 70, 0.12);
+}
+
+.brief-send-btn {
+  padding: 14px 20px;
+  background: #3e5c46;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.02s;
+}
+
+.brief-send-btn:hover:not(:disabled) {
+  background: #2d4532;
+}
+
+.brief-send-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.brief-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 다른 방법으로 */
+.brief-back {
+  margin-top: 8px;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: #5f6368;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.brief-back:hover {
+  color: #3e5c46;
+}
+
+/* 결과 토스트 (상태 카드 스타일) */
+.brief-toast {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.brief-toast-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.brief-toast--success {
+  background: #e6f4ea;
+  color: #1e8e3e;
+}
+
+.brief-toast--success .brief-toast-icon {
+  background: #1e8e3e;
+  color: #fff;
+}
+
+.brief-toast--error {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+.brief-toast--error .brief-toast-icon {
+  background: #c5221f;
+  color: #fff;
+}

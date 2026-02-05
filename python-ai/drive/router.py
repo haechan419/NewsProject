@@ -284,14 +284,13 @@ async def speech_to_text(
         # STT 변환 (의존성 주입된 config 사용)
         text = await transcribe_audio(audio_data, audio.filename or "audio.webm", openai_config)
         
-        if text:
-            return {
-                "text": text,
-                "user_id": user_id,
-                "success": True
-            }
-        else:
-            raise STTError("STT 변환 결과가 비어있습니다")
+        # 빈 결과도 200으로 반환 (클라이언트에서 "음성을 인식하지 못했습니다" 등 처리)
+        normalized_text = (text or "").strip()
+        return {
+            "text": normalized_text,
+            "user_id": user_id,
+            "success": bool(normalized_text),
+        }
             
     except STTError as e:
         logger.error(f"STT 처리 실패: {e.message}", exc_info=True)

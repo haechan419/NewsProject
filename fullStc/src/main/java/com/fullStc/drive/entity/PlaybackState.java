@@ -15,7 +15,7 @@ public class PlaybackState {
     @Column(nullable = false, length = 64)
     private String playlistId;
 
-    @Column(nullable = false) @Builder.Default
+    @Column(name = "playback_seconds", nullable = false) @Builder.Default
     private Integer currentTime = 0;
 
     @Column(nullable = false) @Builder.Default
