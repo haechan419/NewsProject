@@ -12,7 +12,9 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-// Redis 설정 (선택적 - 연결 실패 시에도 정상 동작)
+/**
+ * Redis 설정
+ */
 @Configuration
 public class RedisConfig {
 

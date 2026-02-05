@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const PLACEHOLDER_IMAGE =
-    "https://placehold.co/320x180/1a1a2e/eee?text=News";
+  "https://via.placeholder.com/320x180/1a1a2e/eee?text=News";
 
 /** 스크랩 항목 카드. 클릭 시 뉴스 상세 페이지로 이동. */
 const ScrapCard = ({ item, onUnscrap }) => {

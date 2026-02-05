@@ -178,6 +178,7 @@ const CategoryPage = () => {
             {/* 히어로 배너 */}
             <div className="category-hero">
                 <div className="hero-inner">
+                    <div className="hero-chip">ISSUE NO.{issueNo}</div>
                     <h1 className="hero-title">{displayTitle}</h1>
                     <div className="hero-sub">오늘의 핵심 이슈</div>
                 </div>

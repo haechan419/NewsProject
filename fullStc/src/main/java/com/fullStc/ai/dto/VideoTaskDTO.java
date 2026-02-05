@@ -14,6 +14,7 @@ public class VideoTaskDTO {
     private Long newsId;
     private String rawText;
     private String customTitle;
+    private String category;
     private String videoMode;
     private String status;
     private String videoUrl;

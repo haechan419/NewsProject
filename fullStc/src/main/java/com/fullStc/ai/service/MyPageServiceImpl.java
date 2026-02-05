@@ -24,59 +24,59 @@ import java.util.stream.Collectors;
 @Transactional
 public class MyPageServiceImpl implements MyPageService {
 
-        private final VideoTaskRepository videoTaskRepository; // 변수명 수정
-        private final ScrapRepository scrapRepository;
-        private final MemberConfigRepository memberConfigRepository;
-        private final ScrapService scrapService;
+    private final VideoTaskRepository videoTaskRepository; // 변수명 수정
+    private final ScrapRepository scrapRepository;
+    private final MemberConfigRepository memberConfigRepository;
+    private final ScrapService scrapService;
 
-        @Override
-        @Transactional(readOnly = true)
-        public MyPageResponseDTO getMyPageData(Long memberId) {
+    @Override
+    @Transactional(readOnly = true)
+    public MyPageResponseDTO getMyPageData(Long memberId) {
+        
+        // 1. 내가 생성한 영상 목록 가져오기 (최신순)
+        // VideoTask 엔티티가 Member 객체를 가지므로 쿼리 메서드가 이에 맞춰 작동합니다.
+        List<VideoTaskDTO> videoList = videoTaskRepository.findByMemberIdOrderByRegDateDesc(memberId)
+                .stream()
+                .map(this::entityToDTO)
+                .collect(Collectors.toList());
 
-                // 1. 내가 생성한 영상 목록 가져오기 (최신순)
-                // VideoTask 엔티티가 Member 객체를 가지므로 쿼리 메서드가 이에 맞춰 작동합니다.
-                List<VideoTaskDTO> videoList = videoTaskRepository.findByMember_IdOrderByRegDateDesc(memberId)
-                                .stream()
-                                .map(this::entityToDTO)
-                                .collect(Collectors.toList());
+        // 2. 내가 스크랩한 뉴스 ID 리스트 가져오기
+        List<String> scrapIds = scrapRepository.findByMemberId(memberId)
+                .stream()
+                .map(Scrap::getNewsId)
+                .collect(Collectors.toList());
+        List<ScrapItemDto> scrapItems = scrapService.getScrapItems(memberId);
 
-                // 2. 내가 스크랩한 뉴스 ID 리스트 가져오기
-                List<String> scrapIds = scrapRepository.findByMemberId(memberId)
-                                .stream()
-                                .map(Scrap::getNewsId)
-                                .collect(Collectors.toList());
-                List<ScrapItemDto> scrapItems = scrapService.getScrapItems(memberId);
+        // 3. 개인 설정 정보 가져오기 (없으면 기본값 생성)
+        MemberConfig config = memberConfigRepository.findById(memberId)
+                .orElseGet(() -> MemberConfig.builder().memberId(memberId).build());
 
-                // 3. 개인 설정 정보 가져오기 (없으면 기본값 생성)
-                MemberConfig config = memberConfigRepository.findById(memberId)
-                                .orElseGet(() -> MemberConfig.builder().memberId(memberId).build());
+        // 4. 통합 DTO로 조립하여 반환
+        return MyPageResponseDTO.builder()
+                .myVideos(videoList)
+                .scrapNewsIds(scrapIds)
+                .scrapItems(scrapItems)
+                .interestCategories(config.getInterestCategories())
+                .isVip(config.isVip())
+                .build();
+    }
 
-                // 4. 통합 DTO로 조립하여 반환
-                return MyPageResponseDTO.builder()
-                                .myVideos(videoList)
-                                .scrapNewsIds(scrapIds)
-                                .scrapItems(scrapItems)
-                                .interestCategories(config.getInterestCategories())
-                                .isVip(config.isVip())
-                                .build();
-        }
+    @Override
+    public void toggleScrap(Long memberId, String newsId) {
+        scrapService.toggleScrap(memberId, newsId);
+    }
 
-        @Override
-        public void toggleScrap(Long memberId, String newsId) {
-                scrapService.toggleScrap(memberId, newsId);
-        }
-
-        // 변환 보조 메서드: VideoTask 엔티티 구조 변경을 반영했습니다.
-        private VideoTaskDTO entityToDTO(VideoTask entity) {
-                return VideoTaskDTO.builder()
-                                .vno(entity.getVno())
-                                .memberId(entity.getMember().getId()) // 중요: entity.getMember().getId()로 변경
-                                .newsId(entity.getNewsId())
-                                .videoMode(entity.getVideoMode())
-                                .status(entity.getStatus())
-                                .videoUrl(entity.getVideoUrl())
-                                .imgUrl(entity.getImgUrl())
-                                .regDate(entity.getRegDate())
-                                .build();
-        }
+    // 변환 보조 메서드: VideoTask 엔티티 구조 변경을 반영했습니다.
+    private VideoTaskDTO entityToDTO(VideoTask entity) {
+        return VideoTaskDTO.builder()
+                .vno(entity.getVno())
+                .memberId(entity.getMember().getId()) // 중요: entity.getMember().getId()로 변경
+                .newsId(entity.getNewsId())
+                .videoMode(entity.getVideoMode())
+                .status(entity.getStatus())
+                .videoUrl(entity.getVideoUrl())
+                .imgUrl(entity.getImgUrl())
+                .regDate(entity.getRegDate())
+                .build();
+    }
 }

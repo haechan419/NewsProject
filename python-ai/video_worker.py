@@ -10,14 +10,6 @@ from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 import media_tools 
 import openai
 
-# Pillow 10.0.0+ 호환성 패치: ANTIALIAS가 제거되어 LANCZOS로 대체
-try:
-    from PIL import Image
-    if not hasattr(Image, 'ANTIALIAS'):
-        Image.ANTIALIAS = Image.LANCZOS
-except ImportError:
-    pass
-
 # [1. 설정]
 IMAGEMAGICK_BINARY = r"D:\ImageMagick-7.1.2-Q16-HDRI\magick.exe"
 change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_BINARY})
@@ -29,9 +21,14 @@ DB_CONFIG = {
     'database': 'newsdb'
 }
 
-OUTPUT_DIR = r"D:\1teamnews\fullStc\upload\videos"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "videos")
 if not os.path.exists(OUTPUT_DIR):
-    os.makedirs(OUTPUT_DIR)
+    try:
+        os.makedirs(OUTPUT_DIR)
+        print(f"✅ 폴더 생성 성공: {OUTPUT_DIR}")
+    except Exception as e:
+        print(f"❌ 폴더 생성 실패: {e}")
 
 # [2. AI 스토리보드 생성]
 def get_storyboard_from_ai(news_text):
@@ -91,7 +88,18 @@ def make_scene_clip(text, keyword, media_type, index, video_mode="16:9"):
     else:
         visual_clip = visual_clip.subclip(0, duration)
 
-    return visual_clip.set_audio(tts_clip), temp_files
+    # --------------------------------------------------------
+    # ✅ 수정 포인트: sub_clips 변수를 먼저 빈 리스트로 만들어줍니다.
+    # --------------------------------------------------------
+    sub_clips = [] 
+    
+    # (선택 사항) 만약 화면에 자막을 넣고 싶다면, 
+    # 여기서 TextClip을 생성해서 sub_clips.append(자막클립)를 하면 됩니다.
+    # 지금은 자막 로직이 없으므로 빈 리스트로 둡니다.
+    # --------------------------------------------------------
+
+    final_scene = CompositeVideoClip([visual_clip] + sub_clips)
+    return final_scene.set_audio(tts_clip), temp_files
 
 # [4. 메인 엔진 루프]
 def run_engine():
@@ -117,6 +125,8 @@ def run_engine():
 
             if task:
                 vno = task['vno']
+                cursor.execute("UPDATE tbl_video_task SET status = 'PROCESSING' WHERE vno = %s", (vno,))
+                conn.commit()
                 print(f"🎬 [Job {vno}] 제작을 시작합니다.")
 
                 # AI 분석 수행

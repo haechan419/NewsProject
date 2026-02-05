@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-// 환율 정보 엔티티
+/**
+ * 환율 정보 엔티티
+ */
 @Entity
 @Table(name = "exchange_rate")
 @Getter
@@ -22,35 +24,51 @@ public class ExchangeRate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 통화 코드
+    /**
+     * 통화 코드 (USD, JPY, EUR 등)
+     */
     @Column(name = "cur_unit", nullable = false, length = 10)
     private String curUnit;
 
-    // 국가/통화명
+    /**
+     * 국가/통화명
+     */
     @Column(name = "cur_nm", length = 100)
     private String curNm;
 
-    // 매매 기준율
+    /**
+     * 매매 기준율
+     */
     @Column(name = "deal_bas_r", precision = 20, scale = 4)
     private BigDecimal dealBasR;
 
-    // 송금 받을 때
+    /**
+     * 송금 받으실 때
+     */
     @Column(name = "ttb", precision = 20, scale = 4)
     private BigDecimal ttb;
 
-    // 송금 보낼 때
+    /**
+     * 송금 보내실 때
+     */
     @Column(name = "tts", precision = 20, scale = 4)
     private BigDecimal tts;
 
-    // 장부가격
+    /**
+     * 장부가격
+     */
     @Column(name = "bkpr", precision = 20, scale = 4)
     private BigDecimal bkpr;
 
-    // 조회 날짜
+    /**
+     * 조회 날짜
+     */
     @Column(name = "search_date", nullable = false)
     private LocalDate searchDate;
 
-    // 결과 코드 (1: 성공)
+    /**
+     * 결과 코드 (1: 성공)
+     */
     @Column(name = "result")
     private Integer result;
 }

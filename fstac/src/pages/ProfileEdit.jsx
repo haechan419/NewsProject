@@ -351,10 +351,6 @@ const ProfileEdit = () => {
   // 취소 핸들러
   const handleCancel = () => {
     navigate('/');
-    // 홈으로 돌아간 후 스크롤을 맨 위로 이동
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
   };
 
   // 회원탈퇴 핸들러
@@ -845,10 +841,6 @@ const ProfileEdit = () => {
       // 성공 시 이전 화면으로 돌아가기
       setTimeout(() => {
         navigate(-1);
-        // 이전 화면으로 돌아간 후 스크롤을 맨 위로 이동
-        setTimeout(() => {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 100);
       }, 500);
     } catch (error) {
       const msg =
@@ -899,7 +891,42 @@ const ProfileEdit = () => {
                 </svg>
                 <span className="text-sm">내 계정</span>
               </button>
-
+              <button
+                onClick={() => handleNavClick('인증')}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm">인증</span>
+              </button>
+              <button
+                onClick={() => handleNavClick('결제 수단')}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <span className="text-sm">결제 수단</span>
+              </button>
+              <button
+                onClick={() => handleNavClick('알림')}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span className="text-sm">알림</span>
+              </button>
+              <button
+                onClick={() => handleNavClick('차단')}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                <span className="text-sm">차단</span>
+              </button>
             </nav>
           </aside>
 

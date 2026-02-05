@@ -42,8 +42,6 @@ export function useDriveModeRefs() {
   const demoLevelIntervalRef = useRef(null);
   const demoLevelPhaseRef = useRef(0);
   const demoKeyPressedThisSessionRef = useRef(false);
-  /** 길게 누름으로 데모 진입 직후, 지연된 클릭이 녹음을 시작하지 않도록 */
-  const longPressJustFiredRef = useRef(false);
 
   return {
     COMMAND_COOLDOWN,
@@ -79,6 +77,5 @@ export function useDriveModeRefs() {
     demoLevelIntervalRef,
     demoLevelPhaseRef,
     demoKeyPressedThisSessionRef,
-    longPressJustFiredRef,
   };
 }

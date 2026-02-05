@@ -8,9 +8,9 @@ import {
   PrevIcon,
   CloseIcon,
   HistoryIcon,
+  MicrophoneIcon,
 } from "./Icons";
 import { VoiceVisualizer } from "./VoiceVisualizer";
-import { MicButtonWithLongPress } from "./MicButtonWithLongPress";
 
 /**
  * @param {string} playlistTitle
@@ -32,8 +32,6 @@ import { MicButtonWithLongPress } from "./MicButtonWithLongPress";
  * @param {Function} onHistoryClose
  * @param {Function} onMicrophoneButtonClick
  * @param {Function} onMicrophoneButtonUp
- * @param {boolean} [showNumberKeyChoice] - 번호키로 선택 링크 표시 여부 (데모 + 마이크 사용 가능 시)
- * @param {Function} [onNumberKeyChoiceClick] - 번호키로 선택 클릭 시
  * @param {number} audioLevel
  * @param {boolean} isRecording
  * @param {string} statusMessage
@@ -59,8 +57,6 @@ export function PlaylistPlayback({
   onHistoryClose,
   onMicrophoneButtonClick,
   onMicrophoneButtonUp,
-  showNumberKeyChoice = false,
-  onNumberKeyChoiceClick,
   audioLevel = -60,
   isRecording = false,
   statusMessage = "",
@@ -165,29 +161,20 @@ export function PlaylistPlayback({
               <span className="text-sm font-semibold">히스토리</span>
             </button>
           )}
-          {showNumberKeyChoice && onNumberKeyChoiceClick && (
-            <button
-              type="button"
-              onClick={onNumberKeyChoiceClick}
-              className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors text-lg font-medium focus:outline-none focus:ring-0"
-              aria-label="도움말"
-              title="도움말"
-            >
-              ?
-            </button>
-          )}
           {onMicrophoneButtonClick && onMicrophoneButtonUp && (
-            <MicButtonWithLongPress
-              onMicrophoneButtonClick={onMicrophoneButtonClick}
-              onMicrophoneButtonUp={onMicrophoneButtonUp}
-              showNumberKeyChoice={showNumberKeyChoice}
-              onNumberKeyChoiceClick={onNumberKeyChoiceClick}
-              enableLongPressForDemo={false}
-              iconSize={22}
+            <button
+              onMouseDown={onMicrophoneButtonClick}
+              onMouseUp={onMicrophoneButtonUp}
+              onTouchStart={onMicrophoneButtonClick}
+              onTouchEnd={onMicrophoneButtonUp}
               className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                isRecording ? "bg-blue-500/30 border-2 border-blue-400 animate-pulse text-[#93C5FD]" : "bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-[#93C5FD]"
+                isRecording ? "bg-blue-500/30 border-2 border-blue-400 animate-pulse" : "bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40"
               }`}
-            />
+              title="음성 명령"
+              aria-label="마이크"
+            >
+              <MicrophoneIcon size={22} color="#93C5FD" />
+            </button>
           )}
           {onBack && (
             <button

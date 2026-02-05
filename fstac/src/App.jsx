@@ -4,8 +4,6 @@ import { useSelector } from 'react-redux';
 
 // FloatingAI 컴포넌트를 lazy로 로드
 const FloatingAI = lazy(() => import('./components/FloatingAI/FloatingAI'));
-// 브리핑 배송(아침 신문) 플로팅 버튼
-const FloatingBriefDelivery = lazy(() => import('./briefDelivery/components/FloatingBriefDelivery'));
 // 드라이브 모드 페이지를 lazy로 로드
 const DriveModePage = lazy(() => import('./drive/DriveModePage'));
 
@@ -35,10 +33,9 @@ function App() {
     <DriveModeContext.Provider value={{ isDriveModeOpen, openDriveMode, closeDriveMode }}>
       <div className="App">
         <AppRouter />
-        {/* 로그인한 사용자에게만 플로팅 버튼 표시: 브리핑 배송(위) → 챗봇(아래) */}
+        {/* 로그인한 사용자에게만 FloatingAI 표시 */}
         {isAuthenticated && (
           <Suspense fallback={null}>
-            <FloatingBriefDelivery />
             <FloatingAI />
           </Suspense>
         )}

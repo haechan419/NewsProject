@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { boardApi, commentApi, fileApi } from '../../api/boardApi';
-import agreeIcon from '../../assets/images/agree.png';
-import disagreeIcon from '../../assets/images/disagree.png';
-import discussionIcon from '../../assets/images/discussion.png';
 
 // 이미지 파일 확장자 체크 함수
 const isImageFile = (fileName) => {
@@ -264,50 +261,33 @@ function BoardDetail() {
         {board.boardType === 'DEBATE' && (
           <div className="mb-10 p-8 bg-white rounded-2xl border border-gray-200 shadow-sm">
             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <img src={discussionIcon} alt="토론" className="w-6 h-6" /> 오늘의 토론 주제
+              <span className="text-red-500">📢</span> 오늘의 토론 주제
             </h3>
             <p className="text-lg font-medium text-gray-800 mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
               {board.debateTopic}
             </p>
             
-            {/* 투표 바 (표시 전용) */}
-            <div className="mb-4 relative h-10 rounded-full overflow-hidden bg-gray-100 flex">
+            {/* 투표 바 */}
+            <div className="mb-3 relative h-14 rounded-full overflow-hidden bg-gray-100 flex cursor-pointer">
               <div 
-                className={`flex items-center justify-center transition-all duration-500 ${board.myVoteType === 'AGREE' ? 'bg-blue-600' : 'bg-blue-400'}`}
-                style={{ width: `${votePercent.agree}%`, minWidth: votePercent.agree > 0 ? '40px' : '0' }}
+                className={`flex items-center justify-center transition-all duration-500 ${board.myVoteType === 'AGREE' ? 'bg-blue-600' : 'bg-blue-500'} hover:bg-blue-600`}
+                style={{ width: `${votePercent.agree}%` }}
+                onClick={() => handleVote('AGREE')}
               >
-                {votePercent.agree > 0 && <span className="text-white font-bold text-sm">{votePercent.agree}%</span>}
+                {votePercent.agree > 10 && <span className="text-white font-bold text-lg">{votePercent.agree}%</span>}
               </div>
               <div 
-                className={`flex items-center justify-center transition-all duration-500 ${board.myVoteType === 'DISAGREE' ? 'bg-red-600' : 'bg-red-400'}`}
-                style={{ width: `${votePercent.disagree}%`, minWidth: votePercent.disagree > 0 ? '40px' : '0' }}
+                className={`flex items-center justify-center transition-all duration-500 ${board.myVoteType === 'DISAGREE' ? 'bg-red-600' : 'bg-red-500'} hover:bg-red-600`}
+                style={{ width: `${votePercent.disagree}%` }}
+                onClick={() => handleVote('DISAGREE')}
               >
-                {votePercent.disagree > 0 && <span className="text-white font-bold text-sm">{votePercent.disagree}%</span>}
+                {votePercent.disagree > 10 && <span className="text-white font-bold text-lg">{votePercent.disagree}%</span>}
               </div>
             </div>
             
-            {/* 투표 버튼 */}
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => handleVote('AGREE')}
-                className={`flex-1 max-w-[200px] py-3 rounded-xl font-bold text-base transition-all transform hover:scale-105 ${
-                  board.myVoteType === 'AGREE'
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                    : 'bg-blue-50 text-blue-600 border-2 border-blue-200 hover:bg-blue-100'
-                }`}
-              >
-                <img src={agreeIcon} alt="찬성" className="w-5 h-5 inline-block mr-1" /> 찬성 {board.agreeCount}표
-              </button>
-              <button
-                onClick={() => handleVote('DISAGREE')}
-                className={`flex-1 max-w-[200px] py-3 rounded-xl font-bold text-base transition-all transform hover:scale-105 ${
-                  board.myVoteType === 'DISAGREE'
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-200'
-                    : 'bg-red-50 text-red-600 border-2 border-red-200 hover:bg-red-100'
-                }`}
-              >
-                <img src={disagreeIcon} alt="반대" className="w-5 h-5 inline-block mr-1" /> 반대 {board.disagreeCount}표
-              </button>
+            <div className="flex justify-between text-sm font-semibold px-2">
+              <span className="text-blue-600">찬성 {board.agreeCount}표</span>
+              <span className="text-red-600">반대 {board.disagreeCount}표</span>
             </div>
           </div>
         )}
@@ -393,7 +373,7 @@ function BoardDetail() {
                 key={comment.id}
                 comment={comment}
                 onReply={(content, files) => handleCreateComment(content, files, comment.id)}
-                onDelete={handleDeleteComment}
+                onDelete={() => handleDeleteComment(comment.id)}
               />
             ))
           ) : (
@@ -546,7 +526,7 @@ function CommentItem({ comment, onReply, onDelete }) {
                  답글달기
                </button>
                <button 
-                 onClick={() => onDelete(comment.id)}
+                 onClick={onDelete}
                  className="text-xs font-medium text-gray-400 hover:text-red-600 transition-colors"
                >
                  삭제

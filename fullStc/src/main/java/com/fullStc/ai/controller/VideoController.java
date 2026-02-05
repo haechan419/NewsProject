@@ -24,4 +24,9 @@ public class VideoController {
     public List<VideoTaskDTO> getVideoList(@PathVariable("memberId") Long memberId) {
         return videoService.getMemberVideoList(memberId);
     }
+    // VideoController.java
+    @GetMapping("/main-hot")
+    public List<VideoTaskDTO> getMainHotVideos() {
+        return videoService.getMainHotVideoList();
+}
 }

@@ -1,14 +1,9 @@
 """
 STT (Speech-to-Text) 서비스
 OpenAI Whisper API를 사용하여 오디오를 텍스트로 변환
-포맷 정규화: WebM 등 브라우저 포맷을 16kHz mono MP3로 변환 후 전송 (Whisper 인식 안정화)
 """
 
-import os
-import shutil
-import subprocess
-import sys
-import tempfile
+from openai import OpenAI
 from typing import Optional
 
 from .config import OpenAIConfig
@@ -16,69 +11,6 @@ from .exceptions import STTError
 from .logger_config import get_logger
 
 logger = get_logger(__name__)
-
-# Whisper 권장: 16kHz, mono
-STT_NORMALIZE_SAMPLE_RATE = 16000
-STT_NORMALIZE_CHANNELS = 1
-
-
-def _find_ffmpeg() -> Optional[str]:
-    """PATH에서 ffmpeg 실행 파일 경로 반환 (Windows: ffmpeg.exe 포함)."""
-    path = shutil.which("ffmpeg")
-    if path:
-        return path
-    if sys.platform == "win32":
-        path = shutil.which("ffmpeg.exe")
-        if path:
-            return path
-    return None
-
-
-def _normalize_audio_to_mp3(
-    input_path: str, output_path: str
-) -> bool:
-    """
-    ffmpeg으로 오디오를 16kHz mono MP3로 변환.
-    성공 시 True, 실패 시 False (호출 측에서 원본 사용).
-    """
-    ffmpeg_path = _find_ffmpeg()
-    if not ffmpeg_path:
-        logger.warning(
-            "[STT] ffmpeg을 찾을 수 없습니다. WebM 원본 전송 시 빈 결과가 나올 수 있습니다. "
-            "ffmpeg 설치 후 PATH에 추가해 주세요."
-        )
-        return False
-    try:
-        cmd = [
-            ffmpeg_path,
-            "-y",
-            "-i", input_path,
-            "-ar", str(STT_NORMALIZE_SAMPLE_RATE),
-            "-ac", str(STT_NORMALIZE_CHANNELS),
-            "-f", "mp3",
-            output_path,
-        ]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            timeout=30,
-        )
-        if result.returncode != 0 or not os.path.exists(output_path):
-            stderr = (result.stderr or b"")[:400].decode("utf-8", errors="replace")
-            logger.warning(
-                "[STT] 포맷 정규화 실패: ffmpeg returncode=%s, stderr=%s",
-                result.returncode,
-                stderr,
-            )
-            return False
-        logger.info("[STT] 포맷 정규화 완료: 16kHz mono MP3")
-        return True
-    except subprocess.TimeoutExpired:
-        logger.warning("[STT] 포맷 정규화 타임아웃, 원본 포맷으로 진행")
-        return False
-    except Exception as e:
-        logger.warning("[STT] 포맷 정규화 오류: %s, 원본 포맷으로 진행", e)
-        return False
 
 
 async def transcribe_audio(
@@ -102,6 +34,10 @@ async def transcribe_audio(
         if openai_config is None:
             from .config import get_openai_config
             openai_config = get_openai_config()
+        
+        # 임시 파일로 저장 (OpenAI Whisper API는 파일 객체를 요구)
+        import tempfile
+        import os
         
         # 파일 형식 감지 (파일 내용 기반)
         def detect_audio_format(data: bytes) -> str:
@@ -227,71 +163,40 @@ async def transcribe_audio(
             final_extension = ".webm"
             logger.warning(f"[STT] 형식 감지 실패. 기본값 사용: {final_extension}")
         
-        audio_size = len(audio_data)
-        logger.info(f"[STT] 최종 사용 확장자: {final_extension}, 파일명: {filename}, 파일 크기: {audio_size} bytes")
-        # 녹음이 거의 안 됐을 가능성 (대략 1초 미만 WebM은 수 KB 이하일 수 있음)
-        if audio_size < 8000:
-            logger.warning(
-                "[STT] 녹음 데이터가 매우 짧습니다(%s bytes). 마이크 권한·녹음 시간을 확인하세요.",
-                audio_size,
-            )
+        logger.info(f"[STT] 최종 사용 확장자: {final_extension}, 파일명: {filename}, 파일 크기: {len(audio_data)} bytes")
         
         # 파일의 실제 바이너리 내용 확인 (디버깅용)
         logger.info(f"[STT] 파일 시작 바이트 (hex): {audio_data[:20].hex()}")
         logger.info(f"[STT] 파일 시작 바이트 (ASCII): {audio_data[:20]}")
         
-        # 임시 파일 생성 (원본 저장) — 기존과 동일
+        # 임시 파일 생성 시 파일명에 확장자가 포함되도록 함
+        # OpenAI API는 파일명의 확장자로 형식을 판단함
         temp_file_name = f"audio{final_extension}"
         with tempfile.NamedTemporaryFile(delete=False, suffix=final_extension, prefix="stt_") as temp_file:
             temp_file.write(audio_data)
             temp_file_path = temp_file.name
-        logger.info(f"[STT] 임시 파일 경로: {temp_file_path}, 파일명: {temp_file_name}")
-        
-        # 포맷 정규화: 16kHz mono MP3로 변환 시도 (Whisper 인식 안정화, WebM 빈 결과 방지)
-        path_to_use = temp_file_path
-        name_to_use = temp_file_name
-        paths_to_cleanup = [temp_file_path]
-        used_normalized = False
-        normalized_path = None
-        if final_extension in (".webm", ".ogg", ".oga", ".mp4", ".m4a"):
-            try:
-                fd, normalized_path = tempfile.mkstemp(suffix=".mp3", prefix="stt_norm_")
-                os.close(fd)
-                if _normalize_audio_to_mp3(temp_file_path, normalized_path):
-                    path_to_use = normalized_path
-                    name_to_use = "audio.mp3"
-                    paths_to_cleanup.append(normalized_path)
-                    used_normalized = True
-            except Exception as e:
-                logger.debug("[STT] 정규화 경로 생성 실패, 원본 사용: %s", e)
+            logger.info(f"[STT] 임시 파일 경로: {temp_file_path}, 파일명: {temp_file_name}")
         
         try:
-            stt_prompt = (
-                "오늘 내일 모레 아침 오후 시 분 보내줘 메일 배송 예약 브리핑 뉴스 "
-                "관심뉴스 주요뉴스 경제 정치 다음 일시정지 재생 정지 종료"
-            )
-            with open(path_to_use, "rb") as audio_file:
+            # OpenAI Whisper API 호출
+            # 튜플 형식 (filename, file_object)로 파일명을 명시적으로 전달
+            # OpenAI API는 파일명의 확장자로 형식을 판단함
+            with open(temp_file_path, "rb") as audio_file:
                 transcript = openai_config.client.audio.transcriptions.create(
                     model="whisper-1",
-                    file=(name_to_use, audio_file),
-                    language="ko",
-                    prompt=stt_prompt[:500],
+                    file=(temp_file_name, audio_file),  # (filename, file_object) 튜플 형식
+                    language="ko"  # 한국어 명시
                 )
+            
             text = transcript.text.strip()
             logger.info(f"[STT] 변환된 텍스트: {text}")
-            if not text and not used_normalized and final_extension in (".webm", ".ogg", ".oga"):
-                logger.warning(
-                    "[STT] 음성이 있는데 빈 결과가 나왔습니다. 브라우저 WebM/Opus를 Whisper가 제대로 읽지 못한 경우입니다. "
-                    "ffmpeg을 설치하고 PATH에 추가하면 16kHz MP3로 변환 후 전송해 빈 결과를 줄일 수 있습니다."
-                )
             return text
+            
         finally:
-            for p in paths_to_cleanup:
-                if p and os.path.exists(p):
-                    try:
-                        os.unlink(p)
-                    except OSError as e:
-                        logger.debug("[STT] 임시 파일 삭제 실패 %s: %s", p, e)
+            # 임시 파일 정리
+            import os
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
                 
     except STTError:
         raise

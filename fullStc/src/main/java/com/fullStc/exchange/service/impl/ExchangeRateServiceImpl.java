@@ -3,7 +3,6 @@ package com.fullStc.exchange.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fullStc.exchange.client.ExchangeRateApiClient;
-import com.fullStc.exchange.client.ExchangeRateCrawler;
 import com.fullStc.exchange.domain.ExchangeRate;
 import com.fullStc.exchange.dto.ExchangeRateDTO;
 import com.fullStc.exchange.dto.ExchangeRateResponseDTO;
@@ -26,20 +25,23 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-// 환율 서비스 구현체
+/**
+ * 환율 서비스 구현체
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExchangeRateServiceImpl implements ExchangeRateService {
 
     private final ExchangeRateApiClient apiClient;
-    private final ExchangeRateCrawler crawler;
     private final ExchangeRateRepository repository;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
     private static final String CACHE_KEY_PREFIX = "exchange-rate:";
-    private static final Duration CACHE_TTL = Duration.ofSeconds(10); // 10초 TTL
+    private static final Duration CACHE_TTL = Duration.ofMinutes(10); // 10분 TTL
+    
+    // 일일 API 호출 횟수 추적 (1000회 제한)
     private final AtomicInteger dailyApiCallCount = new AtomicInteger(0);
     private LocalDate lastApiCallResetDate = LocalDate.now();
     private static final int MAX_DAILY_API_CALLS = 1000; // 일일 최대 API 호출 횟수
@@ -48,6 +50,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     @Override
     @Transactional(readOnly = true)
     public ExchangeRateResponseDTO getExchangeRates(LocalDate searchDate) {
+        // effectively final을 위해 새로운 변수 사용
         final LocalDate finalSearchDate = (searchDate != null) ? searchDate : LocalDate.now();
 
         String dateStr = finalSearchDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -61,11 +64,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 return objectMapper.readValue(cachedData, ExchangeRateResponseDTO.class);
             }
         } catch (JsonProcessingException e) {
-            log.debug("캐시 데이터 역직렬화 실패", e);
+            log.warn("캐시 데이터 역직렬화 실패", e);
         } catch (org.springframework.data.redis.RedisConnectionFailureException e) {
-            log.debug("Redis 연결 실패 - DB에서 조회: {}", e.getMessage());
+            log.warn("Redis 연결 실패 - 캐시를 건너뛰고 DB에서 조회합니다: {}", e.getMessage());
         } catch (Exception e) {
-            log.debug("캐시 조회 오류 - DB에서 조회: {}", e.getMessage());
+            log.warn("캐시 조회 중 오류 발생 - 캐시를 건너뛰고 DB에서 조회합니다: {}", e.getMessage());
         }
 
         // DB에서 조회
@@ -85,11 +88,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             try {
                 redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(responseDTO), CACHE_TTL);
             } catch (JsonProcessingException e) {
-                log.debug("DB 데이터 캐시 저장 실패 (직렬화 오류)", e);
+                log.warn("DB 데이터 캐시 저장 실패 (직렬화 오류)", e);
             } catch (org.springframework.data.redis.RedisConnectionFailureException e) {
-                log.debug("Redis 연결 실패 - 캐시 저장 건너뜀: {}", e.getMessage());
+                log.debug("Redis 연결 실패 - 캐시 저장을 건너뜁니다: {}", e.getMessage());
             } catch (Exception e) {
-                log.debug("DB 데이터 캐시 저장 실패", e);
+                log.warn("DB 데이터 캐시 저장 실패", e);
             }
             return responseDTO;
         }
@@ -103,55 +106,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             dailyApiCallCount.set(0);
             lastApiCallResetDate = today;
         }
-
+        
         int currentApiCallCount = dailyApiCallCount.get();
         if (currentApiCallCount >= MAX_DAILY_API_CALLS) {
-            log.warn("[환율 API 호출] 일일 API 호출 제한 도달 ({}회). 크롤링으로 전환합니다.", MAX_DAILY_API_CALLS);
-
-            // 크롤링으로 데이터 수집 시도
-            try {
-                List<KoreaEximApiResponseDTO> crawledData = crawler.crawlExchangeRates(dateStr);
-
-                if (!crawledData.isEmpty()) {
-                    log.info("[크롤링] 환율 데이터 수집 성공 - 개수: {}", crawledData.size());
-
-                    // DTO 변환
-                    List<ExchangeRateDTO> exchangeRates = crawledData.stream()
-                            .filter(item -> item.getCurUnit() != null && !item.getCurUnit().trim().isEmpty())
-                            .map(item -> convertToDTO(item, finalSearchDate))
-                            .filter(dto -> dto.getCurUnit() != null && !dto.getCurUnit().trim().isEmpty())
-                            .collect(Collectors.toList());
-
-                    // DB 저장
-                    if (!exchangeRates.isEmpty()) {
-                        saveToDatabaseWithNewTransaction(exchangeRates, finalSearchDate);
-                    }
-
-                    // 응답 DTO 생성
-                    ExchangeRateResponseDTO response = ExchangeRateResponseDTO.builder()
-                            .exchangeRates(exchangeRates)
-                            .searchDate(dateStr)
-                            .result(1)
-                            .message("크롤링으로 데이터 수집 완료")
-                            .build();
-
-                    // Redis 캐시에 저장
-                    try {
-                        String json = objectMapper.writeValueAsString(response);
-                        redisTemplate.opsForValue().set(cacheKey, json, CACHE_TTL);
-                        log.debug("크롤링 데이터 캐시 저장: {}", dateStr);
-                    } catch (Exception e) {
-                        log.debug("크롤링 데이터 캐시 저장 실패", e);
-                    }
-
-                    return response;
-                }
-            } catch (Exception e) {
-                log.error("[크롤링] 환율 데이터 수집 실패, DB 데이터를 반환합니다.", e);
-            }
-
-            // 크롤링 실패 시 DB에서 최신 데이터 반환
-            log.warn("[환율] 크롤링 실패로 DB 데이터를 반환합니다.");
+            log.warn("[환율 API 호출] 일일 API 호출 제한 도달 ({}회). 오늘은 더 이상 API를 호출하지 않습니다. DB 데이터를 반환합니다.", MAX_DAILY_API_CALLS);
+            // DB에서 최신 데이터 반환 (없으면 빈 리스트)
             List<ExchangeRateDTO> dtos = dbRates.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
@@ -162,24 +121,27 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                     .message("일일 API 호출 제한 도달 - DB 데이터 반환")
                     .build();
         }
-
+        
         if (currentApiCallCount >= WARNING_THRESHOLD) {
-            log.warn("[환율 API 호출] 일일 API 호출 횟수 경고: {}/{} (임계값: {})",
+            log.warn("[환율 API 호출] 일일 API 호출 횟수 경고: {}/{} (임계값: {})", 
                     currentApiCallCount, MAX_DAILY_API_CALLS, WARNING_THRESHOLD);
         }
-
+        
         log.info("API에서 환율 데이터 조회: {} (오늘 API 호출 횟수: {}/{})", dateStr, currentApiCallCount, MAX_DAILY_API_CALLS);
         List<KoreaEximApiResponseDTO> apiResponse = apiClient.fetchExchangeRates(dateStr);
-
+        
         // API 호출 성공 시 카운터 증가
         int newCount = dailyApiCallCount.incrementAndGet();
         log.info("[환율 API 호출] API 호출 완료 - 오늘 API 호출 횟수: {}/{}", newCount, MAX_DAILY_API_CALLS);
 
-        // DTO 변환
+        // DTO 변환 (이미 필터링된 데이터이므로 추가 필터링 불필요)
         List<ExchangeRateDTO> exchangeRates = apiResponse.stream()
-                .filter(item -> item.getCurUnit() != null && !item.getCurUnit().trim().isEmpty())
+                .filter(item -> {
+                    // curUnit이 있는 경우만 변환
+                    return item.getCurUnit() != null && !item.getCurUnit().trim().isEmpty();
+                })
                 .map(item -> convertToDTO(item, finalSearchDate))
-                .filter(dto -> dto.getCurUnit() != null && !dto.getCurUnit().trim().isEmpty())
+                .filter(dto -> dto.getCurUnit() != null && !dto.getCurUnit().trim().isEmpty()) // 변환 후에도 검증
                 .collect(Collectors.toList());
 
         // DB 저장 (별도 트랜잭션으로 실행)
@@ -201,11 +163,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             redisTemplate.opsForValue().set(cacheKey, json, CACHE_TTL);
             log.debug("환율 데이터 캐시 저장: {}", dateStr);
         } catch (JsonProcessingException e) {
-            log.debug("캐시 데이터 직렬화 실패", e);
+            log.warn("캐시 데이터 직렬화 실패", e);
         } catch (org.springframework.data.redis.RedisConnectionFailureException e) {
-            log.debug("Redis 연결 실패 - 캐시 저장 건너뜀: {}", e.getMessage());
+            log.debug("Redis 연결 실패 - 캐시 저장을 건너뜁니다: {}", e.getMessage());
         } catch (Exception e) {
-            log.debug("캐시 저장 오류", e);
+            log.warn("캐시 저장 중 오류 발생", e);
         }
 
         return response;
@@ -226,7 +188,9 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 .orElseThrow(() -> new ExchangeRateException("해당 통화의 환율 정보를 찾을 수 없습니다: " + curUnit));
     }
 
-    // API 응답 DTO를 ExchangeRateDTO로 변환
+    /**
+     * API 응답 DTO를 ExchangeRateDTO로 변환
+     */
     private ExchangeRateDTO convertToDTO(KoreaEximApiResponseDTO apiResponse, LocalDate searchDate) {
         return ExchangeRateDTO.builder()
                 .curUnit(apiResponse.getCurUnit())
@@ -239,7 +203,9 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 .build();
     }
 
-    // 엔티티를 ExchangeRateDTO로 변환
+    /**
+     * 엔티티를 ExchangeRateDTO로 변환
+     */
     private ExchangeRateDTO convertToDTO(ExchangeRate entity) {
         return ExchangeRateDTO.builder()
                 .curUnit(entity.getCurUnit())
@@ -252,7 +218,9 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 .build();
     }
 
-    // 문자열을 BigDecimal로 변환
+    /**
+     * 문자열을 BigDecimal로 변환 (쉼표 제거)
+     */
     private BigDecimal parseBigDecimal(String value) {
         if (value == null || value.trim().isEmpty()) {
             return null;
@@ -267,7 +235,10 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
         }
     }
 
-    // DB에 환율 데이터 저장 (새로운 트랜잭션으로 실행)
+    /**
+     * DB에 환율 데이터 저장 (새로운 트랜잭션으로 실행)
+     * Propagation.REQUIRES_NEW를 사용하여 readOnly 트랜잭션과 분리
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveToDatabaseWithNewTransaction(List<ExchangeRateDTO> exchangeRates, LocalDate searchDate) {
         log.info("DB에 환율 데이터 저장 시작 - 날짜: {}, 개수: {}", searchDate, exchangeRates.size());

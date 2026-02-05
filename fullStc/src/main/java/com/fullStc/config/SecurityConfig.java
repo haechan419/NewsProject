@@ -88,7 +88,6 @@ public class SecurityConfig {
                         "/api/market/**",  // 금융 시장 데이터 API
                         "/api/exchange-rate/**",  // 환율 API
                         "/api/drive/**",  // 드라이브 모드 API
-                        "/api/brief-delivery/**",  // 브리핑 배송 API
                         "/api/images/**",
                         "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
 
@@ -102,66 +101,47 @@ public class SecurityConfig {
 
         // 인가 설정
         http.authorizeHttpRequests(auth -> {
-            // Swagger UI 경로는 인증 없이 접근 가능 (정확한 경로 포함)
-            auth.requestMatchers(
-                    "/swagger-ui/**",
-                    "/v3/api-docs", // 정확히 /v3/api-docs
-                    "/v3/api-docs/**", // /v3/api-docs/로 시작하는 모든 경로
-                    "/swagger-ui.html").permitAll();
+    // 1. 로그인 없이 접근 가능한 공개 경로들 (Public)
+    auth.requestMatchers(
+            "/swagger-ui/**",
+            "/v3/api-docs",
+            "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "/favicon.ico",
+            "/error",
+            "/static/**",
+            "/public/**",
+            "/resources/**",
+            "/upload/**",
+            "/css/**",
+            "/js/**",
+            "/images/**",
+            "/*.ico", "/*.css", "/*.js",
+            "/default-ui.css"
+    ).permitAll();
 
-            // 정적 리소스 허용 (Swagger UI CSS, favicon 등)
-            auth.requestMatchers(
-                    "/favicon.ico",
-                    "/error",
-                    "/static/**",
-                    "/public/**",
-                    "/resources/**",
-                    "/upload/**", // 추가한 부분
-                    "/css/**",
-                    "/js/**",
-                    "/images/**",
-                    "/*.ico",
-                    "/*.css",
-                    "/*.js",
-                    "/default-ui.css" // Swagger UI CSS
-            ).permitAll();
+    // 2. 관리자 경로 (테스트용 임시 허용)
+    auth.requestMatchers("/admin/**").permitAll();
 
-            // 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
-            auth.requestMatchers("/admin/**").permitAll();
+    // 3. AI 및 뉴스 관련 서비스 경로 (Public)
+    // /api/ai/** 로 통합하면 하위 경로(video, main-hot, chat 등)가 모두 포함됩니다.
+    auth.requestMatchers(
+            "/api/ai/**", 
+            "/api/images/**",
+            "/briefing/**",
+            "/api/category/list",
+            "/api/market/**",
+            "/api/drive/**",
+            "/api/exchange-rate/**"
+    ).permitAll();
 
-            // 1. AI 마이페이지 관련 경로들을 허용 리스트에 추가합니다.
-        auth.requestMatchers("/api/ai/mypage/**").permitAll();
-        auth.requestMatchers("/api/ai/video/**").permitAll();
-        auth.requestMatchers("/upload/**").permitAll();
+    // 4. 인증(로그인) 관련 경로
+    auth.requestMatchers("/api/auth/logout").authenticated(); // 로그아웃은 로그인 상태여야 함
+    auth.requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/**", "/login").permitAll();
 
-            // ▼ [NEW] 이미지 실패 신고 및 뉴스 조회는 로그인 없이 허용
-            auth.requestMatchers("/api/images/**").permitAll();
-            auth.requestMatchers("/briefing/**").permitAll();
-
-            // 로그아웃은 인증 필요
-            auth.requestMatchers("/api/auth/logout").authenticated();
-            // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
-            auth.requestMatchers("/api/auth/**").permitAll();
-            auth.requestMatchers("/api/ai/mypage/**").permitAll();
-            // 얼굴 인식 API는 인증 없이 접근 가능 (로그인 페이지에서 사용)
-            auth.requestMatchers("/api/ai/face/recognize").permitAll();
-            // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
-            auth.requestMatchers("/api/category/list").permitAll();
-            // AI 채팅 API는 인증 없이 접근 가능
-            auth.requestMatchers("/api/ai/chat", "/api/ai/**").permitAll();
-            // 금융 시장 데이터 API는 인증 없이 접근 가능 (메인 페이지에서 사용)
-            auth.requestMatchers("/api/market/**").permitAll();
-            // 드라이브 모드 API는 인증 없이 접근 가능
-            auth.requestMatchers("/api/drive/**").permitAll();
-            // 브리핑 배송 API는 인증 없이 접근 가능
-            auth.requestMatchers("/api/brief-delivery/**").permitAll();
-            // OAuth2 경로 허용
-            auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
-            // /login 경로 허용 (OAuth2 에러 리다이렉트용)
-            auth.requestMatchers("/login").permitAll();
-            // 나머지는 인증 필요
-            auth.anyRequest().authenticated();
-        });
+    // 5. [중요] 모든 요청에 대한 최종 처리 (반드시 맨 마지막에 위치해야 함!)
+    auth.anyRequest().authenticated(); 
+});
 
         // Form Login 비활성화 (JWT 기반 REST API이므로 불필요)
         http.formLogin(config -> config.disable());

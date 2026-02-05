@@ -42,7 +42,7 @@ const NewsDetailPage = lazy(() => import('../pages/NewsDetailPage'));
 
 const AppRouter = () => {
     // Redux에서 user 정보 가져오기
-    const { user } = useSelector((state) => state.auth || {});
+    const { user } = useSelector((state) => state.auth);
 
     return (
         <Layout>

@@ -1,6 +1,6 @@
 package com.fullStc.ai.domain;
 
-import com.fullStc.member.domain.Member; // 팀원 Member 엔티티 임포트
+import com.fullStc.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,12 +22,11 @@ public class VideoTask {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long vno;
 
-    // 팀 프로젝트의 Member 엔티티와 직접 연관관계를 맺습니다
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 
-    private Long newsId; // 팀 프로젝트 News ID가 Long이므로 타입을 맞췄습니다
+    private Long newsId;
 
     @Lob
     @Column(columnDefinition = "LONGTEXT")
@@ -35,8 +34,12 @@ public class VideoTask {
 
     private String customTitle;
 
+    @Builder.Default
+    @Column(length = 32)
+    private String category = "politics";
+
     @Column(nullable = false)
-    private String videoMode; // "9:16" 또는 "16:9"
+    private String videoMode;
 
     @Builder.Default
     private String status = "PENDING";
@@ -46,12 +49,13 @@ public class VideoTask {
 
     private boolean isVipAuto;
     private boolean isMainHot;
-
+    
     @CreatedDate
-    @Column(updatable = false)
+    @Column(name = "regdate", updatable = false)
     private LocalDateTime regDate;
 
     @LastModifiedDate
+    @Column(name = "moddate")
     private LocalDateTime modDate;
 
     public void changeStatus(String status) {

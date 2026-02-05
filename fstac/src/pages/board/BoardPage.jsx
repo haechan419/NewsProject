@@ -107,34 +107,6 @@ function BoardPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans pb-20">
-      {/* 인기글 애니메이션 스타일 */}
-      <style>{`
-        @keyframes dropBounce {
-          0% { opacity: 0; transform: translateY(-50px) scale(0.8); }
-          50% { opacity: 1; transform: translateY(10px) scale(1.05); }
-          70% { transform: translateY(-5px) scale(0.98); }
-          85% { transform: translateY(3px) scale(1.02); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes shakeAfterDrop {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-3px) rotate(-1deg); }
-          40% { transform: translateX(3px) rotate(1deg); }
-          60% { transform: translateX(-2px) rotate(-0.5deg); }
-          80% { transform: translateX(2px) rotate(0.5deg); }
-        }
-        .animate-drop-1 {
-          animation: dropBounce 0.6s ease-out forwards, shakeAfterDrop 0.4s ease-in-out 0.6s;
-        }
-        .animate-drop-2 {
-          animation: dropBounce 0.6s ease-out 0.15s forwards, shakeAfterDrop 0.4s ease-in-out 0.75s;
-          opacity: 0;
-        }
-        .animate-drop-3 {
-          animation: dropBounce 0.6s ease-out 0.3s forwards, shakeAfterDrop 0.4s ease-in-out 0.9s;
-          opacity: 0;
-        }
-      `}</style>
       
       {/* 1. 헤더 섹션 (고객센터 스타일) */}
       <div className="w-full bg-slate-900 py-16 px-4 mb-10">
@@ -211,9 +183,7 @@ function BoardPage() {
                 <ul className="space-y-3">
                   {popularNormalBoards.length > 0 ? popularNormalBoards.map((board, index) => (
                     <li key={board.id} 
-                        className={`group cursor-pointer bg-blue-50 rounded-lg p-3 hover:bg-blue-100 transition-all border border-blue-100 hover:border-blue-300 ${
-                          index === 0 ? 'animate-drop-1' : index === 1 ? 'animate-drop-2' : 'animate-drop-3'
-                        }`}
+                        className="group cursor-pointer bg-blue-50 rounded-lg p-3 hover:bg-blue-100 transition-all border border-blue-100 hover:border-blue-300"
                         onClick={() => navigate(`/board/${board.id}`)}
                     >
                       <div className="flex items-start gap-3">
@@ -253,9 +223,7 @@ function BoardPage() {
                 <ul className="space-y-3">
                   {popularDebateBoards.length > 0 ? popularDebateBoards.map((board, index) => (
                     <li key={board.id} 
-                        className={`group cursor-pointer bg-red-50 rounded-lg p-3 hover:bg-red-100 transition-all border border-red-100 hover:border-red-300 ${
-                          index === 0 ? 'animate-drop-1' : index === 1 ? 'animate-drop-2' : 'animate-drop-3'
-                        }`}
+                        className="group cursor-pointer bg-red-50 rounded-lg p-3 hover:bg-red-100 transition-all border border-red-100 hover:border-red-300"
                         onClick={() => navigate(`/board/${board.id}`)}
                     >
                       <div className="flex items-start gap-3">

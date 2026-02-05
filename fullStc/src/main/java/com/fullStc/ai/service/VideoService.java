@@ -9,6 +9,9 @@ public interface VideoService {
     // 특정 회원의 생성 완료된 영상 목록 조회
     List<VideoTaskDTO> getMemberVideoList(Long memberId);
 
+    // 메인 페이지 노출용 핫이슈 영상 목록 조회
+    List<VideoTaskDTO> getMainHotVideoList();
+
     // 영상 작업 상태 업데이트 (Python 엔진 연동용)
     void updateVideoStatus(Long vno, String status, String videoUrl, String imgUrl);
 }

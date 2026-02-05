@@ -1,7 +1,6 @@
 package com.fullStc.member.service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -10,10 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fullStc.member.domain.Member;
-import com.fullStc.member.domain.MemberCategory;
 import com.fullStc.member.domain.RefreshToken;
 import com.fullStc.member.domain.enums.MemberRole;
-import com.fullStc.member.domain.enums.NewsCategory;
 import com.fullStc.member.dto.FaceLoginDTO;
 import com.fullStc.member.dto.LoginDTO;
 import com.fullStc.member.dto.LoginResponseDTO;
@@ -57,28 +54,6 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("이미 존재하는 닉네임입니다");
         }
 
-        // 카테고리 유효성 검증 및 개수 검증
-        if (signUpDTO.getCategories() != null) {
-            if (signUpDTO.getCategories().size() > 3) {
-                throw new IllegalArgumentException("관심 카테고리는 최대 3개까지 선택할 수 있습니다");
-            }
-
-            // 카테고리 유효성 검증 (크롤링 카테고리 형식으로 변환하여 검증)
-            for (String category : signUpDTO.getCategories()) {
-                try {
-                    // 크롤링 카테고리 형식으로 변환 시도
-                    NewsCategory.fromCrawlCategory(category);
-                } catch (IllegalArgumentException e1) {
-                    try {
-                        // displayName 형식이면 크롤링 형식으로 변환
-                        NewsCategory.fromDisplayName(category);
-                    } catch (IllegalArgumentException e2) {
-                        throw new IllegalArgumentException("유효하지 않은 카테고리입니다: " + category);
-                    }
-                }
-            }
-        }
-
         // 회원 생성
         Member member = Member.builder()
                 .email(signUpDTO.getEmail())
@@ -93,42 +68,6 @@ public class AuthServiceImpl implements AuthService {
 
         Member savedMember = memberRepository.save(member);
         log.info("회원가입 완료: id={}, email={}", savedMember.getId(), savedMember.getEmail());
-
-        // 관심 카테고리 저장 (최대 3개까지만 저장, 크롤링 카테고리 형식으로 변환)
-        if (signUpDTO.getCategories() != null && !signUpDTO.getCategories().isEmpty()) {
-            List<String> categoriesToSave = signUpDTO.getCategories().stream()
-                    .limit(3)
-                    .filter(category -> category != null && !category.trim().isEmpty())
-                    .map(String::trim)
-                    .map(category -> {
-                        // 크롤링 카테고리 형식으로 변환
-                        try {
-                            // 먼저 크롤링 형식인지 확인 (소문자 변환 포함)
-                            String lower = category.toLowerCase();
-                            NewsCategory.fromCrawlCategory(lower);
-                            return lower; // 소문자로 반환
-                        } catch (IllegalArgumentException e1) {
-                            try {
-                                // displayName 형식이면 크롤링 형식으로 변환
-                                NewsCategory newsCategory = NewsCategory.fromDisplayName(category);
-                                return newsCategory.toCrawlCategory();
-                            } catch (IllegalArgumentException e2) {
-                                // 유효성 검증에서 이미 체크했으므로 여기서는 발생하지 않아야 함
-                                throw new IllegalArgumentException("유효하지 않은 카테고리입니다: " + category);
-                            }
-                        }
-                    })
-                    .collect(Collectors.toList());
-
-            for (String category : categoriesToSave) {
-                MemberCategory memberCategory = MemberCategory.builder()
-                        .member(savedMember)
-                        .category(category)
-                        .build();
-                memberCategoryRepository.save(memberCategory);
-            }
-            log.info("관심 카테고리 저장 완료: userId={}, categories={}", savedMember.getId(), categoriesToSave);
-        }
 
         return savedMember.getId();
     }
