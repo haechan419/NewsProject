@@ -1,43 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchUserInfoAsync } from "@/slices/authSlice";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import {
-  HiOutlineHome,
-  HiOutlineFilm,
-  HiOutlineBookmark,
-  HiBookmark,
-  HiOutlineCog,
-  HiOutlineQuestionMarkCircle,
-  HiOutlineOfficeBuilding,
-  HiOutlineCurrencyDollar,
-  HiOutlineMusicNote,
-  HiOutlineChip,
-  HiOutlineUserGroup,
-  HiOutlineGlobe,
-} from "react-icons/hi";
-import ScrapTab from "@/scrap/ScrapTab";
-import { getMyCategories, updateCategories } from "@/api/authApi";
-import { convertCategoriesToDisplayNames, convertDisplayNamesToCategories } from "@/api/categoryApi";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import "./MyPage.css";
-
-const FEED_CATEGORIES = [
-  { name: "정치", Icon: HiOutlineOfficeBuilding, color: "#e3f2fd" },
-  { name: "경제", Icon: HiOutlineCurrencyDollar, color: "#e8f5e9" },
-  { name: "문화", Icon: HiOutlineMusicNote, color: "#f3e5f5" },
-  { name: "IT/과학", Icon: HiOutlineChip, color: "#e1f5fe" },
-  { name: "사회", Icon: HiOutlineUserGroup, color: "#fff3e0" },
-  { name: "국제", Icon: HiOutlineGlobe, color: "#e0f7fa" },
-];
-const MAX_CATEGORIES = 3;
 
 const MyPage = ({ memberId }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab");
-
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,90 +14,12 @@ const MyPage = ({ memberId }) => {
   const [customTitle, setCustomTitle] = useState("");
   const [videoMode, setVideoMode] = useState("9:16");
   const [activeTab, setActiveTab] = useState("videos");
-  const [mainView, setMainView] = useState("feed"); // "feed" | "category"
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoLoading, setVideoLoading] = useState(true);
-  // 피드 카테고리 설정
-  const [categoryList, setCategoryList] = useState([]);
-  const [categoryLoading, setCategoryLoading] = useState(false);
-  const [categorySaving, setCategorySaving] = useState(false);
 
-  const dispatch = useDispatch();
-  const { isAuthenticated, user } = useSelector((state) => state.auth || {});
-  const displayName = user?.nickname || user?.name || (memberId ? `${memberId}번 회원` : "회원");
-
-  // URL ?tab=scrap 반영
-  useEffect(() => {
-    if (tabParam === "scrap") {
-      setActiveTab("scrap");
-      setMainView("feed");
-    }
-  }, [tabParam]);
-
-  const switchTab = (tab) => {
-    setActiveTab(tab);
-    setSearchParams(tab === "scrap" ? { tab: "scrap" } : {});
-  };
-
-  // 피드 카테고리 설정 로드 (프로필 수정과 동일 API)
-  const loadCategories = useCallback(async () => {
-    try {
-      setCategoryLoading(true);
-      const raw = await getMyCategories();
-      const names = convertCategoriesToDisplayNames(Array.isArray(raw) ? raw : []);
-      setCategoryList(names);
-    } catch (err) {
-      console.error("카테고리 조회 실패:", err);
-      setCategoryList([]);
-    } finally {
-      setCategoryLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (mainView === "category") loadCategories();
-  }, [mainView, loadCategories]);
-
-  const handleCategoryToggle = (name) => {
-    const isSelected = categoryList.includes(name);
-    if (isSelected) {
-      setCategoryList((prev) => prev.filter((c) => c !== name));
-    } else if (categoryList.length < MAX_CATEGORIES) {
-      setCategoryList((prev) => [...prev, name]);
-    }
-  };
-  const isCategorySelected = (name) => categoryList.includes(name);
-  const isCategoryDisabled = (name) => !isCategorySelected(name) && categoryList.length >= MAX_CATEGORIES;
-
-  const handleCategorySave = async () => {
-    try {
-      setCategorySaving(true);
-      const english = convertDisplayNamesToCategories(categoryList);
-      await updateCategories(english);
-      await dispatch(fetchUserInfoAsync());
-      alert("피드 카테고리가 저장되었습니다.");
-    } catch (err) {
-      console.error("카테고리 저장 실패:", err);
-      alert("저장에 실패했습니다.");
-    } finally {
-      setCategorySaving(false);
-    }
-  };
-
-  /** 스크랩 해제 시 목록에서만 제거 (전체 새로고침 없음) */
-  const handleUnscrapSuccess = useCallback((item) => {
-    setData((prev) => {
-      if (!prev?.scrapItems) return prev;
-      return {
-        ...prev,
-        scrapItems: prev.scrapItems.filter(
-          (s) => String(s.newsId) !== String(item.newsId)
-        ),
-      };
-    });
-  }, []);
+  const { isAuthenticated } = useSelector((state) => state.auth || {});
 
   const fetchData = useCallback(async () => {
     if (!memberId || !isAuthenticated) {
@@ -155,20 +45,20 @@ const MyPage = ({ memberId }) => {
     fetchData();
   }, [fetchData]);
 
-  // 카테고리 등 다른 화면에서 스크랩 추가 후 마이페이지로 돌아왔을 때 목록 갱신
-  useEffect(() => {
-    if (location.pathname === "/mypage" && memberId && isAuthenticated) {
-      fetchData();
-    }
-  }, [location.pathname, memberId, isAuthenticated, fetchData]);
-
+  // [수정] 영상 클릭 시 사이드바 자동 닫힘 로직
   const handleVideoClick = (video) => {
     if (video.status === "COMPLETED" && video.videoUrl) {
+      console.log("영상 클릭:", video);
+      console.log("영상 URL:", video.videoUrl);
       setIsModalOpen(false);
       setSelectedVideo(video);
       setVideoError(false);
       setVideoLoading(true);
     } else {
+      console.warn("영상을 재생할 수 없습니다:", {
+        status: video.status,
+        videoUrl: video.videoUrl,
+      });
       if (video.status === "COMPLETED" && !video.videoUrl) {
         alert("영상 파일을 찾을 수 없습니다. 관리자에게 문의해주세요.");
       }
@@ -229,260 +119,122 @@ const MyPage = ({ memberId }) => {
     }
   };
 
-  if (loading) return <div className="mypage-loading">마이페이지 로딩 중...</div>;
-  if (error) return <div className="mypage-error">{error}</div>;
+  if (loading) return <div className="loading">AI 스튜디오 로딩 중...</div>;
 
   return (
-    <div className="mypage-layout">
-      {/* 왼쪽 카테고리 선택 바 */}
-      <aside className="mypage-sidebar">
-        <div className="mypage-sidebar-brand">AI Studio</div>
-        <nav className="mypage-sidebar-nav">
-          <button
-            type="button"
-            className="mypage-sidebar-item"
-            onClick={() => navigate("/")}
-          >
-            <HiOutlineHome className="mypage-sidebar-icon" />
-            <span>메인 피드</span>
-          </button>
-          <div className="mypage-sidebar-label">내 콘텐츠</div>
-          <button
-            type="button"
-            className={`mypage-sidebar-item ${mainView === "feed" && activeTab === "videos" ? "active" : ""}`}
-            onClick={() => { setMainView("feed"); setActiveTab("videos"); setSearchParams({}); }}
-          >
-            <HiOutlineFilm className="mypage-sidebar-icon" />
-            <span>제작 영상 보관함</span>
-          </button>
-          <button
-            type="button"
-            className={`mypage-sidebar-item ${mainView === "feed" && activeTab === "scrap" ? "active" : ""}`}
-            onClick={() => { setMainView("feed"); setActiveTab("scrap"); setSearchParams({ tab: "scrap" }); }}
-          >
-            <HiOutlineBookmark className="mypage-sidebar-icon" />
-            <span>스크랩한 뉴스</span>
-          </button>
-          <button
-            type="button"
-            className={`mypage-sidebar-item ${mainView === "category" ? "active" : ""}`}
-            onClick={() => setMainView("category")}
-          >
-            <HiOutlineCog className="mypage-sidebar-icon" />
-            <span>피드 카테고리 설정</span>
-          </button>
-          <div className="mypage-sidebar-label">지원</div>
-          <button
-            type="button"
-            className="mypage-sidebar-item"
-            onClick={() => navigate("/support")}
-          >
-            <HiOutlineQuestionMarkCircle className="mypage-sidebar-icon" />
-            <span>고객 지원 센터</span>
-          </button>
-        </nav>
-      </aside>
-
-      {/* 메인 영역 */}
-      <div className="mypage-main">
-        {mainView === "category" ? (
-          /* 피드 카테고리 설정 화면 */
-          <div className="mypage-category-wrap">
-            <div className="mypage-category-panel">
-              <header className="mypage-category-header">
-                <h2 className="mypage-category-title">피드 카테고리 설정</h2>
-                <p className="mypage-category-desc">
-                  카테고리를 선택하고 관심 뉴스를 받아보세요. 최대 3개까지 선택할 수 있습니다.
-                </p>
-              </header>
-              {categoryLoading ? (
-                <div className="mypage-category-loading">불러오는 중...</div>
-              ) : (
-                <div className="mypage-category-body">
-                  <ul className="mypage-category-list">
-                    {FEED_CATEGORIES.map(({ name, Icon, color }) => {
-                      const selected = isCategorySelected(name);
-                      const disabled = isCategoryDisabled(name);
-                      return (
-                        <li key={name}>
-                          <button
-                            type="button"
-                            className={`mypage-category-row ${selected ? "selected" : ""} ${disabled ? "disabled" : ""}`}
-                            onClick={() => handleCategoryToggle(name)}
-                            disabled={disabled}
-                          >
-                            <span className="mypage-category-row-icon" style={{ backgroundColor: color }}>
-                              <Icon className="mypage-category-row-icon-svg" />
-                            </span>
-                            <span className="mypage-category-row-name">{name}</span>
-                            <span className="mypage-category-row-bookmark" aria-hidden="true">
-                              {selected ? <HiBookmark /> : <HiOutlineBookmark />}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <p className="mypage-category-count-text">
-                    <span className="mypage-category-count-num">{categoryList.length}</span> / {MAX_CATEGORIES}개 선택
-                  </p>
-                  <button
-                    type="button"
-                    className="mypage-category-done"
-                    onClick={handleCategorySave}
-                    disabled={categorySaving}
-                  >
-                    {categorySaving ? "저장 중..." : "완료"}
-                  </button>
-                </div>
-              )}
-            </div>
+    <div className="youtube-layout">
+      {/* 사이드바: 기획안 구성 */}
+      <div className="sidebar">
+        <div className="sidebar-brand">🎬 AI Studio</div>
+        <div className="menu-group">
+          <p className="menu-label">바로가기</p>
+          <div className="menu-item" onClick={() => navigate("/")}>
+            🏠 메인 피드
           </div>
-        ) : (
-          <>
-            {/* 상단 배너 영역 */}
-            <section className="mypage-welcome">
-              <div className="mypage-container">
-                <h2 className="mypage-welcome-title">NewsPulse AI Studio</h2>
-                <p className="mypage-welcome-desc">AI 뉴스 영상 제작 및 스크랩 기사 관리</p>
-              </div>
-            </section>
+          <div
+            className="menu-item"
+            onClick={() => navigate("/settings/interests")}
+          >
+            🎯 관심사 맞춤 설정
+          </div>
+        </div>
+        <div className="menu-group">
+          <p className="menu-label">내 콘텐츠</p>
+          <div
+            className={`menu-item ${activeTab === "videos" ? "active" : ""}`}
+            onClick={() => setActiveTab("videos")}
+          >
+            📹 제작 영상 보관함
+          </div>
+          <div className="menu-item">🔖 스크랩한 뉴스</div>
+          <div className="menu-item">🛠️ 피드 카테고리 설정</div>
+        </div>
+        <div className="menu-group">
+          <p className="menu-label">지원</p>
+          <div className="menu-item">❓ 고객지원 센터</div>
+        </div>
+      </div>
 
-            {/* 프로필 정보 영역 */}
-            <div className="mypage-container">
-              <section className="mypage-profile">
-                <div className="mypage-profile-avatar" aria-hidden="true">
-                  <span className="mypage-profile-initial">M</span>
-                </div>
-                <div className="mypage-profile-details">
-                  <h1 className="mypage-profile-name">
-                    {displayName}님
-                    {data?.isVip && <span className="vip-badge">VIP</span>}
-                  </h1>
-                </div>
-                <button
-                  type="button"
-                  className="mypage-btn primary mypage-profile-create"
-                  onClick={() => setIsModalOpen(true)}
-                >
-                  새 영상 제작
-                </button>
-              </section>
-            </div>
+      <div className="main-content">
+        <div className="channel-banner-mini">ShortNews AI Studio</div>
+        <div className="profile-header">
+          <div className="profile-img">👤</div>
+          <div className="profile-details">
+            <h1>
+              {memberId}번 회원님{" "}
+              {data.isVip && <span className="vip-badge">💎 VIP</span>}
+            </h1>
+            <p className="desc">
+              관심 분야: {data.interestCategories || "설정 없음"}
+            </p>
+            <button
+              className="btn-create-pill"
+              onClick={() => setIsModalOpen(true)}
+            >
+              + 새 영상 제작
+            </button>
+          </div>
+        </div>
 
-            {/* 하위 탭: 영상 목록 | 스크랩 */}
-            <div className="mypage-tabs-wrap">
-              <nav className="mypage-tabs">
-                <button
-                  type="button"
-                  className={`mypage-tab ${activeTab === "videos" ? "active" : ""}`}
-                  onClick={() => switchTab("videos")}
-                >
-                  영상 목록
-                </button>
-                <button
-                  type="button"
-                  className={`mypage-tab ${activeTab === "scrap" ? "active" : ""}`}
-                  onClick={() => switchTab("scrap")}
-                >
-                  스크랩
-                </button>
-              </nav>
-            </div>
-
-            {/* 탭별 콘텐츠 */}
-            <section className="mypage-content">
-        {activeTab === "videos" && (
-          <>
-            <div className="mypage-content-header">
-              <span className="mypage-content-title">제작한 영상</span>
-            </div>
-            <div className="video-grid">
-              {data?.myVideos?.length ? (
-                data.myVideos.map((video) => (
-                  <div
-                    key={video.vno}
-                    className={`video-card ${video.status === "COMPLETED" ? "playable" : ""}`}
-                    onClick={() => handleVideoClick(video)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") handleVideoClick(video);
+        <div className="video-grid">
+          {data.myVideos?.map((video) => (
+            <div
+              key={video.vno}
+              className={`video-card ${video.status === "COMPLETED" ? "playable" : ""}`}
+              onClick={() => handleVideoClick(video)}
+            >
+              <div className="video-thumb">
+                {video.status === "COMPLETED" && video.videoUrl ? (
+                  <video
+                    src={`http://localhost:8080/upload/videos/${video.videoUrl}`}
+                    muted
+                    loop
+                    onError={(e) => {
+                      console.error("썸네일 비디오 로드 실패:", video.videoUrl);
                     }}
-                  >
-                    <div className="video-thumb">
-                      {video.status === "COMPLETED" && video.videoUrl ? (
-                        <video
-                          src={`http://localhost:8080/upload/videos/${video.videoUrl}`}
-                          muted
-                          loop
-                          onError={() => {}}
-                        />
-                      ) : (
-                        <div className={`processing-placeholder ${video.status}`}>
-                          <span>{video.status}</span>
-                        </div>
-                      )}
-                      <span className="badge">{video.videoMode}</span>
-                    </div>
-                    <div className="video-info">
-                      <p className="video-title">
-                        {video.customTitle || "제목 없음"}
-                      </p>
-                    </div>
+                  />
+                ) : (
+                  <div className={`processing-placeholder ${video.status}`}>
+                    <span>{video.status}</span>
                   </div>
-                ))
-              ) : (
-                <div className="mypage-empty">
-                  <p>제작한 영상이 없습니다.</p>
-                  <button
-                    type="button"
-                    className="mypage-btn primary"
-                    onClick={() => setIsModalOpen(true)}
-                  >
-                    영상 제작
-                  </button>
-                </div>
-              )}
+                )}
+                <span className="badge">{video.videoMode}</span>
+              </div>
+              <div className="video-info">
+                <p className="video-title">
+                  {video.customTitle || "제목 없음"}
+                </p>
+              </div>
             </div>
-          </>
-        )}
-
-        {activeTab === "scrap" && (
-          <ScrapTab
-            scrapItems={data?.scrapItems || []}
-            memberId={memberId}
-            onUnscrapSuccess={handleUnscrapSuccess}
-          />
-        )}
-      </section>
-          </>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* 제작 사이드 패널 */}
       {isModalOpen && (
         <div className="side-production-panel">
           <h2>AI 뉴스 제작 요청</h2>
+
+          {/* 1. 화면 비율 선택 */}
           <div className="panel-input-group">
             <label className="panel-label">화면 비율</label>
             <div className="mode-tab-group">
               <button
-                type="button"
                 className={`mode-tab ${videoMode === "9:16" ? "active" : ""}`}
                 onClick={() => setVideoMode("9:16")}
               >
-                숏폼 (9:16)
+                📱 숏폼 (9:16)
               </button>
               <button
-                type="button"
                 className={`mode-tab ${videoMode === "16:9" ? "active" : ""}`}
                 onClick={() => setVideoMode("16:9")}
               >
-                일반 (16:9)
+                💻 일반 (16:9)
               </button>
             </div>
           </div>
+
+          {/* 2. 영상 제목 입력 (누락되었던 부분 복구) */}
           <div className="panel-input-group">
             <label className="panel-label">영상 제목</label>
             <input
@@ -493,6 +245,8 @@ const MyPage = ({ memberId }) => {
               onChange={(e) => setCustomTitle(e.target.value)}
             />
           </div>
+
+          {/* 3. 기사 본문 내용 */}
           <div className="panel-input-group flex-grow">
             <label className="panel-label">기사 본문 내용</label>
             <textarea
@@ -502,12 +256,13 @@ const MyPage = ({ memberId }) => {
               onChange={(e) => setRawText(e.target.value)}
             />
           </div>
+
+          {/* 4. 하단 버튼 (디자인 분리) */}
           <div className="panel-footer-btns">
             <button
-              type="button"
               onClick={() => {
                 if (!customTitle.trim() || !rawText.trim()) {
-                  alert("제목과 내용을 모두 입력해주세요!");
+                  alert("제목과 내용을 모두 입력해주세요!"); // 에러 메시지 구체화
                   return;
                 }
                 handleCreateVideo();
@@ -517,7 +272,6 @@ const MyPage = ({ memberId }) => {
               제작 시작
             </button>
             <button
-              type="button"
               onClick={() => setIsModalOpen(false)}
               className="btn-cancel-production"
             >
@@ -527,40 +281,50 @@ const MyPage = ({ memberId }) => {
         </div>
       )}
 
-      {/* 영상 재생 모달 */}
+      {/* 시네마틱 모달 */}
       {selectedVideo && (
         <div
           className="video-modal-overlay"
           onClick={() => setSelectedVideo(null)}
-          role="presentation"
         >
           <button
-            type="button"
             className="modal-close-x"
             onClick={(e) => {
               e.stopPropagation();
               setSelectedVideo(null);
             }}
-            aria-label="닫기"
           >
             &times;
           </button>
           <div
             className="video-modal-content"
             onClick={(e) => e.stopPropagation()}
-            role="presentation"
           >
             <div className="modal-video-wrapper">
               {videoError ? (
-                <div className="video-modal-error">
+                <div style={{
+                  color: "#fff",
+                  textAlign: "center",
+                  padding: "40px",
+                  fontSize: "18px"
+                }}>
                   <p>영상을 불러올 수 없습니다.</p>
-                  <p className="video-modal-error-url">{selectedVideo.videoUrl}</p>
+                  <p style={{ fontSize: "14px", marginTop: "10px", opacity: 0.7 }}>
+                    URL: {selectedVideo.videoUrl}
+                  </p>
                   <button
-                    type="button"
-                    className="mypage-btn primary"
                     onClick={() => {
                       setVideoError(false);
                       setVideoLoading(true);
+                    }}
+                    style={{
+                      marginTop: "20px",
+                      padding: "10px 20px",
+                      background: "#6366f1",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer"
                     }}
                   >
                     다시 시도
@@ -569,7 +333,16 @@ const MyPage = ({ memberId }) => {
               ) : (
                 <>
                   {videoLoading && (
-                    <div className="video-modal-loading">영상 로딩 중...</div>
+                    <div style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      color: "#fff",
+                      fontSize: "18px"
+                    }}>
+                      영상 로딩 중...
+                    </div>
                   )}
                   <video
                     key={selectedVideo.vno}
@@ -580,11 +353,17 @@ const MyPage = ({ memberId }) => {
                       selectedVideo.videoMode === "9:16" ? "portrait" : "landscape"
                     }
                     onEnded={handleNextVideo}
-                    onError={() => {
+                    onError={(e) => {
+                      console.error("비디오 로드 실패:", {
+                        videoUrl: selectedVideo.videoUrl,
+                        fullUrl: `http://localhost:8080/upload/videos/${selectedVideo.videoUrl}`,
+                        error: e,
+                      });
                       setVideoError(true);
                       setVideoLoading(false);
                     }}
                     onLoadedData={() => {
+                      console.log("비디오 로드 성공:", selectedVideo.videoUrl);
                       setVideoLoading(false);
                       setVideoError(false);
                     }}
