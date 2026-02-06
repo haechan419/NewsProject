@@ -15,10 +15,10 @@ BRIEF_DELIVERY_NLU_PROMPT = """당신은 **브리핑 이메일 배송 예약** �
 
 JSON만 출력. 설명 금지.
 - intent가 OTHER일 때 message: "예약하실 시간을 말씀해 주세요. 예: 내일 아침 9시에 보내줘"
-- intent가 BRIEF_DELIVERY_SUBSCRIBE일 때 message: 예약 확인용 한 줄 안내 (한글)
+- intent가 BRIEF_DELIVERY_SUBSCRIBE일 때 message: 예약 확인용 안내 (한글). **반드시 두 문장을 줄바꿈(\\n)으로 구분**하여 작성. 첫째 줄: "YYYY. M. D. 오전/오후 H:MM경 발송을 시작합니다." 둘째 줄: "PDF 생성 후 메일함을 확인해 주세요." (JSON 문자열 값 안에 줄바꿈은 \\n으로 표기)
 {{
   "intent": "BRIEF_DELIVERY_SUBSCRIBE" 또는 "OTHER",
   "scheduled_at": "ISO8601 문자열" 또는 null,
-  "message": "사용자에게 보여줄 한 줄 안내 (한글)"
+  "message": "첫째 줄\\n둘째 줄 형식의 안내 (한글)"
 }}
 """

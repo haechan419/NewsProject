@@ -135,7 +135,7 @@ const FloatingBriefDelivery = () => {
       const result = await briefDeliveryApi.analyzeVoice(blob, userId, entry.file);
       if (result.scheduled && result.scheduledAt) {
         const at = new Date(result.scheduledAt).toLocaleString('ko-KR');
-        setMessage(`${at}경 발송을 시작합니다. PDF 생성 후 메일함을 확인해 주세요`);
+        setMessage(`${at}경 발송을 시작합니다.\nPDF 생성 후 메일함을 확인해 주세요`);
       } else if (result.message) {
         setError(result.message);
       } else {
@@ -157,7 +157,7 @@ const FloatingBriefDelivery = () => {
       const result = await briefDeliveryApi.analyzeText(textInput.trim(), userId);
       if (result.scheduled && result.scheduledAt) {
         const at = new Date(result.scheduledAt).toLocaleString('ko-KR');
-        setMessage(`${at}경 발송을 시작합니다. PDF 생성 후 메일함을 확인해 주세요`);
+        setMessage(`${at}경 발송을 시작합니다.\nPDF 생성 후 메일함을 확인해 주세요`);
         setTextInput('');
       } else if (result.message) {
         setError(result.message);
@@ -195,7 +195,7 @@ const FloatingBriefDelivery = () => {
           const result = await briefDeliveryApi.analyzeVoice(blob, userId, 'voice.webm');
           if (result.scheduled && result.scheduledAt) {
             const at = new Date(result.scheduledAt).toLocaleString('ko-KR');
-            setMessage(`${at}경 발송을 시작합니다. PDF 생성 후 메일함을 확인해 주세요`);
+            setMessage(`${at}경 발송을 시작합니다.\nPDF 생성 후 메일함을 확인해 주세요`);
           } else if (result.message) {
             setError(result.message);
           } else {
@@ -347,7 +347,7 @@ const FloatingBriefDelivery = () => {
                   </>
                 ) : useDemoFallback || useDemoByChoice ? (
                   <>
-                    <p className="brief-panel-mic-desc">말로만 알려주세요</p>
+                    <p className="brief-panel-mic-desc">음성으로 알려주세요</p>
                     <p className="brief-panel-mic-example">예: 내일 9시에 보내줘, 오늘 15시에 보내줘</p>
                     {!loading ? (
                       <button
@@ -377,7 +377,7 @@ const FloatingBriefDelivery = () => {
                   </>
                 ) : (
                   <>
-                    <p className="brief-panel-mic-desc">말로만 알려주세요</p>
+                    <p className="brief-panel-mic-desc">음성으로 알려주세요</p>
                     <p className="brief-panel-mic-example">예: 내일 9시에 보내줘, 오늘 15시에 보내줘</p>
                     {!isRecording && !loading ? (
                       <button
@@ -450,7 +450,7 @@ const FloatingBriefDelivery = () => {
             {message && (
               <div className="brief-toast brief-toast--success" role="status">
                 <span className="brief-toast-icon" aria-hidden>✓</span>
-                <span>{message}</span>
+                <span style={{ whiteSpace: 'pre-line' }}>{message}</span>
               </div>
             )}
             {error && (
