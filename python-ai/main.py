@@ -100,6 +100,15 @@ try:
 except Exception as e:
     exchange_rate_crawler = None
     logger.warning(f"[Warning] 환율 크롤러 로드 실패: {e}")
+
+# 주가지수 크롤러 임포트
+try:
+    from stock_index_crawler import StockIndexCrawler
+    stock_index_crawler = StockIndexCrawler()
+    logger.info("[Success] 주가지수 크롤러 로드 완료")
+except Exception as e:
+    stock_index_crawler = None
+    logger.warning(f"[Warning] 주가지수 크롤러 로드 실패: {e}")
 _DRIVE_STATIC = Path(__file__).resolve().parent / "drive" / "static"
 if _DRIVE_STATIC.exists():
     app.mount("/static", StaticFiles(directory=str(_DRIVE_STATIC)), name="drive_static")
@@ -1432,6 +1441,50 @@ async def crawl_exchange_rates(search_date: Optional[str] = None):
         raise HTTPException(
             status_code=500,
             detail=f"환율 크롤링 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+# ===== 주가지수 크롤링 API 엔드포인트 =====
+@app.get("/api/stock-index/crawl")
+async def crawl_stock_indices(mrkt_cls: Optional[str] = None, search_date: Optional[str] = None):
+    """
+    주가지수 데이터 크롤링 (API 한도 초과 시 사용)
+    
+    Args:
+        mrkt_cls: 시장 구분 (KOSPI 또는 KOSDAQ, None이면 둘 다)
+        search_date: 조회 날짜 (YYYYMMDD 형식, None이면 오늘)
+    
+    Returns:
+        크롤링된 주가지수 데이터 리스트
+    """
+    if stock_index_crawler is None:
+        raise HTTPException(
+            status_code=503,
+            detail="주가지수 크롤러를 사용할 수 없습니다."
+        )
+    
+    try:
+        logger.info(f"[크롤링] 주가지수 데이터 크롤링 요청 - 시장: {mrkt_cls or '전체'}, 날짜: {search_date or '오늘'}")
+        indices = stock_index_crawler.crawl_stock_index(mrkt_cls, search_date)
+        
+        if not indices:
+            logger.warning(f"[크롤링] 주가지수 데이터를 찾을 수 없습니다 - 시장: {mrkt_cls or '전체'}")
+            return {
+                "stock_indices": [],
+                "count": 0
+            }
+        
+        logger.info(f"[크롤링] 주가지수 데이터 크롤링 성공 - 시장: {mrkt_cls or '전체'}, 개수: {len(indices)}")
+        return {
+            "stock_indices": indices,
+            "count": len(indices)
+        }
+        
+    except Exception as e:
+        logger.error(f"[크롤링] 주가지수 데이터 크롤링 실패 - 시장: {mrkt_cls or '전체'}, 오류: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"주가지수 크롤링 중 오류가 발생했습니다: {str(e)}"
         )
 
 
