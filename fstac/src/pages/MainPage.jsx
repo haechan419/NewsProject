@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { fetchUserInfoAsync } from "@/slices/authSlice";
 import { getMyCategories } from "@/api/categoryApi";
 import { getNewsByCategory } from "@/api/userCategoryNewsApi";
@@ -54,6 +55,7 @@ const currencyNameMap = {
 const priorityCurrencies = ['USD', 'EUR', 'GBP', 'JPY'];
 
 const MainPage = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth || {});
   const [rawVideos, setRawVideos] = useState([]);
@@ -760,7 +762,7 @@ const MainPage = () => {
                     briefingNews.map((news) => (
                       <div
                         key={news.id}
-                        onClick={() => window.open(news.originalUrl)}
+                        onClick={() => navigate(`/news/${news.id}`, { state: { news } })}
                         className="text-[12px] font-bold text-slate-700 hover:text-blue-600 cursor-pointer leading-snug"
                       >
                         • {news.title}
