@@ -11,25 +11,27 @@ python-dotenv==1.0.0
 # Data Validation
 pydantic==2.5.3
 
-# Image Processing
+# Image / Math
 pillow==10.2.0
-
-# Data Science & Math
 numpy==1.26.3
+
+# Data Science
 pandas==2.2.0
 scikit-learn==1.4.0
-scipy==1.16.3
 
+<<<<<<< HEAD
 # Database
 PyMySQL==1.1.0
 mysql-connector-python
+=======
+# DB
+pymysql==1.1.0
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 
-# HTTP / Web Scraping
+# HTTP / Scheduler
 requests==2.31.0
-beautifulsoup4==4.14.3
-
-# Scheduler
 schedule==1.2.1
+<<<<<<< HEAD
 
 # Web Search (Tavily API)
 tavily-python==0.5.0
@@ -54,3 +56,5 @@ python-multipart>=0.0.6
 # Media / TTS
 moviepy==1.0.3
 edge-tts
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163

@@ -1,63 +1,74 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { login as loginApi, logout as logoutApi, getMyInfo } from '../api/authApi';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  login as loginApi,
+  logout as logoutApi,
+  getMyInfo,
+} from "../api/authApi";
 
 // 초기 상태 (쿠키 기반 인증)
 // 쿠키는 JavaScript로 접근할 수 없으므로, 사용자 정보만 localStorage에 저장
 const initialState = {
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  user: JSON.parse(localStorage.getItem("user")) || null,
   accessToken: null, // 쿠키에 저장되므로 null
   refreshToken: null, // 쿠키에 저장되므로 null
   isLoading: false,
   error: null,
   // 쿠키에 토큰이 있는지 확인하려면 서버에 요청해야 함
   // 초기에는 사용자 정보가 있으면 인증된 것으로 간주
-  isAuthenticated: !!localStorage.getItem('user'),
+  isAuthenticated: !!localStorage.getItem("user"),
 };
 
 // 로그인 비동기 액션
 export const loginAsync = createAsyncThunk(
-  'auth/login',
+  "auth/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
       const response = await loginApi(email, password);
       return response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || '로그인에 실패했습니다.'
+        error.response?.data?.message ||
+          error.message ||
+          "로그인에 실패했습니다.",
       );
     }
-  }
+  },
 );
 
 // 로그아웃 비동기 액션
-export const logoutAsync = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
-  try {
-    await logoutApi();
-    return null;
-  } catch (error) {
-    // 서버 에러가 있어도 로컬에서 로그아웃 처리
-    return null;
-  }
-});
+export const logoutAsync = createAsyncThunk(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      await logoutApi();
+      return null;
+    } catch (error) {
+      // 서버 에러가 있어도 로컬에서 로그아웃 처리
+      return null;
+    }
+  },
+);
 
 // 사용자 정보 조회 비동기 액션
 export const fetchUserInfoAsync = createAsyncThunk(
-  'auth/fetchUserInfo',
+  "auth/fetchUserInfo",
   async (_, { rejectWithValue }) => {
     try {
       const response = await getMyInfo();
       return response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || '사용자 정보를 불러오는데 실패했습니다.'
+        error.response?.data?.message ||
+          error.message ||
+          "사용자 정보를 불러오는데 실패했습니다.",
       );
     }
-  }
+  },
 );
 
 // auth slice
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     clearError: (state) => {
@@ -68,14 +79,14 @@ const authSlice = createSlice({
       // 토큰은 쿠키에 저장되므로 상태에 저장하지 않음
       state.user = user;
       state.isAuthenticated = true;
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(user));
     },
     clearCredentials: (state) => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
-      localStorage.removeItem('user');
+      localStorage.removeItem("user");
     },
   },
   extraReducers: (builder) => {
@@ -95,7 +106,7 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.error = null;
         // 사용자 정보만 localStorage에 저장 (쿠키는 JavaScript로 접근 불가)
-        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem("user", JSON.stringify(user));
       })
       .addCase(loginAsync.rejected, (state, action) => {
         state.isLoading = false;
@@ -115,7 +126,7 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.isAuthenticated = false;
         state.error = null;
-        localStorage.removeItem('user');
+        localStorage.removeItem("user");
       })
       .addCase(logoutAsync.rejected, (state) => {
         state.isLoading = false;
@@ -124,7 +135,7 @@ const authSlice = createSlice({
         state.accessToken = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
-        localStorage.removeItem('user');
+        localStorage.removeItem("user");
       });
 
     // 사용자 정보 조회
@@ -137,7 +148,7 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true; // 사용자 정보를 성공적으로 가져오면 인증된 것으로 간주
         state.error = null;
-        localStorage.setItem('user', JSON.stringify(action.payload));
+        localStorage.setItem("user", JSON.stringify(action.payload));
       })
       .addCase(fetchUserInfoAsync.rejected, (state, action) => {
         state.isLoading = false;
@@ -147,5 +158,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setCredentials, clearCredentials } = authSlice.actions;
+export const { clearError, setCredentials, clearCredentials } =
+  authSlice.actions;
 export default authSlice.reducer;

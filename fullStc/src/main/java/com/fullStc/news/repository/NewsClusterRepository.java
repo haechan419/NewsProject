@@ -13,8 +13,9 @@ import java.util.Optional;
 
 public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> {
 
-        Optional<NewsCluster> findByClusterKey(String clusterKey);
+    Optional<NewsCluster> findByClusterKey(String clusterKey);
 
+<<<<<<< HEAD
         // =================================================================
         // ★ [NEW] 최신순 정렬을 위한 핵심 메소드 2개 (이걸 서비스에서 호출해야 함)
         // =================================================================
@@ -118,4 +119,43 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
         order by c.imageNextRetryAt asc
     """)
         List<NewsCluster> findRetryDue(@Param("now") Instant now);
+=======
+    List<NewsCluster> findTop20ByClusterSummaryIsNotNullOrderByIdDesc();
+
+    // ★ [핵심 수정] 여기에 @Transactional을 붙여야
+    // 병렬 스레드(parallelStream)에서도 에러 없이 DB를 수정할 수 있습니다.
+    @Transactional
+    @Modifying
+    @Query(value = """
+        UPDATE news_cluster
+        SET category = COALESCE(:category, category),
+            representative_news_id = COALESCE(:representativeNewsId, representative_news_id),
+            cluster_title = COALESCE(:clusterTitle, cluster_title),
+            quality_score = COALESCE(:qualityScore, quality_score),
+            risk_flags = COALESCE(:riskFlags, risk_flags),
+            badge = COALESCE(:badge, badge),
+            updated_at = NOW()
+        WHERE cluster_key = :clusterKey
+    """, nativeQuery = true)
+    void updateClusterMetadata(
+            @Param("clusterKey") String clusterKey,
+            @Param("category") String category,
+            @Param("representativeNewsId") Long representativeNewsId,
+            @Param("clusterTitle") String clusterTitle,
+            @Param("qualityScore") Integer qualityScore,
+            @Param("riskFlags") String riskFlags,
+            @Param("badge") String badge
+    );
+
+    // ★ [핵심 수정] 여기도 마찬가지입니다!
+    @Transactional
+    @Modifying
+    @Query("UPDATE NewsCluster n SET n.representativeUrl = :url, n.clusterTitle = :title, n.clusterSummary = :summary WHERE n.id = :id")
+    void updateClusterSummaryInfo(
+            @Param("id") Long id,
+            @Param("url") String url,
+            @Param("title") String title,
+            @Param("summary") String summary
+    );
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 }

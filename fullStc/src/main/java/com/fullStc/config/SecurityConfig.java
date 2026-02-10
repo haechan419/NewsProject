@@ -85,12 +85,15 @@ public class SecurityConfig {
                         "/api/inquiry/**",
                         "/api/category/**",
                         "/api/user/**",
+<<<<<<< HEAD
                         "/api/market/**",  // 금융 시장 데이터 API
                         "/api/exchange-rate/**",  // 환율 API
                         "/api/drive/**",  // 드라이브 모드 API
                         "/api/images/**",
                         "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
 
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/oauth2/**",
@@ -126,17 +129,21 @@ public class SecurityConfig {
             ).permitAll();
 
             // 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
-            auth.requestMatchers("/admin/**").permitAll();
+        auth.requestMatchers("/admin/**").permitAll();
 
             // 1. AI 마이페이지 관련 경로들을 허용 리스트에 추가합니다.
         auth.requestMatchers("/api/ai/mypage/**").permitAll();
         auth.requestMatchers("/api/ai/video/**").permitAll();
         auth.requestMatchers("/upload/**").permitAll();
+<<<<<<< HEAD
 
             // ▼ [NEW] 이미지 실패 신고 및 뉴스 조회는 로그인 없이 허용
             auth.requestMatchers("/api/images/**").permitAll();
             auth.requestMatchers("/briefing/**").permitAll();
 
+=======
+        
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             // 로그아웃은 인증 필요
             auth.requestMatchers("/api/auth/logout").authenticated();
             // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
@@ -146,12 +153,15 @@ public class SecurityConfig {
             auth.requestMatchers("/api/ai/face/recognize").permitAll();
             // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
             auth.requestMatchers("/api/category/list").permitAll();
+<<<<<<< HEAD
             // AI 채팅 API는 인증 없이 접근 가능
             auth.requestMatchers("/api/ai/chat", "/api/ai/**").permitAll();
             // 금융 시장 데이터 API는 인증 없이 접근 가능 (메인 페이지에서 사용)
             auth.requestMatchers("/api/market/**").permitAll();
             // 드라이브 모드 API는 인증 없이 접근 가능
             auth.requestMatchers("/api/drive/**").permitAll();
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             // OAuth2 경로 허용
             auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
             // /login 경로 허용 (OAuth2 에러 리다이렉트용)

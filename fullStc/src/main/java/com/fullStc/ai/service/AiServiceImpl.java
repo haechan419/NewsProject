@@ -26,51 +26,51 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AiServiceImpl implements AiService {
-
+    
     private final RestTemplate restTemplate;
-
+    
     /** Python FastAPI 서버 URL */
     @Value("${ai.python.server.url:http://localhost:8000}")
     private String pythonServerUrl;
-
+    
     @Override
     public ChatResponseDTO chat(ChatRequestDTO requestDTO) {
-        log.info("AI 채팅 요청: {}", requestDTO != null ? requestDTO.getMessage() : "null");
-
-        // 요청 데이터 검증
-        if (requestDTO == null || requestDTO.getMessage() == null || requestDTO.getMessage().trim().isEmpty()) {
-            log.error("AI 채팅 요청 데이터가 유효하지 않습니다: {}", requestDTO);
-            throw new IllegalArgumentException("메시지를 입력해주세요.");
-        }
-
+        log.info("AI 채팅 요청: {}", requestDTO.getMessage());
+        
         try {
             // Python 서버로 전송할 요청 생성
             PythonChatRequestDTO pythonRequest = convertToPhythonRequest(requestDTO);
-            log.debug("Python 요청 데이터: message={}, history size={}",
-                    pythonRequest.getMessage(),
-                    pythonRequest.getConversationHistory() != null ? pythonRequest.getConversationHistory().size() : 0);
-
+            
             // HTTP 헤더 설정
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
+            
             // HTTP 요청 생성
             HttpEntity<PythonChatRequestDTO> httpEntity = new HttpEntity<>(pythonRequest, headers);
-
+            
             // Python 서버에 POST 요청
             String url = pythonServerUrl + "/chat";
             log.debug("Python 서버 요청 URL: {}", url);
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             PythonChatResponseDTO pythonResponse = restTemplate.postForObject(
                 url,
                 httpEntity,
                 PythonChatResponseDTO.class
             );
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             if (pythonResponse == null || pythonResponse.getReply() == null) {
                 log.error("Python 서버로부터 빈 응답 수신");
                 throw new RuntimeException("AI 응답을 받지 못했습니다.");
             }
+<<<<<<< HEAD
 
             log.info("AI 채팅 응답 수신 완료");
 
@@ -115,6 +115,11 @@ public class AiServiceImpl implements AiService {
                     keywords != null ? keywords.size() : 0);
             }
 
+=======
+            
+            log.info("AI 채팅 응답 수신 완료");
+            
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             return ChatResponseDTO.builder()
                     .reply(pythonResponse.getReply())
                     .timestamp(LocalDateTime.now())
@@ -124,19 +129,19 @@ public class AiServiceImpl implements AiService {
                     .isTrending(pythonResponse.getIsTrending() != null ? pythonResponse.getIsTrending() : false)
                     .trendingData(trendingData)
                     .build();
-
+                    
         } catch (RestClientException e) {
             log.error("Python 서버 통신 에러: {}", e.getMessage());
             throw new RuntimeException("AI 서버와 통신 중 오류가 발생했습니다.", e);
         }
     }
-
+    
     /**
      * DTO 변환: 클라이언트 요청 → Python 요청
      */
     private PythonChatRequestDTO convertToPhythonRequest(ChatRequestDTO requestDTO) {
         List<PythonChatRequestDTO.ConversationMessage> history = null;
-
+        
         if (requestDTO.getConversationHistory() != null) {
             history = requestDTO.getConversationHistory().stream()
                     .map(msg -> new PythonChatRequestDTO.ConversationMessage(
@@ -145,7 +150,7 @@ public class AiServiceImpl implements AiService {
                     ))
                     .collect(Collectors.toList());
         }
-
+        
         return PythonChatRequestDTO.builder()
                 .message(requestDTO.getMessage())
                 .conversationHistory(history)

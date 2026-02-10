@@ -172,10 +172,20 @@ const FloatingAI = () => {
       
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Chat Error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: '죄송합니다. 오류가 발생했습니다.',
+=======
+      console.error('채팅 에러:', error);
+      
+      // 에러 메시지 추가
+      const errorMessage = {
+        role: 'assistant',
+        content: '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        timestamp: new Date().toISOString(),
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         isError: true
       }]);
     } finally {

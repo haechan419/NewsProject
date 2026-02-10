@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import TopBar from '../../layouts/TopBar';
 import { boardApi, commentApi, fileApi } from '../../api/boardApi';
+import './BoardPage.css';
 
 // 이미지 파일 확장자 체크 함수
 const isImageFile = (fileName) => {
@@ -190,14 +192,20 @@ function BoardDetail() {
     };
   };
 
+<<<<<<< HEAD
   if (loading && !board) return <div className="min-h-screen bg-white flex items-center justify-center">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
   </div>;
   if (!board) return <div className="min-h-screen bg-white flex items-center justify-center text-gray-500">게시글을 찾을 수 없습니다.</div>;
+=======
+  if (loading && !board) return <div className="loading">로딩 중...</div>;
+  if (!board) return <div className="empty-state">게시글을 찾을 수 없습니다.</div>;
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 
   const votePercent = getVotePercent();
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-white font-sans pb-20">
       
       {/* 헤더 섹션 */}
@@ -251,10 +259,25 @@ function BoardDetail() {
               </div>
             </div>
           </div>
+=======
+    <div className="board-page-wrapper">
+      <TopBar />
+      
+      {/* 헤더 섹션 */}
+      <section className="board-hero-section">
+        <div className="board-hero-title">
+            <h1>게시글 상세</h1>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         </div>
-      </div>
+        <div className="board-top-actions">
+          <button className="btn-secondary" onClick={() => navigate('/board')}>목록으로</button>
+          <button className="btn-primary" onClick={() => navigate(`/board/${id}/modify`)}>수정</button>
+          <button className="btn-danger" onClick={handleDeleteBoard}>삭제</button>
+        </div>
+      </section>
 
       {/* 컨텐츠 섹션 */}
+<<<<<<< HEAD
       <div className="max-w-4xl mx-auto px-4 mt-10">
         
         {/* 토론 투표 바 UI */}
@@ -288,10 +311,25 @@ function BoardDetail() {
             <div className="flex justify-between text-sm font-semibold px-2">
               <span className="text-blue-600">찬성 {board.agreeCount}표</span>
               <span className="text-red-600">반대 {board.disagreeCount}표</span>
+=======
+      <section className="board-content-section">
+        <div className="board-detail-container">
+          <div className="board-detail-header">
+            <div className="board-detail-title">
+              <span className="board-type">{board.boardType === 'DEBATE' ? '토론' : '일반'}</span>
+              <h2>{board.title}</h2>
+            </div>
+            <div className="board-item-meta">
+              <span>작성자: {board.writerNickname}</span>
+              <span>조회수: {board.viewCount}</span>
+              <span>좋아요: {board.likeCount}</span>
+              <span>{new Date(board.createdAt).toLocaleString()}</span>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             </div>
           </div>
         )}
 
+<<<<<<< HEAD
         <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed min-h-[200px] mb-12">
           {/* 이미지 갤러리 */}
           {board.files && board.files.filter(file => isImageFile(file.originalFileName)).length > 0 && (
@@ -339,6 +377,108 @@ function BoardDetail() {
                 </a>
               ))}
             </div>
+=======
+          {/* 토론 투표 바 UI */}
+          {board.boardType === 'DEBATE' && (
+            <div className="debate-vote-section">
+              <h3 className="debate-topic">토론 주제: {board.debateTopic}</h3>
+              
+              {/* 투표 바 */}
+              <div className="vote-bar-container">
+                <div className="vote-bar">
+                  <div 
+                    className={`vote-bar-agree ${board.myVoteType === 'AGREE' ? 'voted' : ''}`}
+                    style={{ width: `${votePercent.agree}%` }}
+                    onClick={() => handleVote('AGREE')}
+                  >
+                    {votePercent.agree > 15 && <span>찬성</span>}
+                  </div>
+                  <div 
+                    className={`vote-bar-disagree ${board.myVoteType === 'DISAGREE' ? 'voted' : ''}`}
+                    style={{ width: `${votePercent.disagree}%` }}
+                    onClick={() => handleVote('DISAGREE')}
+                  >
+                    {votePercent.disagree > 15 && <span>반대</span>}
+                  </div>
+                </div>
+              </div>
+              
+              {/* 투표 결과 텍스트 */}
+              <div className="vote-result">
+                <span className="vote-agree">찬성 {board.agreeCount}표 ({votePercent.agree}%)</span>
+                <span className="vote-disagree">반대 {board.disagreeCount}표 ({votePercent.disagree}%)</span>
+              </div>
+            </div>
+          )}
+
+         {/* 이미지 갤러리 - 본문 위에 표시 */}
+{board.files && board.files.filter(file => isImageFile(file.originalFileName)).length > 0 && (
+  <div className="image-gallery">
+    {(() => {
+      const imageFiles = board.files.filter(file => isImageFile(file.originalFileName));
+      const thumbnail = imageFiles[0];
+      const otherImages = imageFiles.slice(1);
+      
+      return (
+        <>
+          {/* 썸네일 (첫 번째 이미지) */}
+          <div className="thumbnail-image">
+            <img 
+              src={fileApi.getDownloadUrl(thumbnail.storedFileName)} 
+              alt={thumbnail.originalFileName}
+              onClick={() => window.open(fileApi.getDownloadUrl(thumbnail.storedFileName), '_blank')}
+            />
+          </div>
+          
+          {/* 나머지 이미지들 */}
+          {otherImages.length > 0 && (
+            <div className="other-images">
+              {otherImages.map((file) => (
+                <div key={file.id} className="other-image-item">
+                  <img 
+                    src={fileApi.getDownloadUrl(file.storedFileName)} 
+                    alt={file.originalFileName}
+                    onClick={() => window.open(fileApi.getDownloadUrl(file.storedFileName), '_blank')}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      );
+    })()}
+  </div>
+)}
+
+<div className="board-detail-content">
+  <p>{board.content}</p>
+</div>
+
+{/* 기타 파일 다운로드 (이미지 제외) */}
+{board.files && board.files.filter(file => !isImageFile(file.originalFileName)).length > 0 && (
+  <div className="file-download-section">
+    <h4>첨부파일</h4>
+    <div className="file-download-list">
+      {board.files.filter(file => !isImageFile(file.originalFileName)).map((file) => (
+        <div key={file.id} className="file-download-item">
+          <a href={fileApi.getDownloadUrl(file.storedFileName)} download={file.originalFileName}>
+            📎 {file.originalFileName} ({(file.fileSize / 1024).toFixed(2)} KB)
+          </a>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+          
+          {/* 좋아요 버튼 */}
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+             <button 
+                className={board.isLiked ? 'btn-primary' : 'btn-secondary'} 
+                onClick={handleToggleLike}
+             >
+                {board.isLiked ? '❤️' : '🤍'} 좋아요
+             </button>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
           </div>
         )}
         
@@ -358,6 +498,7 @@ function BoardDetail() {
            </button>
         </div>
 
+<<<<<<< HEAD
         {/* 댓글 섹션 */}
         <div className="mb-20">
           <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -380,11 +521,30 @@ function BoardDetail() {
             <div className="text-center text-gray-400 py-12 bg-gray-50 rounded-xl">
               <p>아직 댓글이 없습니다.</p>
               <p className="text-sm">첫 번째 댓글을 남겨보세요!</p>
+=======
+          {/* 댓글 섹션 */}
+          <div className="comments-section">
+            <h3>댓글 ({Array.isArray(comments) ? comments.length : 0})</h3>
+            <CommentForm onSubmit={(content, files) => handleCreateComment(content, files)} />
+            <div className="comments-list">
+            {Array.isArray(comments) && comments.length > 0 ? (
+              comments.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  onReply={(content, files) => handleCreateComment(content, files, comment.id)}
+                  onDelete={() => handleDeleteComment(comment.id)}
+                />
+              ))
+            ) : (
+              <div className="empty-state">댓글이 없습니다.</div>
+            )}
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             </div>
           )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
@@ -412,6 +572,7 @@ function CommentForm({ onSubmit }) {
   };
 
   return (
+<<<<<<< HEAD
     <form onSubmit={handleSubmit} className="mb-8 bg-white p-1 rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
       <textarea 
         value={content} 
@@ -461,6 +622,41 @@ function CommentForm({ onSubmit }) {
           등록
         </button>
       </div>
+=======
+    <form onSubmit={handleSubmit} className="comment-form">
+      <div className="comment-form-content">
+        <textarea 
+          value={content} 
+          onChange={(e) => setContent(e.target.value)} 
+          rows="2" 
+          placeholder="댓글을 입력하세요..." 
+        />
+        <button type="submit" className="btn-primary">작성</button>
+      </div>
+      
+      <div className="comment-form-file">
+        <label className="file-attach-btn">
+          📎 파일 첨부
+          <input 
+            type="file" 
+            multiple 
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+        </label>
+        
+        {files.length > 0 && (
+          <div className="comment-file-list">
+            {files.map((file, index) => (
+              <span key={index} className="comment-file-item">
+                {file.name}
+                <button type="button" onClick={() => handleRemoveFile(index)}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     </form>
   );
 }
@@ -469,6 +665,7 @@ function CommentItem({ comment, onReply, onDelete }) {
    const [showReply, setShowReply] = useState(false);
    
    return (
+<<<<<<< HEAD
      <div className="group">
        <div className="flex gap-4">
          <div className="flex-shrink-0">
@@ -545,6 +742,54 @@ function CommentItem({ comment, onReply, onDelete }) {
        {/* 대댓글 렌더링 (재귀) */}
        {comment.replies && comment.replies.length > 0 && (
          <div className="mt-4 ml-14 space-y-6 border-l-2 border-gray-100 pl-6">
+=======
+     <div className="comment-item">
+       <div className="comment-header">
+         <span className="comment-author">{comment.writerNickname}</span>
+         <span className="comment-date">{new Date(comment.createdAt).toLocaleString()}</span>
+       </div>
+       <div className="comment-content" style={{ whiteSpace: 'pre-wrap' }}>
+  {comment.content}
+  
+  {/* 댓글 첨부파일 */}
+  {comment.files && comment.files.length > 0 && (
+    <div className="comment-files">
+      {comment.files.map((file) => (
+        <div key={file.id} className="comment-file">
+          {isImageFile(file.originalFileName) ? (
+            <img 
+              src={fileApi.getDownloadUrl(file.storedFileName)} 
+              alt={file.originalFileName}
+              onClick={() => window.open(fileApi.getDownloadUrl(file.storedFileName), '_blank')}
+            />
+          ) : (
+            <a href={fileApi.getDownloadUrl(file.storedFileName)} download={file.originalFileName}>
+              📎 {file.originalFileName}
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+       
+       {!comment.isDeleted && (
+         <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+           <button onClick={() => setShowReply(!showReply)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:'12px', color:'#555' }}>답글</button>
+           <button onClick={onDelete} style={{ border:'none', background:'none', cursor:'pointer', fontSize:'12px', color:'#ff6b6b' }}>삭제</button>
+         </div>
+       )}
+
+{showReply && (
+  <div style={{ marginTop: '10px', paddingLeft: '20px', borderLeft: '2px solid #ddd' }}>
+     <CommentForm onSubmit={(content, files) => { onReply(content, files); setShowReply(false); }} />
+  </div>
+)}
+
+       {/* 대댓글 렌더링 (재귀) */}
+       {comment.replies && comment.replies.length > 0 && (
+         <div style={{ marginTop: '15px', paddingLeft: '20px', borderLeft: '2px solid #ddd' }}>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
            {comment.replies.map(reply => (
              <CommentItem key={reply.id} comment={reply} onReply={onReply} onDelete={onDelete} />
            ))}

@@ -16,6 +16,7 @@ public class BriefingResponseDTO {
     private String summary;
     private String originalUrl;
     private String date;
+<<<<<<< HEAD
     private String category;
     private String image;
 
@@ -61,3 +62,21 @@ public class BriefingResponseDTO {
         this.image = toProxyImageUrl(image);
     }
 }
+=======
+
+    public BriefingResponseDTO(NewsCluster cluster) {
+        this.id = cluster.getId();
+
+        // ★ 수정된 부분 1: 엔티티 필드명이 clusterTitle 입니다.
+        this.title = cluster.getClusterTitle();
+
+        // ★ 수정된 부분 2: 엔티티 필드명이 clusterSummary 입니다. (summary -> getClusterSummary)
+        this.summary = cluster.getClusterSummary();
+
+        this.originalUrl = cluster.getRepresentativeUrl();
+
+        // 날짜 변환 (Null 방지 처리 살짝 추가하면 더 안전합니다)
+        this.date = (cluster.getCreatedAt() != null) ? cluster.getCreatedAt().toString() : "";
+    }
+}
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163

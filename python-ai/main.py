@@ -1,14 +1,16 @@
 # main.py - AI 챗봇 FastAPI 서버 (링크 누락 수정판)
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from openai import OpenAI
 import os
 import threading # 추가: 스레딩 지원
+<<<<<<< HEAD
 import asyncio
 from contextlib import asynccontextmanager
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 from dotenv import load_dotenv
 import logging
 import base64
@@ -22,10 +24,17 @@ from datetime import datetime
 # 사용자 정의 모듈 임포트
 try:
     from video_worker import run_engine
+<<<<<<< HEAD
     print("[Success] 영상 엔진 로드 완료")
 except Exception as e:
     run_engine = None
     print(f"[Error] 영상 엔진 로드 실패: {e}")
+=======
+    print("🎬 [Success] 영상 엔진 로드 완료")
+except Exception as e:
+    run_engine = None
+    print(f"❌ [Error] 영상 엔진 로드 실패: {e}")
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 except ImportError:
     run_engine = None
 
@@ -36,6 +45,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+<<<<<<< HEAD
 # 검색 서비스 import
 from search_service import SearchService
 
@@ -57,22 +67,21 @@ async def lifespan(app: FastAPI):
     yield
 
 
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 # FastAPI 앱 생성
 app = FastAPI(title="AI Chat & Video API", version="1.0.0")
 
 # CORS 설정 (Spring Boot 및 React 연동 허용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",  # Spring Boot
-        "http://localhost:3000",  # React (CRA)
-        "http://localhost:5173",  # React (Vite)
-    ],
+    allow_origins=["http://localhost:8080", "http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+<<<<<<< HEAD
 # 드라이브 모드 라우터 및 정적 파일
 from drive.router import router as drive_router
 app.include_router(drive_router)
@@ -95,6 +104,11 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # 검색 서비스 초기화
 search_service = SearchService(client)
 
+=======
+# OpenAI 클라이언트 초기화 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 # 서버 시작 시 영상 엔진 자동 가동
 @app.on_event("startup")
 async def startup_event():
@@ -102,13 +116,21 @@ async def startup_event():
         # 영상 제작은 시간이 걸리므로 별도 스레드(Thread)에서 실행
         video_thread = threading.Thread(target=run_engine, daemon=True)
         video_thread.start()
+<<<<<<< HEAD
         logger.info("[System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+=======
+        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 
 # 생존 확인 엔드포인트
 @app.get("/")
 async def root():
     return {
+<<<<<<< HEAD
         "status": "ok",
+=======
+        "status": "ok", 
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         "message": "AI Chat & Video API is running",
         "video_engine": "Active" if run_engine else "Missing"
     }
@@ -574,10 +596,21 @@ def find_matching_user(face_description: str) -> Optional[dict]:
 async def root():
     """서버 상태 확인"""
     return {
+<<<<<<< HEAD
         "status": "ok",
         "message": "AI Chat & Video API is running",
         "video_engine": "Active" if run_engine else "Missing"
     }
+=======
+        "status": "ok", 
+        "message": "AI Chat & Video API is running",
+        "video_engine": "Active" if run_engine else "Missing"
+    }
+
+@app.post("/generate_video")
+async def generate_video(request: VideoGenerationRequest):
+    logger.info(f"🚀 [영상 요청 수신] vno: {request.vno}")
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 
 @app.post("/generate_video")
 async def generate_video(request: VideoGenerationRequest):
@@ -614,7 +647,6 @@ async def health_check():
         "status": "healthy",
         "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
     }
-
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -1004,6 +1036,7 @@ async def get_face_info(user_id: str):
             detail=f"얼굴 정보 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
+<<<<<<< HEAD
     # ===== Q&A 챗봇 엔드포인트 (FAQ 기반) =====
 @app.post("/qa", response_model=QaResponse)
 async def qa_chat(request: QaRequest):
@@ -1247,6 +1280,8 @@ async def get_exchange_rate_by_currency(cur_unit: str):
             detail=f"환율 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 
 # ===== 서버 실행 =====
 if __name__ == "__main__":

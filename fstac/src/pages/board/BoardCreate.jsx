@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import TopBar from '../../layouts/TopBar';
 import { boardApi } from '../../api/boardApi';
+import './BoardPage.css';
 
 function BoardCreate() {
   const navigate = useNavigate();
@@ -44,6 +46,7 @@ function BoardCreate() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-white font-sans pb-20">
       
       {/* 헤더 섹션 */}
@@ -56,9 +59,21 @@ function BoardCreate() {
           >
             취소
           </button>
+=======
+    <div className="board-page-wrapper">
+      <TopBar />
+      
+      <section className="board-hero-section">
+        <div className="board-hero-title">
+          <h1>게시글 작성</h1>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         </div>
-      </div>
+        <div className="board-top-actions">
+           <button className="btn-secondary" onClick={() => navigate('/board')}>취소</button>
+        </div>
+      </section>
 
+<<<<<<< HEAD
       {/* 컨텐츠 섹션 */}
       <div className="max-w-4xl mx-auto px-4 mt-8">
         <div className="bg-white">
@@ -99,24 +114,64 @@ function BoardCreate() {
 
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">제목 <span className="text-red-500">*</span></label>
+=======
+      <section className="board-content-section">
+        <div className="board-detail-container">
+          <form onSubmit={handleCreateBoard}>
+            <div className="form-group">
+              <label>게시판 타입</label>
+              <select
+                value={formData.boardType}
+                onChange={(e) => setFormData({ ...formData, boardType: e.target.value })}
+              >
+                <option value="NORMAL">일반 게시판</option>
+                <option value="DEBATE">토론 게시판</option>
+              </select>
+            </div>
+
+            {formData.boardType === 'DEBATE' && (
+              <div className="form-group">
+                <label>토론 주제</label>
+                <input
+                  type="text"
+                  value={formData.debateTopic}
+                  onChange={(e) => setFormData({ ...formData, debateTopic: e.target.value })}
+                  placeholder="토론 주제를 입력하세요"
+                  required
+                />
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>제목</label>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="제목을 입력하세요"
                 required
+<<<<<<< HEAD
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 text-lg font-medium placeholder-gray-400"
               />
             </div>
 
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">내용 <span className="text-red-500">*</span></label>
+=======
+              />
+            </div>
+
+            <div className="form-group">
+              <label>내용</label>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows="15"
                 placeholder="내용을 입력하세요"
                 required
+<<<<<<< HEAD
                 className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none leading-relaxed"
               />
             </div>
@@ -175,11 +230,33 @@ function BoardCreate() {
                 className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 disabled:bg-gray-400 transition-colors shadow-lg shadow-gray-200"
               >
                 {loading ? '등록 중...' : '게시글 등록'}
+=======
+              />
+            </div>
+
+            <div className="form-group">
+              <label>파일 첨부</label>
+              <input
+                type="file"
+                multiple
+                onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+              />
+              {selectedFiles.length > 0 && (
+                <ul style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                  {selectedFiles.map((file, i) => <li key={i}>{file.name}</li>)}
+                </ul>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
+              <button type="submit" className="btn-primary" disabled={loading}>
+                작성 완료
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
               </button>
             </div>
           </form>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 package com.fullStc.board.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ public class BoardController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
+<<<<<<< HEAD
     public ResponseEntity<BoardPageResponseDTO> getBoards(
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "10") int limit) {
@@ -26,19 +28,37 @@ public class BoardController {
 
     @GetMapping("/type/{boardType}")
     public ResponseEntity<BoardPageResponseDTO> getBoardsByType(
+=======
+    public ResponseEntity<Page<BoardListResponseDTO>> getBoards(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(boardService.getBoards(page, size));
+    }
+
+    @GetMapping("/type/{boardType}")
+    public ResponseEntity<Page<BoardListResponseDTO>> getBoardsByType(
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             @PathVariable String boardType,
-            @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(boardService.getBoardsByType(boardType, offset, limit));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(boardService.getBoardsByType(boardType, page, size));
     }
 
     @GetMapping("/search")
+<<<<<<< HEAD
     public ResponseEntity<BoardPageResponseDTO> searchBoards(
             @RequestParam String keyword,
             @RequestParam(required = false, defaultValue = "TITLE_CONTENT") String searchType,
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(boardService.searchBoards(keyword, searchType, offset, limit));
+=======
+    public ResponseEntity<Page<BoardListResponseDTO>> searchBoards(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(boardService.searchBoards(keyword, page, size));
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     }
 
     @GetMapping("/{boardId}")

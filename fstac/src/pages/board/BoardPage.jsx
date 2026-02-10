@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { boardApi } from '../../api/boardApi';
+import TopBar from '../../layouts/TopBar';
+import { boardApi, fileApi } from '../../api/boardApi';
+import './BoardPage.css';
 
 function BoardPage() {
   const navigate = useNavigate();
-  
-  // 상태 관리
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -35,11 +36,22 @@ function BoardPage() {
 
   // 게시글 데이터 조회
   const fetchBoards = useCallback(async (page = 1) => {
+=======
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [boardType, setBoardType] = useState('ALL');
+
+  // 게시글 목록 조회
+  const fetchBoards = async (pageNum = 0) => {
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     setLoading(true);
     try {
       const offset = (page - 1) * limit;
       let response;
+      
       if (boardType !== 'ALL') {
+<<<<<<< HEAD
         response = await boardApi.getBoardsByType(boardType, offset, limit);
       } else if (searchKeyword) {
         response = await boardApi.searchBoards(searchKeyword, searchType, offset, limit);
@@ -62,11 +74,26 @@ function BoardPage() {
         setTotalCount(estimatedTotal);
         setTotalPages(Math.ceil(estimatedTotal / limit));
       }
+=======
+        response = await boardApi.getBoardsByType(boardType, pageNum, 10);
+      } else if (searchKeyword) {
+        response = await boardApi.searchBoards(searchKeyword, pageNum, 10);
+      } else {
+        response = await boardApi.getBoards(pageNum, 10);
+      }
+
+      const data = await response.json();
+      setBoards(data.content || []);
+      setTotalPages(data.totalPages || 0);
+      setPage(data.number || 0);
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     } catch (error) {
       console.error('게시글 목록 조회 실패:', error);
+      alert('게시글 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   }, [boardType, searchKeyword, searchType, limit]);
 
   // 인기글 조회 (별도로 조회)
@@ -103,9 +130,16 @@ function BoardPage() {
   const handleSearch = () => {
     setSearchKeyword(tempSearchKeyword);
     setCurrentPage(1);
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
   };
 
+  useEffect(() => {
+    fetchBoards();
+  }, [boardType]);
+
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-white font-sans pb-20">
       
       {/* 1. 헤더 섹션 (고객센터 스타일) */}
@@ -155,9 +189,25 @@ function BoardPage() {
               </div>
             </div>
           </div>
+=======
+    <div className="board-page-wrapper">
+      <TopBar />
+      
+      {/* 헤더 섹션 */}
+      <section className="board-hero-section">
+        <div className="board-hero-title">
+          <h1>커뮤니티 게시판</h1>
+          <p>자유롭게 의견을 나누고 정보를 공유하는 공간입니다.</p>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         </div>
-      </div>
+        <div className="board-top-actions">
+          <button className="btn-primary" onClick={() => navigate('/board/create')}>
+            글쓰기
+          </button>
+        </div>
+      </section>
 
+<<<<<<< HEAD
       {/* 2. 메인 컨텐츠 */}
       <div className="max-w-7xl mx-auto px-4 mt-12 flex flex-col lg:flex-row gap-10">
         
@@ -428,6 +478,85 @@ function BoardPage() {
           <div className="h-8"></div>
         </main>
       </div>
+=======
+      {/* 컨텐츠 섹션 */}
+      <section className="board-content-section">
+        {/* 필터 및 검색 */}
+        <div className="board-filters">
+          <select value={boardType} onChange={(e) => {
+            setBoardType(e.target.value);
+            setSearchKeyword('');
+          }}>
+            <option value="ALL">전체 보기</option>
+            <option value="NORMAL">일반 게시판</option>
+            <option value="DEBATE">토론 게시판</option>
+          </select>
+          <input
+            type="text"
+            placeholder="관심있는 내용을 검색해보세요..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && fetchBoards(0)}
+          />
+          <button className="btn-primary" onClick={() => fetchBoards(0)}>검색</button>
+        </div>
+
+        {/* 게시글 리스트 */}
+        {loading ? (
+          <div className="loading">데이터를 불러오고 있습니다...</div>
+        ) : (
+          <>
+            <div className="board-list">
+              {boards.length === 0 ? (
+                <div className="empty-state">등록된 게시글이 없습니다.</div>
+              ) : (
+                boards.map((board) => (
+                  <div key={board.id} className="board-item" onClick={() => navigate(`/board/${board.id}`)}>
+                    <div className="board-item-content">
+                      {board.thumbnailUrl && (
+                        <div className="board-item-thumbnail">
+                          <img 
+                            src={fileApi.getThumbnailUrl(board.thumbnailUrl)} 
+                            alt="썸네일" 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                      <div className="board-item-info">
+                        <div className="board-item-header">
+                          <span className="board-type">{board.boardType === 'DEBATE' ? '토론' : '일반'}</span>
+                          <h3 className="board-title">{board.title}</h3>
+                        </div>
+                        <div className="board-item-meta">
+                          <span>작성자: {board.writerNickname}</span>
+                          <span>조회수 {board.viewCount}</span>
+                          <span>좋아요 {board.likeCount}</span>
+                          <span>댓글 {board.commentCount}</span>
+                          <span>{new Date(board.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 페이지네이션 */}
+            <div className="pagination">
+              <button disabled={page === 0} onClick={() => fetchBoards(page - 1)}>
+                이전
+              </button>
+              <span style={{ display:'flex', alignItems:'center', fontWeight:'bold', color:'#333' }}>
+                {page + 1} / {totalPages || 1}
+              </span>
+              <button disabled={page >= totalPages - 1} onClick={() => fetchBoards(page + 1)}>
+                다음
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     </div>
   );
 }

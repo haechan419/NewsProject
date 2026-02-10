@@ -36,10 +36,14 @@ out/
 ### VS Code ###
 .vscode/
 
-### Upload Files ###
-upload/
-!upload/.gitkeep
+### Environment Variables ###
+.env
+.env.local
+.env.*.local
+application-local.properties
 
-### Log Files ###
-logs/
-*.log
+### Application Properties (민감한 정보 포함) ###
+application.properties
+**/application.properties
+src/main/resources/application.properties
+src/test/resources/application.properties

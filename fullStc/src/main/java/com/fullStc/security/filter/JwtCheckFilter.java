@@ -30,6 +30,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        
         // Preflight 요청은 체크하지 않음
         if (request.getMethod().equals("OPTIONS")) {
             return true;
@@ -37,7 +38,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
 
         // 경로 변수 선언을 가장 먼저 수행
         String path = request.getRequestURI();
-        log.info("check uri.......................{}", path);
+    log.info("check uri.......................{}", path);
 
     // 1. 기존에 추가했던 AI 관련 경로
     if (path.startsWith("/api/ai/mypage/") || path.startsWith("/api/ai/video/")) {
@@ -49,7 +50,11 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         log.info("정적 리소스(/upload/) 경로이므로 JwtCheckFilter를 통과시킵니다.");
         return true;
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         // 예외 경로 설정 (토큰 검사 건너뛰기)
 
         // 관리자 관련 API (테스트용)
@@ -79,11 +84,14 @@ public class JwtCheckFilter extends OncePerRequestFilter {
             return true;
         }
 
+<<<<<<< HEAD
         // AI 관련 API는 체크하지 않음 (채팅, 얼굴 인식 등)
         if (path.startsWith("/api/ai/")) {
             return true;
         }
 
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         // OAuth2 경로는 체크하지 않음 (OAuth2 인증 플로우)
         if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
             return true;
@@ -95,10 +103,10 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         }
 
         // Swagger UI 경로는 체크하지 않음
-        if (path.startsWith("/swagger-ui/")
-                || path.startsWith("/v3/api-docs") // /v3/api-docs 또는 /v3/api-docs/ 모두 포함
-                || path.equals("/swagger-ui.html")
-                || path.equals("/v3/api-docs")) { // 정확히 /v3/api-docs인 경우도 추가
+        if (path.startsWith("/swagger-ui/") 
+            || path.startsWith("/v3/api-docs")  // /v3/api-docs 또는 /v3/api-docs/ 모두 포함
+            || path.equals("/swagger-ui.html")
+            || path.equals("/v3/api-docs")) {  // 정확히 /v3/api-docs인 경우도 추가
             return true;
         }
 
@@ -119,7 +127,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         try {
             // 토큰 추출
             String accessToken = extractAccessToken(request);
-
+            
             // 토큰 검증 및 인증 설정
             validateAndSetAuthentication(accessToken);
 
@@ -147,21 +155,15 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         // 2. 쿠키에서 토큰 읽기 (우선순위 2)
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
-            log.debug("요청된 쿠키 개수: {}", cookies.length);
             for (Cookie cookie : cookies) {
-                log.debug("쿠키 이름: {}, 값 길이: {}", cookie.getName(),
-                        cookie.getValue() != null ? cookie.getValue().length() : 0);
                 if ("accessToken".equals(cookie.getName())) {
                     log.info("토큰을 쿠키에서 읽었습니다");
                     return cookie.getValue();
                 }
             }
-        } else {
-            log.debug("요청에 쿠키가 없습니다");
         }
 
         log.warn("Authorization header와 쿠키 모두에서 토큰을 찾을 수 없습니다");
-        log.warn("요청 URI: {}, 메서드: {}", request.getRequestURI(), request.getMethod());
         throw new IllegalArgumentException("Authorization header or cookie is missing");
     }
 
@@ -172,13 +174,13 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         }
 
         log.info("토큰 검증 시작: token length={}", accessToken.length());
-
+        
         // 토큰 만료 여부 먼저 확인
         if (jwtUtil.isTokenExpired(accessToken)) {
             log.warn("토큰이 만료되었습니다");
             throw new IllegalArgumentException("Token expired");
         }
-
+        
         // Claims 추출 및 검증
         Map<String, Object> claims = jwtUtil.validateTokenAndGetClaims(accessToken);
         log.info("JWT claims: {}", claims);
@@ -191,19 +193,19 @@ public class JwtCheckFilter extends OncePerRequestFilter {
     // Claims에서 MemberDTO 생성
     private MemberDTO createMemberDTOFromClaims(Map<String, Object> claims) {
         Long id = extractUserIdFromClaims(claims);
-
+        
         String email = (String) claims.get("email");
         String nickname = (String) claims.get("nickname");
         String provider = (String) claims.get("provider");
         if (provider == null) {
             provider = "local";
         }
-
+        
         Boolean enabled = (Boolean) claims.get("enabled");
         if (enabled == null) {
             enabled = true;
         }
-
+        
         @SuppressWarnings("unchecked")
         List<String> roleNames = (List<String>) claims.get("roleNames");
         if (roleNames == null) {
@@ -275,7 +277,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
     private void handleJwtException(HttpServletRequest request, HttpServletResponse response, Exception e) {
         log.error("JWT 검증 실패: {}", e.getMessage());
         log.error("요청 경로: {}", request.getRequestURI());
-
+        
         if (e instanceof IllegalArgumentException) {
             log.error("IllegalArgumentException 발생");
         } else {
@@ -284,8 +286,9 @@ public class JwtCheckFilter extends OncePerRequestFilter {
 
         String errorMessage = getErrorMessage(e);
         String msg = new Gson().toJson(Map.of(
-                "error", "ERROR_ACCESS_TOKEN",
-                "message", errorMessage));
+            "error", "ERROR_ACCESS_TOKEN",
+            "message", errorMessage
+        ));
 
         try {
             response.setContentType("application/json;charset=UTF-8");
@@ -304,7 +307,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         if (message == null) {
             return "토큰 검증 중 오류가 발생했습니다";
         }
-
+        
         if (message.contains("expired")) {
             return "토큰이 만료되었습니다";
         } else if (message.contains("missing") || message.contains("invalid")) {
@@ -312,7 +315,7 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         } else if (message.contains("empty")) {
             return "토큰이 비어있습니다";
         }
-
+        
         return "토큰 검증 중 오류가 발생했습니다: " + message;
     }
 }

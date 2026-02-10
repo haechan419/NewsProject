@@ -15,7 +15,6 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class RepresentativeSummaryService {
 
     private final NewsRepository newsRepository;
@@ -27,8 +26,7 @@ public class RepresentativeSummaryService {
 
     @Transactional
     public int generateRepresentativeSummariesForClusterIds(List<Long> clusterIds, int limit) {
-        if (clusterIds == null || clusterIds.isEmpty())
-            return 0;
+        if (clusterIds == null || clusterIds.isEmpty()) return 0;
 
         List<NewsCluster> clusters = newsClusterRepository.findAllById(clusterIds);
 
@@ -68,8 +66,12 @@ public class RepresentativeSummaryService {
                             cluster.getId(),
                             bestUrl,
                             aiTitle,
+<<<<<<< HEAD
                             aiSummary,
                             dynamicImageUrl // ★ 여기에 이미지 URL 추가
+=======
+                            aiSummary
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
                     );
 
                     log.info("🎉 [SUMMARY] Cluster ID={} 완료! (이미지 포함)", cluster.getId());
@@ -92,9 +94,9 @@ public class RepresentativeSummaryService {
         if (firstNewLine > 0) {
             String title = clean.substring(0, firstNewLine).replaceAll("^[\"']|[\"']$", "").replaceAll("^[-*]\\s*", "").trim();
             String summary = clean.substring(firstNewLine).trim();
-            return new String[] { title, summary };
+            return new String[]{title, summary};
         } else {
-            return new String[] { "AI 자동 생성 제목", clean };
+            return new String[]{"AI 자동 생성 제목", clean};
         }
     }
 }

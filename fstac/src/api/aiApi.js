@@ -19,7 +19,7 @@ export const sendChatMessage = async (message, conversationHistory = []) => {
       message,
       conversationHistory
     });
-
+    
     return response.data.data;
   } catch (error) {
     console.error('AI 채팅 API 에러:', error);

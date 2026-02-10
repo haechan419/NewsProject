@@ -1,174 +1,148 @@
 /* TopBar.css */
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
-
 .top-bar-container {
   width: 100%;
-  height: 80px;
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background-color: #f5f5f5; /* 연한 회색 배경 */
+  border-bottom: 1px solid #ddd;
+}
+
+.upper-bar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
-  box-sizing: border-box;
-  font-family: 'Pretendard', sans-serif;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  align-items: center;
+  padding: 10px 40px;
+  position: relative;
 }
 
-/* MainPage에서 배너 위에 오버레이되는 스타일 */
-.top-bar-container.top-bar-overlay {
-  position: absolute;
-  background-color: rgba(31, 41, 55, 0.85);
-}
-
-/* 1. 로고 영역 */
 .logo-area {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  /* 로고 영역이 고정된 크기를 갖지 않도록 설정 */
-  flex-shrink: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* 중앙 정렬 */
+  text-align: center;
 }
 
-.logo-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #F4F0F7;
-  color: #1E1E2D;
-  font-size: 19px;
-  padding: 10px 20px;
-  border-radius: 2px;
-  letter-spacing: -0.2px;
-}
-
-.logo-box span { font-weight: 300; }
-.logo-box strong { font-weight: 700; margin-left: 5px; }
-
-/* 2. 중앙 메뉴 (왼쪽으로 이동) */
-.nav-bar {
-  flex: 1; /* 남은 공간을 차지하여 우측 메뉴를 끝으로 밀어냄 */
-  display: flex;
-
-  /* [수정 포인트] 중앙 정렬(center) -> 왼쪽 정렬(flex-start) */
-  justify-content: flex-start;
-
-  /* [수정 포인트] 로고와의 간격 조정 (원하시는 만큼 숫자를 조절하세요) */
-  margin-left: 80px;
-}
-
-.nav-bar ul {
-  display: flex;
-  list-style: none;
+.logo-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #5d87c9; /* 로고 파란색 톤 */
   margin: 0;
-  padding: 0;
-  gap: 60px; /* 메뉴 글자 사이 간격 */
+  line-height: 1;
 }
 
-.nav-bar li {
-  font-size: 17px;
-  color: #111;
-  cursor: pointer;
-  font-weight: 300; /* 기본 Light */
-  transition: all 0.2s ease;
-  white-space: nowrap; /* 줄바꿈 방지 */
+.logo-highlight {
+  color: #5d87c9;
 }
 
-.top-bar-overlay .nav-bar li {
-  color: #fff;
-}
-
-.nav-bar li:hover {
-  font-weight: 400; /* 호버 시 Regular */
-  transform: scale(1.02);
-}
-
-/* 3. 오른쪽 유틸 메뉴 */
 .user-menu {
+  margin-left: auto; /* 오른쪽 끝으로 밀기 */
   display: flex;
   align-items: center;
-  gap: 32px;
-  flex-shrink: 0; /* 화면이 줄어들어도 찌그러지지 않음 */
+  gap: 15px;
+  font-size: 12px;
+  color: #333;
 }
 
-.text-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #111;
-  cursor: pointer;
-  padding: 0;
-  font-family: 'Pretendard', sans-serif;
-  font-weight: 300;
-  transition: font-weight 0.2s;
-  white-space: nowrap;
+.user-menu a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
 }
 
-.top-bar-overlay .text-btn {
-  color: #fff;
-}
-
-.text-btn:hover {
-  font-weight: 400;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
+.user-icon-link {
+  text-decoration: none;
   display: flex;
   align-items: center;
+  transition: opacity 0.2s;
+}
+
+.user-icon-link:hover {
+  opacity: 0.7;
+}
+
+.user-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  display: flex;
   justify-content: center;
-  color: #000;
-  transition: transform 0.2s;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.top-bar-overlay .icon-btn {
-  color: #fff;
+.user-icon:hover {
+  border-color: #5d87c9;
+  background-color: #f0f4f8;
 }
 
-.icon-btn:hover {
-  transform: scale(1.1);
+.user-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
-/* 드롭다운 스타일 */
 .user-icon-container {
   position: relative;
 }
 
 .dropdown-menu {
   position: absolute;
-  top: 50px;
-  right: -10px;
+  top: calc(100% + 8px);
+  right: 0;
   background-color: #fff;
-  border: 1px solid #eee;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-  width: 150px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 150px;
+  z-index: 1000;
   overflow: hidden;
-  padding: 8px 0;
-  z-index: 100;
-  font-weight: 300;
 }
 
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 10px 16px;
-  font-size: 14px;
-  color: #333;
+  padding: 12px 16px;
   text-decoration: none;
-  border: none;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
   background: none;
+  border: none;
   text-align: left;
   cursor: pointer;
-  font-family: 'Pretendard', sans-serif;
+  transition: background-color 0.2s;
 }
 
 .dropdown-item:hover {
-  background-color: #f8f9fa;
+  background-color: #f5f5f5;
+}
+
+.dropdown-item:not(:last-child) {
+  border-bottom: 1px solid #eee;
+}
+
+/* 내비게이션 바 */
+/* .nav-bar {
+  border-top: 1px solid #e0e0e0;
+} */
+
+.nav-bar ul {
+  display: flex;
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 15px 0;
+  gap: 60px; /* 메뉴 간격 */
+}
+
+.nav-bar li {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  position: relative;
+}
+
+.nav-bar li:hover {
+  color: #000;
+  text-decoration: underline;
 }

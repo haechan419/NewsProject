@@ -9,9 +9,12 @@ public interface ScrapRepository extends JpaRepository<Scrap, Long> {
     // 사용자가 찜한 뉴스 목록 (news.id 해시값 기준)
     List<Scrap> findByMemberId(Long memberId);
 
+<<<<<<< HEAD
     // 최근 스크랩 순 정렬 (스크랩 탭 카드 목록용)
     List<Scrap> findByMemberIdOrderByRegDateDesc(Long memberId);
 
+=======
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     // 이미 스크랩한 기사인지 확인 (중복 방지)
     Optional<Scrap> findByMemberIdAndNewsId(Long memberId, String newsId);
 }

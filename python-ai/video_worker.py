@@ -7,6 +7,7 @@ from moviepy.config import change_settings
 from moviepy.editor import *
 from moviepy.audio.AudioClip import AudioClip 
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
+<<<<<<< HEAD
 from dotenv import load_dotenv
 import media_tools 
 import openai
@@ -57,12 +58,37 @@ def get_storyboard_from_ai(news_text):
 
     출력 형식: 오직 JSON [ {"text": "...", "keyword": "...", "type": "video"} ]
     """
+=======
+import media_tools 
+import openai
+
+# [1. 설정]
+IMAGEMAGICK_BINARY = r"D:\ImageMagick-7.1.2-Q16-HDRI\magick.exe"
+change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_BINARY})
+
+DB_CONFIG = {
+    'host': 'localhost', 
+    'user': 'root', 
+    'password': '1234', 
+    'database': 'newsdb'
+}
+
+OUTPUT_DIR = r"D:\1teamnews\fullStc\upload\videos"
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
+
+# [2. AI 스토리보드 생성]
+def get_storyboard_from_ai(news_text):
+    print("🤖 [AI Director] 맥락 인지형 스크립트 구성 중...")
+    system_prompt = "너는 '30초 뉴스' 편집자야. 형식: JSON [ {'text': '...', 'keyword': '...', 'type': 'video'} ] 만 출력해."
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": news_text}]
         )
         content = response.choices[0].message.content.strip()
+<<<<<<< HEAD
         content = content.replace("```json", "").replace("```", "").strip()
         match = re.search(r'\[.*\]', content, re.DOTALL)
         return json.loads(match.group()) if match else None
@@ -73,6 +99,15 @@ def get_storyboard_from_ai(news_text):
 # ------------------------------------------------------------------------------
 # [3. 장면 제작 로직 (사용자 원본 유지)]
 # ------------------------------------------------------------------------------
+=======
+        match = re.search(r'\[.*\]', content.replace("```json", "").replace("```", ""), re.DOTALL)
+        return json.loads(match.group()) if match else None
+    except Exception as e:
+        print(f"⚠️ AI 분석 오류 (API키/잔액 확인 필요): {e}")
+        return None
+
+# [3. 보조 함수들]
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 def split_text_natural(text, min_len=8, max_len=18):
     words = text.split(' ')
     chunks, current_chunk, current_len = [], [], 0
@@ -84,6 +119,7 @@ def split_text_natural(text, min_len=8, max_len=18):
     if current_chunk: chunks.append(' '.join(current_chunk))
     return chunks
 
+<<<<<<< HEAD
 def get_compatible_silence(duration, reference_clip):
     fps, nchannels = reference_clip.fps, reference_clip.nchannels
     make_frame = lambda t: [0]*nchannels if nchannels > 1 else 0
@@ -157,10 +193,56 @@ def run_engine():
     print("[Engine] 뉴스 영상 제작 일꾼이 출근했습니다! (newsdb 감시 중)")
     while True:
         conn = None
+=======
+def make_scene_clip(text, keyword, media_type, index, video_mode="16:9"):
+    is_portrait = (video_mode == "9:16")
+    target_w, target_h = (720, 1280) if is_portrait else (1280, 720)
+    audio_path = os.path.abspath(f"temp_audio_{index}.mp3")
+    media_path_img = os.path.abspath(f"temp_media_{index}.jpg")
+    media_path_vid = os.path.abspath(f"temp_media_{index}.mp4")
+    temp_files = [audio_path]
+
+    if not media_tools.create_tts(text, audio_path): return None, []
+    
+    tts_clip = AudioFileClip(audio_path)
+    duration = tts_clip.duration + 0.6
+    
+    visual_clip = None
+    if media_type == 'image' and media_tools.generate_free_image(keyword, media_path_img, is_portrait):
+        visual_clip = ImageClip(media_path_img).set_duration(duration)
+        temp_files.append(media_path_img)
+    elif media_tools.download_pexels_video(keyword, media_path_vid, is_portrait):
+        visual_clip = VideoFileClip(media_path_vid)
+        temp_files.append(media_path_vid)
+    
+    if visual_clip is None:
+        visual_clip = ColorClip(size=(target_w, target_h), color=(30, 30, 30)).set_duration(duration)
+
+    visual_clip = visual_clip.resize(newsize=(target_w, target_h))
+    if hasattr(visual_clip, 'duration') and visual_clip.duration < duration:
+        visual_clip = vfx.loop(visual_clip, duration=duration)
+    else:
+        visual_clip = visual_clip.subclip(0, duration)
+
+    return visual_clip.set_audio(tts_clip), temp_files
+
+# [4. 메인 엔진 루프]
+def run_engine():
+    print("🚀 [Engine] 뉴스 영상 제작 엔진 가동 시작!")
+    while True:
+        # ★ 중요: 모든 주요 변수를 루프 시작 시 None으로 초기화 (NameError 방지)
+        conn = None
+        task = None
+        final_video = None
+        final_clips = []
+        all_temps = []
+
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         try:
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
             
+<<<<<<< HEAD
             # PENDING 상태인 작업 1개 가져오기
             cursor.execute("""
     SELECT * FROM tbl_video_task 
@@ -168,10 +250,18 @@ def run_engine():
     AND regdate > NOW() - INTERVAL 15 MINUTE
     ORDER BY vno ASC LIMIT 1
 """)
+=======
+            cursor.execute("""
+                SELECT * FROM tbl_video_task 
+                WHERE status = 'PENDING' 
+                ORDER BY vno ASC LIMIT 1
+            """)
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
             task = cursor.fetchone()
 
             if task:
                 vno = task['vno']
+<<<<<<< HEAD
                 print(f"[Job {vno}] 제작을 시작합니다. (유형: {task['task_type']})")
                 
                 cursor.execute("UPDATE tbl_video_task SET status = 'PROCESSING' WHERE vno = %s", (vno,))
@@ -220,6 +310,61 @@ def run_engine():
             if conn: conn.close()
         
         time.sleep(10) # 10초마다 DB 확인
+=======
+                print(f"🎬 [Job {vno}] 제작을 시작합니다.")
+
+                # AI 분석 수행
+                story_board = get_storyboard_from_ai(task['raw_text'])
+                
+                # AI 분석 실패 시 (API키 오류 등)
+                if not story_board:
+                    print(f"❌ [Job {vno}] AI 분석 실패. 작업을 중단합니다.")
+                    cursor.execute("UPDATE tbl_video_task SET status = 'FAILED' WHERE vno = %s", (vno,))
+                    conn.commit()
+                    continue
+
+                v_mode = task.get('video_mode', '9:16')
+                for i, scene in enumerate(story_board):
+                    clip, files = make_scene_clip(scene['text'], scene['keyword'], scene['type'], i, v_mode)
+                    if clip:
+                        final_clips.append(clip)
+                        all_temps.extend(files)
+
+                if final_clips:
+                    file_name = f"result_vno_{vno}.mp4"
+                    save_path = os.path.join(OUTPUT_DIR, file_name)
+                    
+                    final_video = concatenate_videoclips(final_clips, method="compose")
+                    final_video.write_videofile(save_path, fps=24, codec='libx264', audio_codec='libmp3lame', threads=4)
+                    
+                    cursor.execute("UPDATE tbl_video_task SET status = 'COMPLETED', video_url=%s WHERE vno = %s", (file_name, vno))
+                    conn.commit()
+                    print(f"✅ [Job {vno}] 제작 완료!")
+
+            cursor.close()
+        except Exception as e:
+            # task 변수가 정의된 경우에만 작업 번호 출력
+            vno_str = f"Job {task['vno']}" if task else "Unknown Job"
+            print(f"❌ [Error] {vno_str} 엔진 작동 중 에러 발생: {e}")
+        finally: 
+            # ★ 자원 해제 안전장치 (정의 여부 확인 후 닫기)
+            if final_video: 
+                try: final_video.close()
+                except: pass
+            for c in final_clips: 
+                try: c.close()
+                except: pass
+            if conn and conn.is_connected(): 
+                conn.close()
+            
+            # 임시 파일 삭제
+            for f in all_temps:
+                if f and os.path.exists(f):
+                    try: os.remove(f)
+                    except: pass
+        
+        time.sleep(10)
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
 
 if __name__ == "__main__":
     run_engine()

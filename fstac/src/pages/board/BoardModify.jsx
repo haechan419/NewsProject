@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import TopBar from '../../layouts/TopBar';
 import { boardApi, fileApi } from '../../api/boardApi';
+import './BoardPage.css';
 
 function BoardModify() {
   const navigate = useNavigate();
@@ -93,6 +95,7 @@ function BoardModify() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-white font-sans pb-20">
       
       {/* 헤더 섹션 */}
@@ -105,31 +108,59 @@ function BoardModify() {
           >
             취소
           </button>
+=======
+    <div className="board-page-wrapper">
+      <TopBar />
+      
+      <section className="board-hero-section">
+        <div className="board-hero-title">
+          <h1>게시글 수정</h1>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
         </div>
-      </div>
+        <div className="board-top-actions">
+          <button className="btn-secondary" onClick={() => navigate(`/board/${id}`)}>취소</button>
+        </div>
+      </section>
 
+<<<<<<< HEAD
       {/* 컨텐츠 섹션 */}
       <div className="max-w-4xl mx-auto px-4 mt-8">
         <div className="bg-white">
           <form onSubmit={handleUpdateBoard} className="space-y-8">
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">제목</label>
+=======
+      <section className="board-content-section">
+        <div className="board-detail-container">
+          <form onSubmit={handleUpdateBoard}>
+            <div className="form-group">
+              <label>제목</label>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
+<<<<<<< HEAD
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 text-lg font-medium"
               />
             </div>
 
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">내용</label>
+=======
+              />
+            </div>
+
+            <div className="form-group">
+              <label>내용</label>
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows="15"
                 required
+<<<<<<< HEAD
                 className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none leading-relaxed"
               />
             </div>
@@ -226,11 +257,79 @@ function BoardModify() {
                 className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 disabled:bg-gray-400 transition-colors shadow-lg shadow-gray-200"
               >
                 {loading ? '수정 중...' : '수정 완료'}
+=======
+              />
+              {/* 기존 파일 목록 */}
+{existingFiles.length > 0 && (
+  <div className="form-group">
+    <label>기존 첨부파일</label>
+    <div className="existing-files-list">
+      {existingFiles.map((file, index) => (
+        <div key={file.id} className="existing-file-item">
+          {isImageFile(file.originalFileName) ? (
+            <img 
+              src={fileApi.getDownloadUrl(file.storedFileName)} 
+              alt={file.originalFileName}
+              className="file-thumbnail"
+            />
+          ) : (
+            <span className="file-icon">📎</span>
+          )}
+          <span className="file-name">
+            {index === 0 && isImageFile(file.originalFileName) && (
+              <span className="thumbnail-badge">썸네일</span>
+            )}
+            {file.originalFileName}
+          </span>
+          <button 
+            type="button" 
+            className="btn-delete-file"
+            onClick={() => handleDeleteExistingFile(file.id)}
+          >
+            삭제
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{/* 새 파일 추가 */}
+<div className="form-group">
+  <label>파일 추가</label>
+  <input
+    type="file"
+    multiple
+    onChange={handleAddFiles}
+  />
+  {newFiles.length > 0 && (
+    <div className="new-files-list">
+      {newFiles.map((file, index) => (
+        <div key={index} className="new-file-item">
+          <span>{file.name}</span>
+          <button 
+            type="button"
+            className="btn-delete-file"
+            onClick={() => handleDeleteNewFile(index)}
+          >
+            삭제
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
+              <button type="submit" className="btn-primary" disabled={loading}>
+                수정 완료
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
               </button>
             </div>
           </form>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 package com.fullStc.board.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,7 +20,6 @@ import com.fullStc.member.repository.MemberRepository;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 /**
@@ -62,6 +64,7 @@ public class BoardService {
 
     /**
      * 게시글 목록 조회 (전체)
+<<<<<<< HEAD
      * @param offset 시작 위치
      * @param limit 조회할 개수
      * @return 페이징 정보를 포함한 게시글 목록
@@ -85,11 +88,22 @@ public class BoardService {
                 .hasNext(currentPage < totalPages)
                 .hasPrevious(currentPage > 1)
                 .build();
+=======
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 게시글 목록 응답 페이지
+     */
+    public Page<BoardListResponseDTO> getBoards(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return boardRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable)
+                .map(BoardListResponseDTO::from);
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     }
 
     /**
      * 게시글 목록 조회 (타입별)
      * @param boardType 게시판 타입 (NORMAL 또는 DEBATE)
+<<<<<<< HEAD
      * @param offset 시작 위치
      * @param limit 조회할 개수
      * @return 페이징 정보를 포함한 게시글 목록
@@ -113,11 +127,23 @@ public class BoardService {
                 .hasNext(currentPage < totalPages)
                 .hasPrevious(currentPage > 1)
                 .build();
+=======
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 게시글 목록 응답 페이지
+     */
+    public Page<BoardListResponseDTO> getBoardsByType(String boardType, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Board.BoardType type = Board.BoardType.valueOf(boardType.toUpperCase());
+        return boardRepository.findByBoardTypeAndIsDeletedFalseOrderByCreatedAtDesc(type, pageable)
+                .map(BoardListResponseDTO::from);
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     }
 
     /**
      * 게시글 검색
      * @param keyword 검색 키워드
+<<<<<<< HEAD
      * @param searchType 검색 타입 (TITLE: 제목만, TITLE_CONTENT: 제목+내용, WRITER: 작성자)
      * @param offset 시작 위치
      * @param limit 조회할 개수
@@ -161,6 +187,16 @@ public class BoardService {
                 .hasNext(currentPage < totalPages)
                 .hasPrevious(currentPage > 1)
                 .build();
+=======
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 검색된 게시글 목록 응답 페이지
+     */
+    public Page<BoardListResponseDTO> searchBoards(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return boardRepository.searchByKeyword(keyword, pageable)
+                .map(BoardListResponseDTO::from);
+>>>>>>> a946f6f6b18974710cc396ee87547a607e4cf163
     }
 
     /**
