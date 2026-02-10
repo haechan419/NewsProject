@@ -440,36 +440,31 @@ public class DriveModeServiceImpl implements DriveModeService {
                     .build();
         }
         
-        // 현재 뉴스 목록의 clusterKey 목록 (정렬) - null 제외
+        // 기사가 업데이트됐는지 구분: 현재 목록의 clusterKey 집합이 최근 히스토리와 같으면 "같은 기사" → 캐시 재사용
         List<String> currentClusterKeys = newsList.stream()
                 .map(NewsItemDto::getClusterKey)
-                .filter(key -> key != null && !key.isEmpty())  // null 및 빈 문자열 제외
+                .filter(key -> key != null && !key.isEmpty())
                 .sorted()
                 .collect(Collectors.toList());
         
-        // 최근 1시간 내 같은 플레이리스트의 히스토리 조회
         LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
         List<DriveHistory> recentHistories = driveHistoryRepository.findByUserIdAndPlaylistIdAndCreatedAtAfter(
                 userId, playlistId, oneHourAgo);
         
-        // 같은 뉴스 목록인 히스토리 찾기 (clusterKey로 비교)
         Optional<DriveHistory> duplicateHistory = recentHistories.stream()
                 .filter(h -> {
+                    if (h.getNewsList() == null || h.getNewsList().isEmpty()) return false;
                     try {
-                        if (h.getNewsList() == null || h.getNewsList().isEmpty()) {
-                            return false;
-                        }
                         List<NewsItemDto> historyNewsList = objectMapper.readValue(
-                                h.getNewsList(),
-                                new TypeReference<List<NewsItemDto>>() {});
+                                h.getNewsList(), new TypeReference<List<NewsItemDto>>() {});
                         List<String> historyClusterKeys = historyNewsList.stream()
                                 .map(NewsItemDto::getClusterKey)
-                                .filter(key -> key != null && !key.isEmpty())  // null 및 빈 문자열 제외
+                                .filter(key -> key != null && !key.isEmpty())
                                 .sorted()
                                 .collect(Collectors.toList());
                         return currentClusterKeys.equals(historyClusterKeys);
                     } catch (Exception e) {
-                        log.warn("히스토리 뉴스 목록 파싱 실패: historyId={}, error={}", h.getHistoryId(), e.getMessage());
+                        log.warn("히스토리 newsList 파싱 실패: historyId={}, error={}", h.getHistoryId(), e.getMessage());
                         return false;
                     }
                 })
@@ -478,19 +473,26 @@ public class DriveModeServiceImpl implements DriveModeService {
         Long historyId;
         boolean isDuplicate = false;
         String message = null;
+        List<NewsItemDto> newsListToReturn = newsList;
         
         if (duplicateHistory.isPresent()) {
-            // 같은 뉴스 목록이면 기존 히스토리 재사용
-            historyId = duplicateHistory.get().getHistoryId();
+            // 같은 기사 목록 → 캐시 재사용. 화면에는 해당 히스토리에 저장된 기사 목록을 반환해 오디오와 일치시킴
+            DriveHistory dup = duplicateHistory.get();
+            historyId = dup.getHistoryId();
             isDuplicate = true;
             message = "뉴스가 아직 업데이트되지 않았습니다. 이전 플레이리스트를 재생합니다.";
-            log.info("[selectPlaylist] 같은 뉴스 목록 발견: userId={}, playlistId={}, historyId={}", 
-                    userId, playlistId, historyId);
+            log.info("[selectPlaylist] 같은 기사 목록으로 캐시 재사용: userId={}, playlistId={}, historyId={}", userId, playlistId, historyId);
+            if (dup.getNewsList() != null && !dup.getNewsList().isEmpty()) {
+                try {
+                    newsListToReturn = objectMapper.readValue(dup.getNewsList(), new TypeReference<List<NewsItemDto>>() {});
+                } catch (Exception e) {
+                    log.warn("[selectPlaylist] 히스토리 newsList 파싱 실패, 현재 목록 사용: historyId={}, error={}", historyId, e.getMessage());
+                }
+            }
         } else {
-            // 새로운 히스토리 생성
+            // 기사가 바뀌었음 → 새 히스토리 생성 후 해당 목록으로 TTS 생성 (화면과 오디오 일치)
             historyId = historyService.createPlaylistHistory(userId, playlistId, playlistTitle, newsList);
-            log.info("[selectPlaylist] 새로운 히스토리 생성: userId={}, playlistId={}, historyId={}", 
-                    userId, playlistId, historyId);
+            log.info("[selectPlaylist] 기사 갱신으로 새 히스토리 생성: userId={}, playlistId={}, historyId={}", userId, playlistId, historyId);
         }
         
         String audioUrl = String.format("/api/drive/tts/playlist?playlistId=%s&historyId=%d", playlistId, historyId);
@@ -499,7 +501,7 @@ public class DriveModeServiceImpl implements DriveModeService {
                 .historyId(historyId)
                 .playlistId(playlistId)
                 .playlistTitle(playlistTitle)
-                .newsList(newsList)
+                .newsList(newsListToReturn)
                 .audioUrl(audioUrl)
                 .isDuplicate(isDuplicate)
                 .message(message)

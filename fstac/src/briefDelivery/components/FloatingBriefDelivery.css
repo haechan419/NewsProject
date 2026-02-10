@@ -1,8 +1,8 @@
-/* FAB: right 40px, bottom 100px */
+/* FAB: 챗봇 버튼과 정렬 (right 130px), bottom 100px → 챗봇(30px) 위에 배치 */
 .floating-brief-delivery-fab {
   position: fixed;
   bottom: 100px;
-  right: 40px;
+  right: 130px;
   z-index: 9998;
   width: 60px;
   height: 60px;
@@ -98,7 +98,7 @@
 .floating-brief-delivery-panel {
   position: fixed;
   bottom: 100px;
-  right: 110px;  /* FAB(40+60) + 간격(10px) = 아이콘 열 오른쪽, 패널은 아이콘 왼쪽에 표시 */
+  right: 200px;  /* FAB(right 130 + 60) + 간격(10px), 챗봇 버튼과 정렬된 FAB 왼쪽에 표시 */
   width: calc(100vw - 140px);
   max-width: 400px;
   max-height: calc(100vh - 140px);
