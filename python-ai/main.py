@@ -109,6 +109,44 @@ try:
 except Exception as e:
     stock_index_crawler = None
     logger.warning(f"[Warning] 주가지수 크롤러 로드 실패: {e}")
+
+# ===== 주가지수 실시간(5초 간격) 크롤링 캐시 =====
+# - 파이썬에서 5초마다 크롤링해서 메모리에 보관
+# - Spring Boot / React는 이 캐시를 조회하는 API를 5초 간격으로 호출
+stock_index_realtime_cache = []
+stock_index_realtime_last_updated: Optional[str] = None
+
+
+async def stock_index_realtime_loop():
+    """
+    주가지수 실시간 크롤링 루프
+    - 5초 간격으로 KOSPI, KOSDAQ 지수를 크롤링
+    - 결과를 전역 캐시에 저장
+    """
+    global stock_index_realtime_cache, stock_index_realtime_last_updated
+
+    if stock_index_crawler is None:
+        logger.warning("[주가지수-실시간] 크롤러가 없어 실시간 루프를 시작할 수 없습니다.")
+        return
+
+    logger.info("[주가지수-실시간] 5초 간격 크롤링 루프 시작")
+    while True:
+        try:
+            # KOSPI + KOSDAQ 모두 크롤링 (mrkt_cls=None)
+            indices = stock_index_crawler.crawl_stock_index(mrkt_cls=None, search_date=None)
+            if indices:
+                stock_index_realtime_cache = indices
+                stock_index_realtime_last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                logger.info(
+                    f"[주가지수-실시간] 최신 데이터 갱신 - 개수: {len(indices)}, 시각: {stock_index_realtime_last_updated}"
+                )
+            else:
+                logger.warning("[주가지수-실시간] 크롤링 결과가 비어 있습니다.")
+        except Exception as e:
+            logger.error(f"[주가지수-실시간] 크롤링 루프 중 오류 발생: {e}", exc_info=True)
+
+        # 5초 대기 후 다시 크롤링
+        await asyncio.sleep(5)
 _DRIVE_STATIC = Path(__file__).resolve().parent / "drive" / "static"
 if _DRIVE_STATIC.exists():
     app.mount("/static", StaticFiles(directory=str(_DRIVE_STATIC)), name="drive_static")
@@ -134,6 +172,13 @@ async def startup_event():
     import asyncio
     asyncio.create_task(trending_service.start_background_update())
     logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
+
+    # 주가지수 실시간(5초 간격) 크롤링 루프 시작
+    try:
+        asyncio.create_task(stock_index_realtime_loop())
+        logger.info("📈 [주가지수-실시간] 5초 간격 크롤링 루프 태스크 시작됨")
+    except Exception as e:
+        logger.warning(f"[주가지수-실시간] 루프 시작 실패: {e}")
 # 생존 확인 엔드포인트
 @app.get("/")
 async def root():
@@ -1486,6 +1531,45 @@ async def crawl_stock_indices(mrkt_cls: Optional[str] = None, search_date: Optio
             status_code=500,
             detail=f"주가지수 크롤링 중 오류가 발생했습니다: {str(e)}"
         )
+
+
+# ===== 주가지수 실시간(5초 간격) 조회 API =====
+@app.get("/api/stock-index/realtime")
+async def get_realtime_stock_indices():
+    """
+    5초 간격으로 파이썬에서 크롤링해 저장해 둔
+    최신 주가지수(KOSPI, KOSDAQ) 데이터를 조회하는 엔드포인트
+
+    - 백그라운드 루프가 5초마다 네이버 금융에서 크롤링
+    - 캐시에 없으면 즉시 한 번 크롤링해서 반환
+    """
+    global stock_index_realtime_cache, stock_index_realtime_last_updated
+
+    if stock_index_crawler is None:
+        raise HTTPException(
+            status_code=503,
+            detail="주가지수 크롤러를 사용할 수 없습니다."
+        )
+
+    # 캐시에 아직 데이터가 없으면 즉시 한 번 크롤링
+    if not stock_index_realtime_cache:
+        try:
+            indices = stock_index_crawler.crawl_stock_index(mrkt_cls=None, search_date=None)
+            if indices:
+                stock_index_realtime_cache = indices
+                stock_index_realtime_last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        except Exception as e:
+            logger.error(f"[주가지수-실시간] 초기 크롤링 실패: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"주가지수 실시간 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+            )
+
+    return {
+        "stock_indices": stock_index_realtime_cache,
+        "count": len(stock_index_realtime_cache),
+        "last_updated": stock_index_realtime_last_updated,
+    }
 
 
 # ===== 서버 실행 =====

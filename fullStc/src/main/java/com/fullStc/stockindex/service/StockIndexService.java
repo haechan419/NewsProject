@@ -21,7 +21,7 @@ public interface StockIndexService {
     /**
      * 특정 시장의 주가지수 조회
      * 
-     * @param mrktCls 시장 구분 (KOSPI 또는 KOSDAQ)
+     * @param mrktCls    시장 구분 (KOSPI 또는 KOSDAQ)
      * @param searchDate 조회 날짜 (null이면 오늘)
      * @return 주가지수 DTO
      */

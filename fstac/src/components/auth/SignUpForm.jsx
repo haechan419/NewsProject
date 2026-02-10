@@ -45,9 +45,8 @@ const SignUpForm = ({
               onChange={onEmailChange}
               placeholder="이메일을 입력하세요"
               disabled={isLoading}
-              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                validationErrors.email ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'
-              }`}
+              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${validationErrors.email ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'
+                }`}
             />
             {validationErrors.email && (
               <p className="mt-1 text-xs text-red-500">{validationErrors.email}</p>
@@ -65,9 +64,8 @@ const SignUpForm = ({
               onChange={onPasswordChange}
               placeholder="영문, 숫자, 특수문자 포함 8자 이상"
               disabled={isLoading}
-              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                validationErrors.password ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'
-              }`}
+              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${validationErrors.password ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'
+                }`}
             />
             {validationErrors.password && (
               <p className="mt-1 text-xs text-red-500">{validationErrors.password}</p>
@@ -88,11 +86,10 @@ const SignUpForm = ({
               onChange={onConfirmPasswordChange}
               placeholder="비밀번호를 다시 입력하세요"
               disabled={isLoading}
-              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                validationErrors.confirmPassword
+              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${validationErrors.confirmPassword
                   ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
                   : 'border-gray-200'
-              }`}
+                }`}
             />
             {validationErrors.confirmPassword && (
               <p className="mt-1 text-xs text-red-500">{validationErrors.confirmPassword}</p>
@@ -110,9 +107,8 @@ const SignUpForm = ({
               onChange={onNicknameChange}
               placeholder="닉네임을 입력하세요 (2-20자)"
               disabled={isLoading}
-              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                validationErrors.nickname ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'
-              }`}
+              className={`block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${validationErrors.nickname ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'
+                }`}
             />
             {validationErrors.nickname && (
               <p className="mt-1 text-xs text-red-500">{validationErrors.nickname}</p>
@@ -135,11 +131,10 @@ const SignUpForm = ({
                     type="button"
                     onClick={() => onCategoryToggle(category)}
                     disabled={isLoading || isDisabled}
-                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                      isSelected
+                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${isSelected
                         ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
                         : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                    } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {category}
                     {isSelected && <span className="ml-1.5 text-[11px]">✓</span>}
