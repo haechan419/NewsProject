@@ -4,8 +4,6 @@ import { getPlaylistImage } from "../utils/playlistImages";
 import {
   PlayIcon,
   PauseIcon,
-  NextIcon,
-  PrevIcon,
   CloseIcon,
   HistoryIcon,
 } from "./Icons";
@@ -75,6 +73,43 @@ export function PlaylistPlayback({
       setLocalCurrentTime(currentTime);
     }
   }, [currentTime, isDragging]);
+
+  // 드래그 중 바 밖에서 놓아도 시크되도록, 드래그 중 실시간 시크 (마우스 + 터치)
+  useEffect(() => {
+    if (!isDragging || !duration || !progressBarRef.current) return;
+    const getTimeFromClientX = (clientX) => {
+      const rect = progressBarRef.current.getBoundingClientRect();
+      const clickX = clientX - rect.left;
+      const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+      return duration * percentage;
+    };
+    const applySeek = (newTime) => {
+      setLocalCurrentTime(newTime);
+      onSeek?.(newTime);
+    };
+    const onMouseMove = (e) => applySeek(getTimeFromClientX(e.clientX));
+    const onMouseUp = (e) => {
+      applySeek(getTimeFromClientX(e.clientX));
+      setIsDragging(false);
+    };
+    const onTouchMove = (e) => {
+      if (e.touches.length > 0) applySeek(getTimeFromClientX(e.touches[0].clientX));
+    };
+    const onTouchEnd = (e) => {
+      if (e.changedTouches.length > 0) applySeek(getTimeFromClientX(e.changedTouches[0].clientX));
+      setIsDragging(false);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isDragging, duration, onSeek]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -420,27 +455,13 @@ export function PlaylistPlayback({
           </div>
 
           {/* 재생 컨트롤 */}
-          <div className="flex items-center gap-4 md:gap-6">
-            <button
-              onClick={() => {}}
-              className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              title="이전"
-            >
-              <PrevIcon size={24} />
-            </button>
+          <div className="flex items-center justify-center">
             <button
               onClick={onPlayPause}
               className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
               title={isPlaying ? "일시정지" : "재생"}
             >
               {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
-            </button>
-            <button
-              onClick={() => {}}
-              className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              title="다음"
-            >
-              <NextIcon size={24} />
             </button>
           </div>
         </div>
