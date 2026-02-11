@@ -8,19 +8,16 @@ import time
 from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
 
-# 환경 변수 로드
 load_dotenv()
-
-# [설정] 키 정보 (환경 변수에서 읽기)
+# 환경 변수에서 가져오기
 HF_TOKEN = os.getenv("HF_TOKEN")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
+if not HF_TOKEN:
+    print("⚠️ 경고: .env 파일에서 HF_TOKEN을 찾을 수 없습니다.")
+
 # 허깅페이스 공식 클라이언트 초기화
-if HF_TOKEN:
-    hf_client = InferenceClient(token=HF_TOKEN)
-else:
-    hf_client = None
-    print("⚠️ 경고: HF_TOKEN이 설정되지 않았습니다. 이미지 생성 기능이 제한될 수 있습니다.")
+hf_client = InferenceClient(token=HF_TOKEN)
 
 def create_tts(text, filename):
     try:
@@ -34,19 +31,24 @@ def create_tts(text, filename):
     except: return False
 
 def generate_free_image(prompt, filename, is_portrait):
-    """
-    허깅페이스 공식 클라이언트를 사용하여 404 에러 없이 
-    무조건 '작동하는' 고화질 이미지를 생성합니다.
-    """
     try:
-        if not hf_client:
-            print("⚠️ HF_TOKEN이 없어 Pollinations 백업으로 전환합니다.")
-            return _generate_pollinations_backup(prompt, filename, is_portrait)
-        
         print(f"🎨 [HF Client] 이미지 생성 요청 중: {prompt[:15]}...")
         
-        enhanced_prompt = f"A realistic press of {prompt}, journalistic style, cinematic lighting, 4k, high resolution, detailed texture."
+        # 1. 비율에 따른 키워드 설정
+        # 9:16(세로)일 때와 16:9(가로)일 때 AI에게 줄 힌트를 다르게 합니다.
+        if is_portrait:
+            ratio_desc = "vertical smartphone portrait orientation, 9:16 aspect ratio"
+        else:
+            ratio_desc = "wide cinematic landscape orientation, 16:9 aspect ratio"
+
+        # 2. 프롬프트 재구성 (비율 설명 추가 및 불필요한 단어 정리)
+        enhanced_prompt = (
+            f"A photorealistic editorial shot of {prompt}, {ratio_desc}, "
+            f"professional photography, cinematic lighting, 4k, high resolution, "
+            f"detailed texture, no cameras, no journalists."
+        )
         
+        # 3. 이미지 생성 요청
         image = hf_client.text_to_image(
             enhanced_prompt,
             model="black-forest-labs/FLUX.1-schnell"
@@ -55,16 +57,15 @@ def generate_free_image(prompt, filename, is_portrait):
         # 결과 저장
         image.save(filename)
         
-        # 파일 크기 검사 (10KB 미만이면 'Rate Limit' 이미지일 확률이 높음)
+        # 파일 크기 검사
         if os.path.getsize(filename) < 10000:
             raise Exception("Generated image is too small (possible error image)")
             
-        print(f"✅ [HF Client] 이미지 생성 성공: {filename}")
+        print(f"✅ [HF Client] 이미지 생성 성공: {filename} (Portrait: {is_portrait})")
         return True
         
     except Exception as e:
         print(f"❌ HF 에러 발생: {e}")
-        # HF 실패 시에만 최후의 수단으로 Pollinations 백업 가동
         return _generate_pollinations_backup(prompt, filename, is_portrait)
 
 def _generate_pollinations_backup(prompt, filename, is_portrait):
@@ -85,10 +86,6 @@ def _generate_pollinations_backup(prompt, filename, is_portrait):
     except: return False
 
 def download_pexels_video(keyword, filename, is_portrait):
-    if not PEXELS_API_KEY:
-        print("⚠️ 경고: PEXELS_API_KEY가 설정되지 않았습니다.")
-        return False
-    
     orientation = "portrait" if is_portrait else "landscape"
     headers = {'Authorization': PEXELS_API_KEY}
     url = f"https://api.pexels.com/videos/search?query={keyword}&per_page=15&orientation={orientation}"
