@@ -120,11 +120,6 @@ export function DriveModePage({ userId = 1, onClose }) {
   useEffect(() => { showResumeChoiceRef.current = showResumeChoice; }, [showResumeChoice]);
   useEffect(() => { newsQueueRef.current = newsQueue; }, [newsQueue]);
 
-  // 히스토리 목록 ref (플레이리스트 ended에서 다음 히스토리 자동 재생용)
-  useEffect(() => {
-    historyRef.current = Array.isArray(history) ? history : [];
-  }, [history]);
-
   // 데모 모드 키보드 이벤트 (1~6): 숫자 키를 누른 뒤 마이크를 떼면 해당 명령 실행
   useEffect(() => {
     if (!demoVoice && !useDemoFallback && !useDemoByChoice) return;
@@ -576,29 +571,11 @@ export function DriveModePage({ userId = 1, onClose }) {
         ...playlist,
         title: response.playlistTitle,
       });
+      setCurrentPlaylistAudioUrl(response.audioUrl);
       setCurrentPlaylistHistoryId(response.historyId);
       setIsHistoryPanelCollapsed(true);
       setShowPlaylistSelection(false);
-      playbackSourceRef.current = "playlist";
-      setStatusMessage("TTS를 불러오는 중입니다.");
-
-      let urlToUse = response.audioUrl;
-      if (response.audioUrl && (response.audioUrl.startsWith("http") || response.audioUrl.startsWith("/"))) {
-        try {
-          const res = await fetch(response.audioUrl);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const blob = await res.blob();
-          if (playlistBlobUrlRef.current) {
-            URL.revokeObjectURL(playlistBlobUrlRef.current);
-            playlistBlobUrlRef.current = null;
-          }
-          urlToUse = URL.createObjectURL(blob);
-          playlistBlobUrlRef.current = urlToUse;
-        } catch (blobError) {
-          console.warn("플레이리스트 오디오 blob 변환 실패, 원본 URL 사용:", blobError);
-        }
-      }
-      setCurrentPlaylistAudioUrl(urlToUse);
+      setStatusMessage("TTS를 불러오는 중입니다. 1~2분 걸릴 수 있습니다.");
     } catch (error) {
       console.error("플레이리스트 선택 실패:", error);
       setStatus("error");
@@ -613,10 +590,6 @@ export function DriveModePage({ userId = 1, onClose }) {
       handlePlaylistSelect(playlists[index]);
     }
   };
-
-  useEffect(() => {
-    handlePlaylistSelectRef.current = handlePlaylistSelect;
-  }, [handlePlaylistSelect]);
 
   useEffect(() => {
     return () => {
@@ -661,15 +634,11 @@ export function DriveModePage({ userId = 1, onClose }) {
       if (!pausedTimeRef.current) pausedTimeRef.current = Date.now();
     } else {
       if (!showResumeChoice && status !== "error" && status !== "recording" && status !== "processing") {
-        // 플레이리스트 재생 화면에서는 메시지를 덮어쓰지 않음 (예: "다음 히스토리를 재생합니다.")
-        const isPlaylistPlaybackView = selectedPlaylist && !showPlaylistSelection;
-        if (!isPlaylistPlaybackView) {
-          setStatus("idle");
-          setStatusMessage("마이크 버튼을 눌러 음성 명령을 시작하세요");
-        }
+        setStatus("idle");
+        setStatusMessage("마이크 버튼을 눌러 음성 명령을 시작하세요");
       }
     }
-  }, [isPlaying, isPaused, currentNewsId, showResumeChoice, status, selectedPlaylist, showPlaylistSelection]);
+  }, [isPlaying, isPaused, currentNewsId, showResumeChoice, status]);
 
   // 재생/일시정지 핸들러
   const handlePlayPause = () => {
@@ -943,8 +912,6 @@ export function DriveModePage({ userId = 1, onClose }) {
       HELP: "help",
       PLAYLIST_LOADING: "playlist_loading",
       PLAYLIST_COMPLETED: "playlist_completed",
-      NEXT_HISTORY: "next_history",
-      NEXT_PLAYLIST: "next_playlist",
       TTS_ERROR: "tts_error",
       NETWORK_ERROR: "network_error",
       TTS_RETRY: "tts_retry",
@@ -961,8 +928,6 @@ export function DriveModePage({ userId = 1, onClose }) {
       HELP: "마이크 버튼을 누르고 명령을 말해 주세요.",
       PLAYLIST_LOADING: "플레이리스트를 준비하고 있습니다",
       PLAYLIST_COMPLETED: "플레이리스트 재생을 완료했습니다",
-      NEXT_HISTORY: "다음 히스토리를 재생합니다",
-      NEXT_PLAYLIST: "다음 플레이리스트를 재생합니다",
       TTS_ERROR: "음성 생성 중 오류가 발생했습니다",
       NETWORK_ERROR: "연결 문제가 있습니다. 잠시 후 다시 시도해주세요.",
       TTS_RETRY: "뉴스 재생에 문제가 발생했습니다. 잠시 후 다시 시도합니다.",
@@ -1695,11 +1660,6 @@ export function DriveModePage({ userId = 1, onClose }) {
   const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(false);
   const playlistAudioRef = useRef(null);
   const playlistSyncTimerRef = useRef(null);
-  const historyRef = useRef([]);
-  const handleHistoryItemPlayRef = useRef(null);
-  const playbackSourceRef = useRef("playlist");
-  const handlePlaylistSelectRef = useRef(null);
-  const playlistBlobUrlRef = useRef(null);
 
   // 플레이리스트 오디오 초기화 및 재생 제어
   useEffect(() => {
@@ -1717,29 +1677,21 @@ export function DriveModePage({ userId = 1, onClose }) {
 
     const audio = new Audio(currentPlaylistAudioUrl);
     playlistAudioRef.current = audio;
-    audio.preload = "auto";
 
-    const applyDuration = () => {
-      if (typeof audio.duration === "number" && Number.isFinite(audio.duration) && audio.duration > 0) {
-        setPlaybackDuration(audio.duration);
-      }
-    };
-    audio.addEventListener("loadedmetadata", () => {
-      applyDuration();
+    audio.addEventListener('loadedmetadata', () => {
+      setPlaybackDuration(audio.duration);
+      // TTS 로드 완료 시 자동 재생 (완료 시점을 사용자에게 알림)
       if (playlistAudioRef.current !== audio) return;
       setIsPlaybackPlaying(true);
       audio.play().catch((err) => {
         if (err?.name === "NotAllowedError") setStatusMessage("재생을 위해 화면을 한 번 클릭해주세요.");
         setIsPlaybackPlaying(false);
       });
-      // HTTP URL은 loadedmetadata 시점에 duration이 아직 0인 경우가 있음. 재생 시작 후 한 번 더 적용
-      setTimeout(applyDuration, 300);
     });
-    audio.addEventListener("durationchange", applyDuration);
-    audio.addEventListener("canplaythrough", applyDuration);
 
-    const onTimeUpdate = () => setPlaybackCurrentTime(audio.currentTime);
-    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener('timeupdate', () => {
+      setPlaybackCurrentTime(audio.currentTime);
+    });
 
     audio.addEventListener('ended', async () => {
       setIsPlaybackPlaying(false);
@@ -1760,49 +1712,15 @@ export function DriveModePage({ userId = 1, onClose }) {
         }
       }
       
+      // 완료 메시지 표시
+      setStatus("idle");
+      setStatusMessage("플레이리스트 재생을 완료했습니다.");
+      playFixedMessage("PLAYLIST_COMPLETED");
+      
       setPlaybackCurrentTime(0);
       if (playlistSyncTimerRef.current) {
         clearInterval(playlistSyncTimerRef.current);
         playlistSyncTimerRef.current = null;
-      }
-
-      const source = playbackSourceRef.current;
-      const list = historyRef.current || [];
-      const idx = list.findIndex((h) => h.historyId === currentPlaylistHistoryId);
-      const hasNextHistory = idx >= 0 && idx < list.length - 1;
-      const nextItem = hasNextHistory ? list[idx + 1] : null;
-
-      const plist = playlistsRef.current || [];
-      const pidx = selectedPlaylist ? plist.findIndex((p) => p.id === selectedPlaylist.id) : -1;
-      const hasNextPlaylist = pidx >= 0 && pidx < plist.length - 1;
-      const nextPlaylist = hasNextPlaylist ? plist[pidx + 1] : null;
-
-      if (source === "playlist" && hasNextPlaylist && nextPlaylist) {
-        setStatus("idle");
-        setStatusMessage("다음 플레이리스트를 재생합니다.");
-        playFixedMessage("NEXT_PLAYLIST").then(() => {
-          cleanupFixedMessageAudio();
-          setTimeout(() => {
-            setStatusMessage("");
-            setStatus("processing");
-            handlePlaylistSelectRef.current?.(nextPlaylist);
-          }, 400);
-        }).catch(() => {});
-      } else if (source === "history" && hasNextHistory) {
-        setStatus("idle");
-        setStatusMessage("다음 히스토리를 재생합니다.");
-        playFixedMessage("NEXT_HISTORY").then(() => {
-          cleanupFixedMessageAudio();
-          setTimeout(() => {
-            setStatusMessage("");
-            setStatus("processing");
-            handleHistoryItemPlayRef.current?.(nextItem);
-          }, 400);
-        }).catch(() => {});
-      } else {
-        setStatus("idle");
-        setStatusMessage("플레이리스트 재생을 완료했습니다.");
-        playFixedMessage("PLAYLIST_COMPLETED");
       }
     });
 
@@ -1815,9 +1733,6 @@ export function DriveModePage({ userId = 1, onClose }) {
     });
 
     return () => {
-      audio.removeEventListener("durationchange", applyDuration);
-      audio.removeEventListener("canplaythrough", applyDuration);
-      audio.removeEventListener("timeupdate", onTimeUpdate);
       if (audio) {
         audio.pause();
         audio.src = '';
@@ -1917,10 +1832,6 @@ export function DriveModePage({ userId = 1, onClose }) {
     setCurrentPlaylistHistoryId(null);
     setPlaybackCurrentTime(0);
     setPlaybackDuration(0);
-    if (playlistBlobUrlRef.current) {
-      URL.revokeObjectURL(playlistBlobUrlRef.current);
-      playlistBlobUrlRef.current = null;
-    }
   };
   
   // 플레이리스트 새로고침 핸들러
@@ -1955,15 +1866,10 @@ export function DriveModePage({ userId = 1, onClose }) {
           title: historyData.playlistTitle || "히스토리",
         });
         
-        // 히스토리 TTS 재생 (기존 플레이리스트 blob URL 정리)
-        if (playlistBlobUrlRef.current) {
-          URL.revokeObjectURL(playlistBlobUrlRef.current);
-          playlistBlobUrlRef.current = null;
-        }
+        // 히스토리 TTS 재생
         const audioUrl = await driveApi.getHistoryTTS(historyItem.historyId);
         setCurrentPlaylistAudioUrl(audioUrl);
         setCurrentPlaylistHistoryId(historyItem.historyId);
-        playbackSourceRef.current = "history";
         
         // 저장된 재생 위치부터 재생
         if (historyData.currentTime && historyData.currentTime > 0) {
@@ -1987,10 +1893,6 @@ export function DriveModePage({ userId = 1, onClose }) {
       setIsLoadingPlaylist(false);
     }
   };
-
-  useEffect(() => {
-    handleHistoryItemPlayRef.current = handleHistoryItemPlay;
-  }, [handleHistoryItemPlay]);
 
   if (selectedPlaylist && !showPlaylistSelection) {
     return (

@@ -37,187 +37,183 @@ import lombok.extern.slf4j.Slf4j;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-        private final JwtUtil jwtUtil;
-        private final CustomOAuth2UserService customOAuth2UserService;
-        private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
-        private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
+    private final JwtUtil jwtUtil;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+    private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
 
-        @Value("${app.cors.allowed-origins:http://localhost:5173}")
-        private String allowedOrigins;
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
 
-        @Value("${app.frontend.url:http://localhost:5173}")
-        private String frontendUrl;
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
-        // PasswordEncoder 빈 등록
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-                return new BCryptPasswordEncoder();
-        }
+    // PasswordEncoder 빈 등록
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-        // SecurityFilterChain 설정
-        @Bean
-        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-                log.info("---------------------security config---------------------------");
+    // SecurityFilterChain 설정
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        log.info("---------------------security config---------------------------");
 
-                // CORS 설정
-                http.cors(httpSecurityCorsConfigurer -> {
-                        httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource());
-                });
+        // CORS 설정
+        http.cors(httpSecurityCorsConfigurer -> {
+            httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource());
+        });
 
-                // 세션을 사용하지 않음 (STATELESS)
-                http.sessionManagement(sessionConfig -> sessionConfig
-                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        // 세션을 사용하지 않음 (STATELESS)
+        http.sessionManagement(sessionConfig -> sessionConfig
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-                // CSRF 보호 활성화 (Double Submit Cookie 패턴)
-                // 쿠키에 CSRF 토큰 저장, 헤더에서 검증
-                http.csrf(csrf -> csrf
-                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                                // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
-                                .ignoringRequestMatchers("/api/auth/**",
-                                                "/api/boards/**",
-                                                "/api/comments/**",
-                                                "/api/files/**",
-                                                "/api/ai/**",
-                                                "/api/qa/**", // QA API 경로 추가 !!!!!!!!!!!!
-                                                "/api/faq/**",
-                                                "/api/support/**",
-                                                "/api/inquiry/**",
-                                                "/api/category/**",
-                                                "/api/user/**",
-                                                "/api/exchange-rate/**", // 환율 API
-                                                "/api/stock-index/**", // 주가지수 API
-                                                "/api/drive/**", // 드라이브 모드 API
-                                                "/api/brief-delivery/**", // 브리핑 배송 API
-                                                "/api/images/**",
-                                                "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
+        // CSRF 보호 활성화 (Double Submit Cookie 패턴)
+        // 쿠키에 CSRF 토큰 저장, 헤더에서 검증
+        http.csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                // GET, HEAD, OPTIONS, TRACE는 CSRF 검증 제외 (안전한 메서드)
+                .ignoringRequestMatchers("/api/auth/**",
+                        "/api/boards/**",
+                        "/api/comments/**",
+                        "/api/files/**",
+                        "/api/ai/**",
+                        "/api/qa/**",  // QA API 경로 추가 !!!!!!!!!!!!
+                        "/api/faq/**",
+                        "/api/support/**",
+                        "/api/inquiry/**",
+                        "/api/category/**",
+                        "/api/user/**",
+                        "/api/exchange-rate/**",  // 환율 API
+                        "/api/drive/**",  // 드라이브 모드 API
+                        "/api/brief-delivery/**",  // 브리핑 배송 API
+                        "/api/images/**",
+                        "/briefing/**", // 뉴스 브리핑 조회도 면제하면 안전
 
-                                                "/swagger-ui/**",
-                                                "/v3/api-docs/**",
-                                                "/oauth2/**",
-                                                "/login/oauth2/**",
-                                                "/admin/**"));
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/oauth2/**",
+                        "/login/oauth2/**",
+                        "/admin/**"));
 
-                // 인가 설정
-                http.authorizeHttpRequests(auth -> {
-                        // Swagger UI 경로는 인증 없이 접근 가능 (정확한 경로 포함)
-                        auth.requestMatchers(
-                                        "/swagger-ui/**",
-                                        "/v3/api-docs", // 정확히 /v3/api-docs
-                                        "/v3/api-docs/**", // /v3/api-docs/로 시작하는 모든 경로
-                                        "/swagger-ui.html").permitAll();
 
-                        // 정적 리소스 허용 (Swagger UI CSS, favicon 등)
-                        auth.requestMatchers(
-                                        "/favicon.ico",
-                                        "/error",
-                                        "/static/**",
-                                        "/public/**",
-                                        "/resources/**",
-                                        "/upload/**", // 추가한 부분
-                                        "/css/**",
-                                        "/js/**",
-                                        "/images/**",
-                                        "/*.ico",
-                                        "/*.css",
-                                        "/*.js",
-                                        "/default-ui.css" // Swagger UI CSS
-                        ).permitAll();
 
-                        // 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
-                        auth.requestMatchers("/admin/**").permitAll();
+        // 인가 설정
+        http.authorizeHttpRequests(auth -> {
+            // Swagger UI 경로는 인증 없이 접근 가능 (정확한 경로 포함)
+            auth.requestMatchers(
+                    "/swagger-ui/**",
+                    "/v3/api-docs", // 정확히 /v3/api-docs
+                    "/v3/api-docs/**", // /v3/api-docs/로 시작하는 모든 경로
+                    "/swagger-ui.html").permitAll();
 
-                        // 1. AI 마이페이지 관련 경로들을 허용 리스트에 추가합니다.
-                        auth.requestMatchers("/api/ai/mypage/**").permitAll();
-                        auth.requestMatchers("/api/ai/video/**").permitAll();
-                        auth.requestMatchers("/upload/**").permitAll();
+            // 정적 리소스 허용 (Swagger UI CSS, favicon 등)
+            auth.requestMatchers(
+                    "/favicon.ico",
+                    "/error",
+                    "/static/**",
+                    "/public/**",
+                    "/resources/**",
+                    "/upload/**", // 추가한 부분
+                    "/css/**",
+                    "/js/**",
+                    "/images/**",
+                    "/*.ico",
+                    "/*.css",
+                    "/*.js",
+                    "/default-ui.css" // Swagger UI CSS
+            ).permitAll();
 
-                        // ▼ [NEW] 이미지 실패 신고 및 뉴스 조회는 로그인 없이 허용
-                        auth.requestMatchers("/api/images/**").permitAll();
-                        auth.requestMatchers("/briefing/**").permitAll();
+            // 테스트를 위해 관리자 경로 임시 허용 (추가할 부분)
+            auth.requestMatchers("/admin/**").permitAll();
 
-                        // 로그아웃은 인증 필요
-                        auth.requestMatchers("/api/auth/logout").authenticated();
-                        // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
-                        auth.requestMatchers("/api/auth/**").permitAll();
-                        auth.requestMatchers("/api/ai/mypage/**").permitAll();
-                        // 얼굴 인식 API는 인증 없이 접근 가능 (로그인 페이지에서 사용)
-                        auth.requestMatchers("/api/ai/face/recognize").permitAll();
-                        // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
-                        auth.requestMatchers("/api/category/list").permitAll();
-                        // AI 채팅 API는 인증 없이 접근 가능
-                        auth.requestMatchers("/api/ai/chat", "/api/ai/**").permitAll();
-                        // 환율 API는 인증 없이 접근 가능
-                        auth.requestMatchers("/api/exchange-rate/**").permitAll();
-                        // 주가지수 API는 인증 없이 접근 가능
-                        auth.requestMatchers("/api/stock-index/**").permitAll();
-                        // 드라이브 모드 API는 인증 없이 접근 가능
-                        auth.requestMatchers("/api/drive/**").permitAll();
-                        // 브리핑 배송 API는 인증 없이 접근 가능
-                        auth.requestMatchers("/api/brief-delivery/**").permitAll();
-                        // OAuth2 경로 허용
-                        auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
-                        // /login 경로 허용 (OAuth2 에러 리다이렉트용)
-                        auth.requestMatchers("/login").permitAll();
-                        // 나머지는 인증 필요
-                        auth.anyRequest().authenticated();
-                });
+            // 1. AI 마이페이지 관련 경로들을 허용 리스트에 추가합니다.
+        auth.requestMatchers("/api/ai/mypage/**").permitAll();
+        auth.requestMatchers("/api/ai/video/**").permitAll();
+        auth.requestMatchers("/upload/**").permitAll();
 
-                // Form Login 비활성화 (JWT 기반 REST API이므로 불필요)
-                http.formLogin(config -> config.disable());
+            // ▼ [NEW] 이미지 실패 신고 및 뉴스 조회는 로그인 없이 허용
+            auth.requestMatchers("/api/images/**").permitAll();
+            auth.requestMatchers("/briefing/**").permitAll();
 
-                // OAuth2 로그인 설정
-                http.oauth2Login(oauth2 -> oauth2
-                                .userInfoEndpoint(userInfo -> userInfo
-                                                .userService(customOAuth2UserService))
-                                .successHandler(customOAuth2SuccessHandler)
-                                .failureHandler(customOAuth2FailureHandler));
+            // 로그아웃은 인증 필요
+            auth.requestMatchers("/api/auth/logout").authenticated();
+            // 인증 관련 API는 인증 없이 접근 가능 (로그아웃 제외)
+            auth.requestMatchers("/api/auth/**").permitAll();
+            auth.requestMatchers("/api/ai/mypage/**").permitAll();
+            // 얼굴 인식 API는 인증 없이 접근 가능 (로그인 페이지에서 사용)
+            auth.requestMatchers("/api/ai/face/recognize").permitAll();
+            // 카테고리 목록 조회 API는 인증 없이 접근 가능 (회원가입 페이지에서 사용)
+            auth.requestMatchers("/api/category/list").permitAll();
+            // AI 채팅 API는 인증 없이 접근 가능
+            auth.requestMatchers("/api/ai/chat", "/api/ai/**").permitAll();
+            // 드라이브 모드 API는 인증 없이 접근 가능
+            auth.requestMatchers("/api/drive/**").permitAll();
+            // 브리핑 배송 API는 인증 없이 접근 가능
+            auth.requestMatchers("/api/brief-delivery/**").permitAll();
+            // OAuth2 경로 허용
+            auth.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll();
+            // /login 경로 허용 (OAuth2 에러 리다이렉트용)
+            auth.requestMatchers("/login").permitAll();
+            // 나머지는 인증 필요
+            auth.anyRequest().authenticated();
+        });
 
-                // JWT 체크 필터 추가
-                http.addFilterBefore(new JwtCheckFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+        // Form Login 비활성화 (JWT 기반 REST API이므로 불필요)
+        http.formLogin(config -> config.disable());
 
-                // 예외 처리 설정
-                http.exceptionHandling(config -> {
-                        config.accessDeniedHandler(new CustomAccessDeniedHandler());
-                });
+        // OAuth2 로그인 설정
+        http.oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                        .userService(customOAuth2UserService))
+                .successHandler(customOAuth2SuccessHandler)
+                .failureHandler(customOAuth2FailureHandler));
 
-                // 보안 HTTP 헤더 설정
-                http.headers(headers -> headers
-                                .frameOptions(frameOptions -> frameOptions.deny()) // X-Frame-Options: DENY (클릭재킹 방지)
-                                .contentTypeOptions(contentTypeOptions -> {
-                                }) // X-Content-Type-Options: nosniff
-                                .httpStrictTransportSecurity(hsts -> hsts
-                                                .maxAgeInSeconds(31536000) // 1년
-                                ));
+        // JWT 체크 필터 추가
+        http.addFilterBefore(new JwtCheckFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
-                return http.build();
-        }
+        // 예외 처리 설정
+        http.exceptionHandling(config -> {
+            config.accessDeniedHandler(new CustomAccessDeniedHandler());
+        });
 
-        // CORS 설정 (외부화)
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-                CorsConfiguration configuration = new CorsConfiguration();
+        // 보안 HTTP 헤더 설정
+        http.headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.deny()) // X-Frame-Options: DENY (클릭재킹 방지)
+                .contentTypeOptions(contentTypeOptions -> {
+                }) // X-Content-Type-Options: nosniff
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .maxAgeInSeconds(31536000) // 1년
+                ));
 
-                // application.properties에서 허용할 Origin 읽기
-                List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                                .map(String::trim)
-                                .filter(s -> !s.isEmpty())
-                                .collect(Collectors.toList());
+        return http.build();
+    }
 
-                log.info("CORS 허용 Origin: {}", origins);
-                configuration.setAllowedOrigins(origins);
+    // CORS 설정 (외부화)
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
 
-                configuration.setAllowedMethods(
-                                Arrays.asList("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-                configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type",
-                                "X-Requested-With", "Cookie", "X-CSRF-TOKEN"));
-                configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "X-CSRF-TOKEN"));
-                configuration.setAllowCredentials(true);
-                configuration.setMaxAge(3600L); // preflight 요청 캐시 시간 (1시간)
+        // application.properties에서 허용할 Origin 읽기
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
 
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", configuration);
+        log.info("CORS 허용 Origin: {}", origins);
+        configuration.setAllowedOrigins(origins);
 
-                return source;
-        }
+        configuration.setAllowedMethods(Arrays.asList("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type",
+                "X-Requested-With", "Cookie", "X-CSRF-TOKEN"));
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "X-CSRF-TOKEN"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // preflight 요청 캐시 시간 (1시간)
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
 }

@@ -19,16 +19,16 @@ const LoadingSpinner = () => (
 );
 
 // 인증 불필요 페이지들(Lazy 로드)
-const Login = lazy(() => import('../pages/auth/Login'));
-const SignUp = lazy(() => import('../pages/auth/SignUp'));
-const FindEmail = lazy(() => import('../pages/auth/FindEmail'));
-const FindPassword = lazy(() => import('../pages/auth/FindPassword'));
-const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
+const Login = lazy(() => import('../pages/Login'));
+const SignUp = lazy(() => import('../pages/SignUp'));
+const FindEmail = lazy(() => import('../pages/FindEmail'));
+const FindPassword = lazy(() => import('../pages/FindPassword'));
+const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 
 // 보호된 페이지들 (lazy 로드)
 const MainPage = lazy(() => import('../pages/MainPage'));
 const MyPage = lazy(() => import("../pages/mypage/MyPage")); // 마이페이지 추가
-const ProfileEdit = lazy(() => import('../pages/auth/ProfileEdit'));
+const ProfileEdit = lazy(() => import('../pages/ProfileEdit'));
 const BoardPage = lazy(() => import('../pages/board/BoardPage'));
 const BoardDetail = lazy(() => import('../pages/board/BoardDetail'));
 const BoardCreate = lazy(() => import('../pages/board/BoardCreate'));

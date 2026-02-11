@@ -80,13 +80,27 @@ const FaceRegistration = ({
                 autoPlay
                 playsInline
                 muted
-                className={`w-full max-w-sm mx-auto rounded-lg ${isVideoReady ? 'block' : 'hidden'}`}
+                className={`w-full rounded-lg ${isVideoReady ? 'block' : 'hidden'}`}
                 style={{
-                  minHeight: '200px',
+                  minHeight: '300px',
                   objectFit: 'cover',
                   backgroundColor: '#000'
                 }}
               />
+              {!cameraError && isVideoReady && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative">
+                    <svg className="w-64 h-80" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+                      <ellipse cx="100" cy="120" rx="70" ry="90" fill="none" stroke="rgba(59, 130, 246, 0.8)" strokeWidth="3" strokeDasharray="5,5"/>
+                      <ellipse cx="80" cy="100" rx="8" ry="6" fill="none" stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2"/>
+                      <ellipse cx="120" cy="100" rx="8" ry="6" fill="none" stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2"/>
+                      <ellipse cx="100" cy="125" rx="5" ry="8" fill="none" stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2"/>
+                      <ellipse cx="100" cy="150" rx="15" ry="8" fill="none" stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2"/>
+                    </svg>
+                    <p className="text-white text-sm mt-2">얼굴을 프레임 안에 맞춰주세요</p>
+                  </div>
+                </div>
+              )}
             </div>
             {cameraError ? (
               <div className="text-red-600">
@@ -172,10 +186,11 @@ const FaceRegistration = ({
         )}
       </div>
       {faceMessage && !faceMessage.includes('완료') && (
-        <div className={`p-3 rounded-lg text-sm ${faceMessage.includes('실패') || faceMessage.includes('오류')
-          ? 'bg-red-50 text-red-700 border border-red-200'
-          : 'bg-blue-50 text-blue-700 border border-blue-200'
-          }`}>
+        <div className={`p-3 rounded-lg text-sm ${
+          faceMessage.includes('실패') || faceMessage.includes('오류')
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-blue-50 text-blue-700 border border-blue-200'
+        }`}>
           {faceMessage}
         </div>
       )}

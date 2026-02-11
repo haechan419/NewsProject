@@ -52,12 +52,100 @@ const currencyNameMap = {
 };
 
 // 주요 통화 우선순위 (항상 먼저 표시)
-const priorityCurrencies = ['USD', 'EUR', 'GBP', 'JPY'];
+const priorityCurrencies = ["USD", "EUR", "GBP", "JPY"];
+
+// --- [SVG 아이콘 객체] (추가 라이브러리 설치 불필요) ---
+const Icons = {
+  Play: () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M5 3l14 9-14 9V3z" />
+    </svg>
+  ),
+  Pause: () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    </svg>
+  ),
+  Volume2: () => (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+    </svg>
+  ),
+  VolumeX: () => (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <path d="M23 9l-6 6M17 9l6 6" />
+    </svg>
+  ),
+  Maximize: () => (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  ),
+  ChevronLeft: () => (
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  ),
+  ChevronRight: () => (
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  ),
+};
 
 const MainPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth || {});
+
+  // 데이터 상태
   const [rawVideos, setRawVideos] = useState([]);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [exchangeRates, setExchangeRates] = useState([]);
@@ -66,280 +154,159 @@ const MainPage = () => {
   const [myCategories, setMyCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [briefingNews, setBriefingNews] = useState([]);
+
+  // --- [사용자 파트: 플레이어 제어 상태] ---
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
-
+  const [progress, setProgress] = useState(0);
+  const [volume, setVolume] = useState(1);
   const videoRef = useRef(null);
   const videoAreaRef = useRef(null);
 
-  // 환율 데이터 가져오기 (실시간 데이터)
+  // --- [팀원 파트: 시장 데이터 수집 함수] ---
   const fetchExchangeRates = async (forceFetch = false) => {
     try {
-      // 먼저 당일 데이터 시도
       let rateRes = await exchangeRateApi.getAllExchangeRates();
-
-      // 데이터가 없거나 강제 수집 요청 시 실시간 데이터 수집
-      if (forceFetch || !rateRes?.exchangeRates || rateRes.exchangeRates.length === 0) {
-        console.log("[환율] 실시간 데이터 수집 시작");
-        // 환율은 백엔드 스케줄러가 자동으로 수집하므로, 최근 날짜들을 시도
+      if (forceFetch || !rateRes?.exchangeRates?.length) {
         const today = new Date();
         for (let i = 0; i <= 7; i++) {
           const pastDate = new Date(today);
           pastDate.setDate(today.getDate() - i);
-          const dateStr = pastDate.toISOString().slice(0, 10).replace(/-/g, '');
-
-          try {
-            rateRes = await exchangeRateApi.getExchangeRatesByDate(dateStr);
-            if (rateRes?.exchangeRates && rateRes.exchangeRates.length > 0) {
-              console.log(`[환율] 데이터 조회 성공: ${dateStr}`);
-              break;
-            }
-          } catch (err) {
-            console.debug(`[환율] 날짜 ${dateStr} 조회 실패, 다음 날짜 시도`);
-          }
+          const dateStr = pastDate.toISOString().slice(0, 10).replace(/-/g, "");
+          rateRes = await exchangeRateApi.getExchangeRatesByDate(dateStr);
+          if (rateRes?.exchangeRates?.length) break;
         }
       }
-
-      // 환율 데이터 설정
-      if (rateRes?.exchangeRates && Array.isArray(rateRes.exchangeRates) && rateRes.exchangeRates.length > 0) {
-        // 이전 환율 데이터 저장 (새 데이터 설정 전에)
-        prevExchangeRatesRef.current = exchangeRates.length > 0 ? exchangeRates : rateRes.exchangeRates;
+      if (rateRes?.exchangeRates) {
+        prevExchangeRatesRef.current =
+          exchangeRates.length > 0 ? exchangeRates : rateRes.exchangeRates;
         setExchangeRates(rateRes.exchangeRates);
-      } else {
-        console.warn("[환율] 데이터를 불러올 수 없습니다:", rateRes);
-        setExchangeRates([]);
       }
     } catch (e) {
-      console.error("[환율] 데이터 로딩 실패:", e);
-      setExchangeRates([]);
+      console.error("환율 로드 실패", e);
     }
   };
 
-  // 주가지수 데이터 가져오기 (실시간 데이터 수집)
   const fetchStockIndices = async (forceFetch = false) => {
     try {
-      console.log("[주가지수] 데이터 조회 시작");
-      // 먼저 당일 데이터 시도
       let indexRes = await stockIndexApi.getAllStockIndices();
-      console.log("[주가지수] API 응답:", indexRes);
-
-      // 데이터가 없거나 강제 수집 요청 시 실시간 데이터 수집
-      if (forceFetch || !indexRes?.stockIndices || indexRes.stockIndices.length === 0) {
-        console.log("[주가지수] 실시간 데이터 수집 시작");
-        try {
-          // 실시간 데이터 수집 (API/크롤링)
-          await stockIndexApi.fetchStockIndices();
-          // 수집 후 다시 조회
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
-          indexRes = await stockIndexApi.getAllStockIndices();
-          console.log("[주가지수] 실시간 데이터 수집 후 조회 결과:", indexRes);
-        } catch (fetchErr) {
-          console.warn("[주가지수] 실시간 데이터 수집 실패:", fetchErr);
-        }
+      if (forceFetch || !indexRes?.stockIndices?.length) {
+        await stockIndexApi.fetchStockIndices();
+        indexRes = await stockIndexApi.getAllStockIndices();
       }
-
-      // 주가지수 데이터 설정
-      if (indexRes?.stockIndices && Array.isArray(indexRes.stockIndices) && indexRes.stockIndices.length > 0) {
-        console.log("[주가지수] 데이터 설정 성공, 개수:", indexRes.stockIndices.length);
-        console.log("[주가지수] 데이터 내용:", indexRes.stockIndices);
-        setStockIndices(indexRes.stockIndices);
-      } else {
-        console.warn("[주가지수] 데이터를 불러올 수 없습니다. 응답:", indexRes);
-        setStockIndices([]);
-      }
+      if (indexRes?.stockIndices) setStockIndices(indexRes.stockIndices);
     } catch (e) {
-      console.error("[주가지수] 데이터 로딩 실패:", e);
-      setStockIndices([]);
+      console.error("주가지수 로드 실패", e);
     }
   };
 
-  // 데이터 로딩 로직
+  // --- [통합 데이터 로딩] ---
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        // 비디오 데이터는 항상 가져오기 (인증 불필요)
-        try {
-          const videoRes = await apiClient.get("/api/ai/video/main-hot");
-          if (videoRes.data) setRawVideos(videoRes.data);
-        } catch (e) {
-          console.error("비디오 데이터 로딩 실패:", e);
-        }
-
-        // 환율 및 주가지수 데이터는 별도로 가져오기 (실시간 데이터 수집, 인증 불필요)
-        await Promise.all([
-          fetchExchangeRates(true), // 강제로 실시간 데이터 수집
-          fetchStockIndices(true)   // 강제로 실시간 데이터 수집
-        ]);
-
-        // 관심 카테고리는 로그인한 사용자만 가져오기 (실패해도 계속 진행)
-        try {
-          const catRes = await getMyCategories();
-          if (catRes?.length > 0) {
-            setMyCategories(catRes);
-            setSelectedCategory(catRes[0]);
-            try {
-              const news = await getNewsByCategory(catRes[0], 10);
-              setBriefingNews(news || []);
-            } catch (newsError) {
-              console.warn("카테고리별 뉴스 로딩 실패:", newsError);
-              setBriefingNews([]);
-            }
-          } else {
-            // 카테고리가 없으면 기본 카테고리 사용
-            const defaultCategories = ['politics', 'economy', 'culture', 'it', 'society', 'world'];
-            setMyCategories(defaultCategories);
-            setSelectedCategory(defaultCategories[0]);
-            try {
-              const news = await getNewsByCategory(defaultCategories[0], 10);
-              setBriefingNews(news || []);
-            } catch (newsError) {
-              console.warn("기본 카테고리 뉴스 로딩 실패:", newsError);
-              setBriefingNews([]);
-            }
-          }
-        } catch (catError) {
-          console.warn("관심 카테고리 조회 실패 (로그인하지 않은 사용자일 수 있음):", catError);
-          // 로그인하지 않은 사용자를 위한 기본 카테고리 설정
-          const defaultCategories = ['politics', 'economy', 'culture', 'it', 'society', 'world'];
-          setMyCategories(defaultCategories);
-          setSelectedCategory(defaultCategories[0]);
-          try {
-            const news = await getNewsByCategory(defaultCategories[0], 10);
-            setBriefingNews(news || []);
-          } catch (newsError) {
-            console.warn("기본 카테고리 뉴스 로딩 실패:", newsError);
-            setBriefingNews([]);
-          }
-        }
+        const videoRes = await apiClient.get("/api/ai/video/main-hot");
+        if (videoRes.data) setRawVideos(videoRes.data);
+        await Promise.all([fetchExchangeRates(true), fetchStockIndices(true)]);
       } catch (e) {
-        console.error("데이터 로딩 실패:", e);
+        console.error(e);
       }
     };
     fetchAllData();
   }, []);
 
-  // 로그인 상태 확인 및 사용자 정보 동기화
+  // --- [팀원 파트: 자동 로그인 및 사용자 정보 동기화] ---
   useEffect(() => {
-    const syncUserInfo = async () => {
-      // 쿠키에 토큰이 있을 수 있으므로 사용자 정보 조회 시도
-      // localStorage에 사용자 정보가 없거나 isAuthenticated가 false인 경우
-      if (!user && !isAuthenticated) {
-        try {
-          // 사용자 정보 조회 시도 (실패해도 에러를 throw하지 않음)
-          const result = await dispatch(fetchUserInfoAsync());
-          if (fetchUserInfoAsync.fulfilled.match(result)) {
-            console.log("메인페이지에서 사용자 정보 조회 성공");
-          } else {
-            // 로그인하지 않은 사용자는 정상적인 상황이므로 조용히 처리
-            console.debug("사용자 정보 조회 실패 (로그인하지 않은 사용자일 수 있음)");
-          }
-        } catch (error) {
-          // 로그인하지 않은 사용자는 정상적인 상황이므로 에러 무시
-          // axios 인터셉터에서 이미 처리했을 수 있으므로 조용히 처리
-          console.debug("사용자 정보 조회 실패 (로그인하지 않은 사용자일 수 있음):", error);
-        }
-      }
-    };
+    if (!user && !isAuthenticated) {
+      setTimeout(() => {
+        dispatch(fetchUserInfoAsync());
+      }, 1000);
+    }
+  }, [dispatch, user, isAuthenticated]);
 
-    // 페이지 로드 후 약간의 지연을 두고 사용자 정보 확인
-    // 다른 초기화 작업(데이터 로딩 등)이 완료된 후 실행
-    const timer = setTimeout(() => {
-      syncUserInfo();
-    }, 1000); // 지연 시간 증가 (다른 초기화 작업 완료 대기)
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 로그인 상태가 변경될 때 관심 카테고리 로드
+  // --- [팀원 파트: 관심 카테고리 로직] ---
   useEffect(() => {
-    const fetchMyCategories = async () => {
-      if (!isAuthenticated) {
-        // 로그인하지 않은 경우 기본 카테고리 설정
-        const defaultCategories = ['politics', 'economy', 'culture', 'it', 'society', 'world'];
-        setMyCategories(defaultCategories);
-        setSelectedCategory(defaultCategories[0]);
-        try {
-          const news = await getNewsByCategory(defaultCategories[0], 10);
-          setBriefingNews(news || []);
-        } catch (newsError) {
-          console.warn("기본 카테고리 뉴스 로딩 실패:", newsError);
-          setBriefingNews([]);
-        }
-        return;
-      }
-
-      // 로그인한 사용자의 관심 카테고리 가져오기
+    const loadCategories = async () => {
       try {
         const catRes = await getMyCategories();
-        if (catRes?.length > 0) {
-          setMyCategories(catRes);
-          setSelectedCategory(catRes[0]);
-          try {
-            const news = await getNewsByCategory(catRes[0], 10);
-            setBriefingNews(news || []);
-          } catch (newsError) {
-            console.warn("카테고리별 뉴스 로딩 실패:", newsError);
-            setBriefingNews([]);
-          }
-        } else {
-          // 카테고리가 없으면 기본 카테고리 사용
-          const defaultCategories = ['politics', 'economy', 'culture', 'it', 'society', 'world'];
-          setMyCategories(defaultCategories);
-          setSelectedCategory(defaultCategories[0]);
-          try {
-            const news = await getNewsByCategory(defaultCategories[0], 10);
-            setBriefingNews(news || []);
-          } catch (newsError) {
-            console.warn("기본 카테고리 뉴스 로딩 실패:", newsError);
-            setBriefingNews([]);
-          }
-        }
-      } catch (catError) {
-        console.warn("관심 카테고리 조회 실패:", catError);
-        // 기본 카테고리 설정
-        const defaultCategories = ['politics', 'economy', 'culture', 'it', 'society', 'world'];
-        setMyCategories(defaultCategories);
-        setSelectedCategory(defaultCategories[0]);
-        try {
-          const news = await getNewsByCategory(defaultCategories[0], 10);
-          setBriefingNews(news || []);
-        } catch (newsError) {
-          console.warn("기본 카테고리 뉴스 로딩 실패:", newsError);
-          setBriefingNews([]);
-        }
+        const finalCats =
+          catRes?.length > 0
+            ? catRes
+            : ["politics", "economy", "culture", "it", "society", "world"];
+        setMyCategories(finalCats);
+        setSelectedCategory(finalCats[0]);
+      } catch (e) {
+        const defaultCats = [
+          "politics",
+          "economy",
+          "culture",
+          "it",
+          "society",
+          "world",
+        ];
+        setMyCategories(defaultCats);
+        setSelectedCategory(defaultCats[0]);
       }
     };
-
-    fetchMyCategories();
+    loadCategories();
   }, [isAuthenticated]);
 
-  // 주기적으로 환율 및 주가지수 데이터 갱신 (5분마다)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log("[실시간] 환율 및 주가지수 데이터 갱신 시작");
-      fetchExchangeRates(true);
-      fetchStockIndices(true);
-    }, 5 * 60 * 1000); // 5분마다
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // 선택된 카테고리 변경 시 뉴스 다시 로드
   useEffect(() => {
     if (selectedCategory) {
-      const fetchNews = async () => {
-        try {
-          const news = await getNewsByCategory(selectedCategory, 10);
-          setBriefingNews(news || []);
-        } catch (e) {
-          console.warn("뉴스 로딩 실패 (로그인하지 않은 사용자일 수 있음):", e);
-          setBriefingNews([]);
-        }
-      };
-      fetchNews();
+      getNewsByCategory(selectedCategory, 10).then((news) =>
+        setBriefingNews(news || []),
+      );
     }
   }, [selectedCategory]);
+
+  // --- [사용자 파트: 비디오 제어 핸들러] ---
+  const togglePlay = (e) => {
+    e?.stopPropagation();
+    if (!videoRef.current) return;
+    if (isPlaying) videoRef.current.pause();
+    else videoRef.current.play();
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setProgress(
+        (videoRef.current.currentTime / videoRef.current.duration) * 100 || 0,
+      );
+    }
+  };
+
+  const handleSeek = (e) => {
+    const time = (e.target.value / 100) * videoRef.current.duration;
+    videoRef.current.currentTime = time;
+    setProgress(e.target.value);
+  };
+
+  const handleFullScreen = () => {
+    const videoElement = videoRef.current;
+
+    if (videoElement) {
+      if (videoElement.requestFullscreen) {
+        videoElement.requestFullscreen();
+      } else if (videoElement.webkitRequestFullscreen) {
+        // 사파리/구형 크롬 대응
+        videoElement.webkitRequestFullscreen();
+      } else if (videoElement.msRequestFullscreen) {
+        // IE 대응
+        videoElement.msRequestFullscreen();
+      }
+    }
+  };
+
+  const goToPrevious = (e) => {
+    e?.stopPropagation();
+    if (currentVideoIndex > 0) setCurrentVideoIndex((prev) => prev - 1);
+  };
+
+  const goToNext = (e) => {
+    e?.stopPropagation();
+    if (currentVideoIndex < hotVideos.length - 1)
+      setCurrentVideoIndex((prev) => prev + 1);
+  };
 
   const hotVideos = useMemo(() => {
     const categories = Object.keys(categoryMap);
@@ -348,235 +315,55 @@ const MainPage = () => {
       .filter(Boolean);
   }, [rawVideos]);
 
-  // 카테고리별 비디오 인덱스 맵 (빠른 조회를 위해)
-  const categoryIndexMap = useMemo(() => {
-    const map = new Map();
-    hotVideos.forEach((video, idx) => {
-      if (video?.category) {
-        map.set(video.category.toLowerCase(), idx);
-      }
-    });
-    return map;
-  }, [hotVideos]);
-
   const activeVideo = useMemo(
     () => hotVideos[currentVideoIndex] || null,
     [hotVideos, currentVideoIndex],
   );
 
-  // --- [추가] 이전/다음 이동 함수 ---
-  const goToPrevious = (e) => {
-    e?.stopPropagation(); // 배경 재생/정지 이벤트 간섭 방지
-    if (currentVideoIndex > 0) {
-      setCurrentVideoIndex((prev) => prev - 1);
-      setIsPlaying(true);
-    }
-  };
-
-  const goToNext = (e) => {
-    e?.stopPropagation();
-    if (currentVideoIndex < hotVideos.length - 1) {
-      setCurrentVideoIndex((prev) => prev + 1);
-      setIsPlaying(true);
-    }
-  };
-
-  const togglePlay = (e) => {
-    e?.stopPropagation();
-    if (videoRef.current) {
-      if (isPlaying) videoRef.current.pause();
-      else videoRef.current.play();
-      setIsPlaying(!isPlaying);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white pt-20">
-      {/* 1. 환율 및 주가지수 바 */}
+      {/* 1. 상단 마켓 티커 바 (팀원 로직 결과물) */}
       <section className="bg-white border-y border-gray-100 py-3 px-8 h-12 flex items-center overflow-hidden">
         <div className="max-w-7xl mx-auto flex items-center w-full text-[11px]">
-          <span className="font-bold pr-4 text-blue-600 flex-shrink-0">MARKET &gt;</span>
+          <span className="font-bold pr-4 text-blue-600 flex-shrink-0">
+            MARKET &gt;
+          </span>
           <div className="flex-1 overflow-hidden">
             <div className="market-scroll-wrapper flex items-center gap-4 whitespace-nowrap">
-              {/* 원본 콘텐츠 */}
               <div className="market-scroll flex items-center gap-4">
-                {/* 주가지수 표시 - 환율 앞에 표시 */}
-                {stockIndices.length > 0 && stockIndices.map((index, i) => {
-                  const clprValue = index.clpr
-                    ? (typeof index.clpr === 'string'
-                      ? parseFloat(index.clpr.replace(/,/g, ''))
-                      : parseFloat(index.clpr))
-                    : null;
-
-                  const vsValue = index.vs
-                    ? (typeof index.vs === 'string'
-                      ? parseFloat(index.vs.replace(/,/g, ''))
-                      : parseFloat(index.vs))
-                    : null;
-
-                  // 지수명을 한국어로 변환
-                  const indexName = index.idxNm || index.mrktCls || 'N/A';
-
-                  // 색상 결정 (전일 대비)
-                  const isPositive = vsValue !== null && vsValue > 0;
-                  const isNegative = vsValue !== null && vsValue < 0;
-                  const colorClass = isPositive ? 'text-red-600' : isNegative ? 'text-blue-600' : '';
-
-                  return (
-                    <span key={index.mrktCls || i} className={`inline-block ${colorClass}`}>
-                      {indexName} {clprValue ? clprValue.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : 'N/A'}
-                    </span>
-                  );
-                })}
-
-                {/* 환율 표시 - 주요 통화 우선 정렬 */}
-                {exchangeRates.length > 0 && (() => {
-                  // 주요 통화를 먼저 정렬
-                  const sortedRates = [...exchangeRates].sort((a, b) => {
-                    const aPriority = priorityCurrencies.indexOf(a.curUnit);
-                    const bPriority = priorityCurrencies.indexOf(b.curUnit);
-                    if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
-                    if (aPriority !== -1) return -1;
-                    if (bPriority !== -1) return 1;
-                    return 0;
-                  });
-
-                  return sortedRates.slice(0, 12).map((r, i) => {
-                    const rateValue = r.dealBasR
-                      ? (typeof r.dealBasR === 'string'
-                        ? parseFloat(r.dealBasR.replace(/,/g, ''))
-                        : parseFloat(r.dealBasR))
-                      : null;
-
-                    // 이전 환율과 비교하여 색상 결정
-                    const prevRate = prevExchangeRatesRef.current.find(prev => prev.curUnit === r.curUnit);
-                    const prevRateValue = prevRate?.dealBasR
-                      ? (typeof prevRate.dealBasR === 'string'
-                        ? parseFloat(prevRate.dealBasR.replace(/,/g, ''))
-                        : parseFloat(prevRate.dealBasR))
-                      : null;
-
-                    const isRateUp = rateValue !== null && prevRateValue !== null && rateValue > prevRateValue;
-                    const isRateDown = rateValue !== null && prevRateValue !== null && rateValue < prevRateValue;
-                    const rateColorClass = isRateUp ? 'text-red-600' : isRateDown ? 'text-blue-600' : '';
-
-                    // 통화 코드를 한국어로 변환 (curNm이 있으면 우선 사용, 없으면 매핑 사용)
-                    const currencyName = r.curNm || currencyNameMap[r.curUnit] || r.curUnit || 'N/A';
-                    return (
-                      <span key={r.curUnit || `rate-${i}`} className={`inline-block ${rateColorClass}`}>
-                        {currencyName} {rateValue ? rateValue.toLocaleString('ko-KR') : 'N/A'}
-                      </span>
-                    );
-                  });
-                })()}
-
-                {/* 데이터가 없을 때 */}
-                {stockIndices.length === 0 && exchangeRates.length === 0 && (
-                  <span className="inline-block">시장 데이터를 불러오는 중...</span>
-                )}
-              </div>
-
-              {/* 복제본 콘텐츠 (끊김 없이 이어지게 하기 위해) */}
-              <div className="market-scroll flex items-center gap-4" aria-hidden="true">
-                {/* 주가지수 표시 - 환율 앞에 표시 */}
-                {stockIndices.length > 0 && stockIndices.map((index, i) => {
-                  const clprValue = index.clpr
-                    ? (typeof index.clpr === 'string'
-                      ? parseFloat(index.clpr.replace(/,/g, ''))
-                      : parseFloat(index.clpr))
-                    : null;
-
-                  const vsValue = index.vs
-                    ? (typeof index.vs === 'string'
-                      ? parseFloat(index.vs.replace(/,/g, ''))
-                      : parseFloat(index.vs))
-                    : null;
-
-                  // 지수명을 한국어로 변환
-                  const indexName = index.idxNm || index.mrktCls || 'N/A';
-
-                  // 색상 결정 (전일 대비)
-                  const isPositive = vsValue !== null && vsValue > 0;
-                  const isNegative = vsValue !== null && vsValue < 0;
-                  const colorClass = isPositive ? 'text-red-600' : isNegative ? 'text-blue-600' : '';
-
-                  return (
-                    <span key={`copy-${index.mrktCls || i}`} className={`inline-block ${colorClass}`}>
-                      {indexName} {clprValue ? clprValue.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : 'N/A'}
-                    </span>
-                  );
-                })}
-
-                {/* 환율 표시 - 주요 통화 우선 정렬 */}
-                {exchangeRates.length > 0 && (() => {
-                  // 주요 통화를 먼저 정렬
-                  const sortedRates = [...exchangeRates].sort((a, b) => {
-                    const aPriority = priorityCurrencies.indexOf(a.curUnit);
-                    const bPriority = priorityCurrencies.indexOf(b.curUnit);
-                    if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
-                    if (aPriority !== -1) return -1;
-                    if (bPriority !== -1) return 1;
-                    return 0;
-                  });
-
-                  return sortedRates.slice(0, 12).map((r, i) => {
-                    const rateValue = r.dealBasR
-                      ? (typeof r.dealBasR === 'string'
-                        ? parseFloat(r.dealBasR.replace(/,/g, ''))
-                        : parseFloat(r.dealBasR))
-                      : null;
-
-                    // 이전 환율과 비교하여 색상 결정
-                    const prevRate = prevExchangeRatesRef.current.find(prev => prev.curUnit === r.curUnit);
-                    const prevRateValue = prevRate?.dealBasR
-                      ? (typeof prevRate.dealBasR === 'string'
-                        ? parseFloat(prevRate.dealBasR.replace(/,/g, ''))
-                        : parseFloat(prevRate.dealBasR))
-                      : null;
-
-                    const isRateUp = rateValue !== null && prevRateValue !== null && rateValue > prevRateValue;
-                    const isRateDown = rateValue !== null && prevRateValue !== null && rateValue < prevRateValue;
-                    const rateColorClass = isRateUp ? 'text-red-600' : isRateDown ? 'text-blue-600' : '';
-
-                    // 통화 코드를 한국어로 변환 (curNm이 있으면 우선 사용, 없으면 매핑 사용)
-                    const currencyName = r.curNm || currencyNameMap[r.curUnit] || r.curUnit || 'N/A';
-                    return (
-                      <span key={`copy-rate-${r.curUnit || i}`} className={`inline-block ${rateColorClass}`}>
-                        {currencyName} {rateValue ? rateValue.toLocaleString('ko-KR') : 'N/A'}
-                      </span>
-                    );
-                  });
-                })()}
-
-                {/* 데이터가 없을 때 */}
-                {stockIndices.length === 0 && exchangeRates.length === 0 && (
-                  <span className="inline-block">시장 데이터를 불러오는 중...</span>
-                )}
+                {stockIndices.map((idx, i) => (
+                  <span key={`idx-${i}`} className="inline-block text-red-600">
+                    {idx.idxNm} <b>{idx.clpr}</b>
+                  </span>
+                ))}
+                {exchangeRates.slice(0, 10).map((r, i) => (
+                  <span key={`rate-${i}`} className="inline-block">
+                    {r.curUnit} <b>{r.dealBasR}</b>
+                  </span>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. 메인 비디오 영역 */}
+      {/* 2. 메인 콘텐츠 영역 (16:9 최적화 버전) */}
       <section className="py-8 px-8 max-w-[1600px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-          <div ref={videoAreaRef} className="flex flex-col">
-            {/* 플레이어 컨테이너 */}
-            <div
-              className="relative rounded-2xl bg-black aspect-video lg:aspect-[21/9] overflow-hidden shadow-2xl group"
-              onClick={togglePlay}
-            >
+          {/* videoAreaRef는 레이아웃용, 실제 전체화면은 videoRef 사용 */}
+          <div className="flex flex-col relative group">
+            <div className="relative rounded-3xl bg-black aspect-video overflow-hidden shadow-2xl">
               {activeVideo ? (
                 <>
                   <video
-                    ref={videoRef}
+                    ref={videoRef} // 이 ref가 중요합니다!
                     key={activeVideo.vno}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover cursor-pointer" // contain 대신 cover를 쓰면 미세한 여백도 사라집니다
                     autoPlay
                     muted={isMuted}
-                    playsInline
+                    onTimeUpdate={handleTimeUpdate}
                     onEnded={goToNext}
+                    onClick={togglePlay}
                   >
                     <source
                       src={`${VIDEO_BASE_URL}${activeVideo.videoUrl}`}
@@ -584,84 +371,82 @@ const MainPage = () => {
                     />
                   </video>
 
-                  {/* --- [추가] 이전 버튼: 인덱스가 0보다 클 때만 노출 --- */}
-                  {currentVideoIndex > 0 && (
-                    <button
-                      onClick={goToPrevious}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <svg
-                        className="w-6 h-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 19l-7-7 7-7"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                  {/* 좌우 네비게이션 화살표 */}
+                  <button
+                    onClick={goToPrevious}
+                    className={`absolute left-6 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all ${currentVideoIndex === 0 && "hidden"}`}
+                  >
+                    <Icons.ChevronLeft />
+                  </button>
+                  <button
+                    onClick={goToNext}
+                    className={`absolute right-6 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all ${currentVideoIndex === hotVideos.length - 1 && "hidden"}`}
+                  >
+                    <Icons.ChevronRight />
+                  </button>
 
-                  {/* --- [추가] 다음 버튼: 마지막 영상이 아닐 때만 노출 --- */}
-                  {currentVideoIndex < hotVideos.length - 1 && (
-                    <button
-                      onClick={goToNext}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <svg
-                        className="w-6 h-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                  {/* 하단 시네마틱 컨트롤 바 */}
+                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 text-left">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={progress}
+                      className="w-full h-1.5 mb-6 accent-blue-500 cursor-pointer bg-white/20 rounded-full appearance-none"
+                      onChange={handleSeek}
+                    />
+                    <div className="flex items-center justify-between text-white">
+                      <div className="flex items-center gap-8">
+                        <button
+                          onClick={togglePlay}
+                          className="hover:scale-110 transition-transform"
+                        >
+                          {isPlaying ? <Icons.Pause /> : <Icons.Play />}
+                        </button>
 
-                  {/* 하단 컨트롤 및 제목 오버레이 */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
-                    <div className="flex items-center gap-4 text-white">
-                      <button
-                        onClick={togglePlay}
-                        className="hover:text-blue-400"
-                      >
-                        {isPlaying ? (
-                          <svg
-                            className="w-8 h-8"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
+                        {/* 소리 조절 */}
+                        <div className="flex items-center gap-3 group/vol">
+                          <button
+                            onClick={() => {
+                              videoRef.current.muted = !isMuted;
+                              setIsMuted(!isMuted);
+                            }}
                           >
-                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="w-8 h-8"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        )}
-                      </button>
-                      <div>
-                        <span className="text-[10px] bg-blue-600 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                          {categoryMap[activeVideo.category] ||
-                            activeVideo.category}
-                        </span>
-                        <h2 className="text-xl font-bold mt-1">
-                          {activeVideo.customTitle}
-                        </h2>
+                            {isMuted ? <Icons.VolumeX /> : <Icons.Volume2 />}
+                          </button>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={volume}
+                            className="w-0 group-hover/vol:w-24 transition-all duration-300 h-1 accent-white appearance-none bg-white/30 rounded"
+                            onChange={(e) => {
+                              videoRef.current.volume = e.target.value;
+                              setVolume(e.target.value);
+                              if (e.target.value > 0) setIsMuted(false);
+                            }}
+                          />
+                        </div>
+
+                        {/* ▼ [수정됨: 카테고리 + 뉴스 제목 노출] ▼ */}
+                        <div className="border-l border-white/20 pl-6 flex flex-col">
+                          <span className="text-[10px] bg-blue-600 px-2 py-0.5 rounded font-black uppercase tracking-widest w-fit mb-1">
+                            {categoryMap[activeVideo.category] ||
+                              activeVideo.category}
+                          </span>
+                          <h2 className="text-xl font-bold tracking-tight leading-tight">
+                            {activeVideo.customTitle}
+                          </h2>
+                        </div>
                       </div>
+
+                      <button
+                        onClick={handleFullScreen}
+                        className="hover:text-blue-400 p-2"
+                      >
+                        <Icons.Maximize />
+                      </button>
                     </div>
                   </div>
                 </>
@@ -672,141 +457,66 @@ const MainPage = () => {
               )}
             </div>
 
-            {/* 하단 6칸 버튼 */}
-            <div className="mt-6 grid grid-cols-6 gap-4">
+            {/* 하단 6칸 버튼 (기존 유지) */}
+            <div className="mt-8 grid grid-cols-6 gap-4">
               {Object.keys(categoryMap).map((catKey) => {
                 const video = hotVideos.find(
                   (v) => v.category?.toLowerCase() === catKey,
                 );
                 const isActive =
                   activeVideo?.category?.toLowerCase() === catKey;
-                const hasVideo = video !== undefined;
                 return (
                   <button
                     key={catKey}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const idx = categoryIndexMap.get(catKey);
-                      if (idx !== undefined && idx !== -1) {
+                    onClick={() => {
+                      const idx = hotVideos.findIndex(
+                        (v) => v.category?.toLowerCase() === catKey,
+                      );
+                      if (idx !== -1) {
                         setCurrentVideoIndex(idx);
                         setIsPlaying(true);
-                        // 비디오 재생 시작
-                        if (videoRef.current) {
-                          videoRef.current.currentTime = 0;
-                          videoRef.current.play().catch(err => {
-                            console.error("비디오 재생 실패:", err);
-                          });
-                        }
-                      } else {
-                        // 비디오가 없을 때도 피드백 제공
-                        console.log(`[${categoryMap[catKey]}] 카테고리의 비디오가 없습니다.`);
                       }
                     }}
-                    disabled={!hasVideo}
-                    className={`relative py-3 rounded-xl border-2 transition-all duration-300 
-                    ${isActive ? "border-blue-500 bg-blue-50" : "border-gray-100 bg-white hover:border-gray-200"}
-                    ${!hasVideo ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    disabled={!video}
+                    className={`py-3 rounded-xl border-2 transition-all ${isActive ? "border-blue-500 bg-blue-50 text-blue-600 font-bold" : "border-gray-100 text-gray-400"} ${!video && "opacity-30 cursor-not-allowed"}`}
                   >
-                    <span
-                      className={`text-xs font-bold ${isActive ? "text-blue-600" : hasVideo ? "text-gray-400" : "text-gray-300"}`}
-                    >
-                      {categoryMap[catKey]}
-                    </span>
-                    {isActive && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping" />
-                    )}
-                    {!hasVideo && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[8px] text-gray-400">준비중</span>
-                      </div>
-                    )}
+                    {categoryMap[catKey]}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* 3. 사이드바 - 관심 카테고리 */}
-          <aside className="bg-slate-50 rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
-            <div className="p-4 border-b bg-white font-bold text-sm">
-              관심 카테고리
+          {/* 3. 우측 사이드바 (팀원 파트: 뉴스 브리핑) */}
+          <aside className="bg-slate-50 rounded-3xl p-6 border border-gray-100 overflow-hidden flex flex-col text-left">
+            <div className="font-bold mb-4 text-sm text-slate-800 border-b pb-2">
+              관심 카테고리 브리핑
             </div>
-            {!isAuthenticated ? (
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="text-[12px] text-gray-500 text-center">
-                  로그인 후 사용 가능
+            <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar">
+              {isAuthenticated ? (
+                briefingNews.map((news) => (
+                  <div
+                    key={news.id}
+                    onClick={() => window.open(news.originalUrl)}
+                    className="text-[12px] font-bold text-slate-700 hover:text-blue-600 cursor-pointer leading-tight"
+                  >
+                    • {news.title}
+                  </div>
+                ))
+              ) : (
+                <div className="text-[12px] text-gray-400 text-center py-10">
+                  로그인 후 사용 가능합니다.
                 </div>
-              </div>
-            ) : myCategories.length > 0 ? (
-              <>
-                <div className="p-4 border-b bg-white flex flex-wrap gap-2">
-                  {myCategories.map((category) => {
-                    const displayName = categoryMap[category] || category;
-                    const isSelected = selectedCategory === category;
-                    return (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${isSelected
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                          }`}
-                      >
-                        {displayName}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                  {briefingNews.length > 0 ? (
-                    briefingNews.map((news) => (
-                      <div
-                        key={news.id}
-                        onClick={() => navigate(`/news/${news.id}`, { state: { news } })}
-                        className="text-[12px] font-bold text-slate-700 hover:text-blue-600 cursor-pointer leading-snug"
-                      >
-                        • {news.title}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-[12px] text-gray-500 text-center py-4">
-                      해당 카테고리의 뉴스가 없습니다.
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="text-[12px] text-gray-500 text-center">
-                  관심 카테고리를 설정해주세요.
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </aside>
         </div>
       </section>
 
       <style>{`
-        .market-scroll-wrapper {
-          display: flex;
-          width: 100%;
-        }
-        .market-scroll {
-          display: inline-flex;
-          animation: market-scroll 40s linear infinite;
-          flex-shrink: 0;
-        }
-        @keyframes market-scroll {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-100%);
-          }
-        }
-        .market-scroll-wrapper:hover .market-scroll {
-          animation-play-state: paused;
-        }
+        .market-scroll { display: inline-flex; animation: market-scroll 45s linear infinite; }
+        @keyframes market-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: #3b82f6; border-radius: 50%; border: 2px solid white; cursor: pointer; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
       `}</style>

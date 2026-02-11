@@ -4,6 +4,8 @@ import com.fullStc.ai.dto.VideoTaskDTO;
 import com.fullStc.ai.service.VideoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -29,4 +31,15 @@ public class VideoController {
     public List<VideoTaskDTO> getMainHotVideos() {
         return videoService.getMainHotVideoList();
 }
+@DeleteMapping("/delete/{vno}")
+    public ResponseEntity<String> deleteVideo(@PathVariable("vno") Long vno) {
+        log.info("비디오 삭제 요청 vno: " + vno);
+        try {
+            videoService.deleteVideo(vno);
+            return ResponseEntity.ok("정상적으로 삭제되었습니다.");
+        } catch (Exception e) {
+            log.error("삭제 중 오류 발생: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("삭제 실패: " + e.getMessage());
+        }
+    }
 }

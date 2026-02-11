@@ -21,10 +21,12 @@ public class NewsVideoScheduler {
     private final VideoService videoService;
     private final NewsClusterRepository newsClusterRepository;
 
-    @Scheduled(cron = "0 0/10 * * * *")
+    /* 10분마다 실행, 각 카테고리별 HOT 이슈 영상제작 요청*/
+    @Scheduled(cron = "0 0/15 * * * *")
     public void generateCategoryHotDigest() {
 
         String[] categories = { "politics", "economy", "society", "world", "it", "culture" };
+
         int index = (LocalTime.now().getMinute() / 10) % categories.length;
         String targetCategory = categories[index];
 
@@ -38,22 +40,33 @@ public class NewsVideoScheduler {
             return;
         }
 
+
+        String catchyTitle = hotClusters.get(0).getClusterSummary();
+        
+        if (catchyTitle != null && catchyTitle.length() > 25) {
+            catchyTitle = catchyTitle.substring(0, 22) + "...";
+        } else if (catchyTitle == null) {
+            catchyTitle = "오늘의 " + targetCategory + " 주요 소식";
+        }
+
         StringBuilder digestText = new StringBuilder("오늘의 " + targetCategory + " 주요 소식입니다.\n\n");
         for (int i = 0; i < hotClusters.size(); i++) {
             digestText.append("이슈 ").append(i + 1).append(": ")
                     .append(hotClusters.get(i).getClusterSummary()).append("\n\n");
         }
 
+        // 비디오 제작 요청 DTO 생성 
         VideoTaskDTO dto = VideoTaskDTO.builder()
-                .memberId(1L)
+                .memberId(1L) // 관리자 ID
                 .category(targetCategory)
                 .rawText(digestText.toString())
-                .customTitle("오늘의 " + targetCategory + " 핵심 요약")
-                .videoMode("16:9")
-                .isMainHot(true)
+                .customTitle(catchyTitle)
+                .videoMode("16:9") 
+                .isMainHot(true)  
                 .build();
 
         videoService.requestVideoGeneration(dto);
-        log.info("✅ [{}] 영상 제작 요청이 성공적으로 큐에 등록되었습니다.", targetCategory);
+        
+        log.info("✅ [{}] 영상 제작 요청 성공. 제목: {}", targetCategory, catchyTitle);
     }
 }

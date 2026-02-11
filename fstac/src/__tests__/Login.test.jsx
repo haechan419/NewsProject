@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../slices/authSlice';
-import Login from '../pages/auth/Login';
+import Login from '../pages/Login';
 
 // Mock API
 vi.mock('../api/authApi', () => ({

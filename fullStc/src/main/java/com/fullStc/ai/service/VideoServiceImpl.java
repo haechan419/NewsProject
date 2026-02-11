@@ -7,8 +7,8 @@ import com.fullStc.member.domain.Member;
 import com.fullStc.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.data.domain.PageRequest; // ◀ 필수
-import org.springframework.data.domain.Pageable;    // ◀ 필수
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.io.File;
 
 @Service
 @Log4j2
@@ -26,13 +27,38 @@ public class VideoServiceImpl implements VideoService {
     private final VideoTaskRepository videoTaskRepository;
     private final MemberRepository memberRepository;
 
+    private final String uploadPath = "D:/shortnews0209/NewsProject-master/python-ai/videos/";
+    @Override
+    public void deleteVideo(Long vno) {
+        log.info("영상 삭제 요청 vno: " + vno);
+
+        // 1. 엔티티 조회
+        VideoTask task = videoTaskRepository.findById(vno)
+                .orElseThrow(() -> new RuntimeException("해당 영상을 찾을 수 없습니다."));
+
+        // 2. 물리 파일 삭제 로직
+        String fileName = task.getVideoUrl();
+        if (fileName != null && !fileName.isEmpty()) {
+            File file = new File(uploadPath + fileName);
+            if (file.exists()) {
+                if (file.delete()) {
+                    log.info("MP4 파일 삭제 성공: " + fileName);
+                } else {
+                    log.error("MP4 파일 삭제 실패: " + fileName);
+                }
+            }
+        }
+
+        // 3. DB 레코드 삭제
+        videoTaskRepository.deleteById(vno);
+    }
     @Override
     public Long requestVideoGeneration(VideoTaskDTO dto) {
         // 기존 작업 취소
         List<VideoTask> activeTasks = videoTaskRepository.findByMemberIdAndStatusIn(
             dto.getMemberId(), List.of("PENDING", "PROCESSING")
         );
-        
+
         if (!activeTasks.isEmpty()) {
             activeTasks.forEach(task -> task.changeStatus("CANCELED"));
             videoTaskRepository.saveAll(activeTasks);

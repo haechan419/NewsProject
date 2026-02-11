@@ -1,4 +1,5 @@
 # main.py - AI 챗봇 FastAPI 서버 (링크 누락 수정판)
+from urllib import request
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -109,44 +110,6 @@ try:
 except Exception as e:
     stock_index_crawler = None
     logger.warning(f"[Warning] 주가지수 크롤러 로드 실패: {e}")
-
-# ===== 주가지수 실시간(5초 간격) 크롤링 캐시 =====
-# - 파이썬에서 5초마다 크롤링해서 메모리에 보관
-# - Spring Boot / React는 이 캐시를 조회하는 API를 5초 간격으로 호출
-stock_index_realtime_cache = []
-stock_index_realtime_last_updated: Optional[str] = None
-
-
-async def stock_index_realtime_loop():
-    """
-    주가지수 실시간 크롤링 루프
-    - 5초 간격으로 KOSPI, KOSDAQ 지수를 크롤링
-    - 결과를 전역 캐시에 저장
-    """
-    global stock_index_realtime_cache, stock_index_realtime_last_updated
-
-    if stock_index_crawler is None:
-        logger.warning("[주가지수-실시간] 크롤러가 없어 실시간 루프를 시작할 수 없습니다.")
-        return
-
-    logger.info("[주가지수-실시간] 5초 간격 크롤링 루프 시작")
-    while True:
-        try:
-            # KOSPI + KOSDAQ 모두 크롤링 (mrkt_cls=None)
-            indices = stock_index_crawler.crawl_stock_index(mrkt_cls=None, search_date=None)
-            if indices:
-                stock_index_realtime_cache = indices
-                stock_index_realtime_last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                logger.info(
-                    f"[주가지수-실시간] 최신 데이터 갱신 - 개수: {len(indices)}, 시각: {stock_index_realtime_last_updated}"
-                )
-            else:
-                logger.warning("[주가지수-실시간] 크롤링 결과가 비어 있습니다.")
-        except Exception as e:
-            logger.error(f"[주가지수-실시간] 크롤링 루프 중 오류 발생: {e}", exc_info=True)
-
-        # 5초 대기 후 다시 크롤링
-        await asyncio.sleep(5)
 _DRIVE_STATIC = Path(__file__).resolve().parent / "drive" / "static"
 if _DRIVE_STATIC.exists():
     app.mount("/static", StaticFiles(directory=str(_DRIVE_STATIC)), name="drive_static")
@@ -154,68 +117,15 @@ if _DRIVE_STATIC.exists():
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# 검색 서비스 초기화
-search_service = SearchService(client)
-
-# 서버 시작 시 영상 엔진 자동 가동
-@app.on_event("startup")
-async def startup_event():
-    logger.info("🚀 FastAPI 앱 가동 시작")
-
-    # 영상 제작 엔진 가동 (Thread)
-    if run_engine:
-        video_thread = threading.Thread(target=run_engine, daemon=True)
-        video_thread.start()
-        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
-
-    # 실시간 검색어 백그라운드 갱신 시작 (asyncio)
-    import asyncio
-    asyncio.create_task(trending_service.start_background_update())
-    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
-
-    # 주가지수 실시간(5초 간격) 크롤링 루프 시작
-    try:
-        asyncio.create_task(stock_index_realtime_loop())
-        logger.info("📈 [주가지수-실시간] 5초 간격 크롤링 루프 태스크 시작됨")
-    except Exception as e:
-        logger.warning(f"[주가지수-실시간] 루프 시작 실패: {e}")
-# 생존 확인 엔드포인트
-@app.get("/")
-async def root():
-    return {
-        "status": "ok",
-        "message": "AI Chat & Video API is running",
-        "video_engine": "Active" if run_engine else "Missing"
-    }
-
-# 얼굴 데이터 저장 디렉토리
-FACE_DATA_DIR = Path("face_data")
-FACE_DATA_DIR.mkdir(exist_ok=True)
-
-
-# ===== 앱 시작/종료 이벤트 =====
-@app.on_event("startup")
-async def startup_event():
-    """앱 시작 시 실행"""
-    import asyncio
-    logger.info("🚀 FastAPI 앱 시작")
-    # 실시간 검색어 백그라운드 갱신 시작
-    asyncio.create_task(trending_service.start_background_update())
-    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """앱 종료 시 실행"""
-    logger.info("🛑 FastAPI 앱 종료")
-    trending_service.stop_background_update()
-
-
 # ===== Pydantic 모델 =====
 class ConversationMessage(BaseModel):
     """대화 메시지"""
     role: str  # "user" 또는 "assistant"
     content: str
+
+# ===== 기사 생성 요청 모델 =====
+class ArticleGenerationRequest(BaseModel):
+    title: str
 
 # 기존 ChatResponse 클래스 아래에 추가
 class VideoGenerationRequest(BaseModel):
@@ -338,6 +248,82 @@ class ExchangeRateListResponse(BaseModel):
     exchange_rates: List[ExchangeRateResponse]
     count: int
     search_date: Optional[str] = None
+
+# 검색 서비스 초기화
+search_service = SearchService(client)
+
+# 서버 시작 시 영상 엔진 자동 가동
+@app.on_event("startup")
+async def startup_event():
+    logger.info("🚀 FastAPI 앱 가동 시작")
+
+    # 영상 제작 엔진 가동 (Thread)
+    if run_engine:
+        video_thread = threading.Thread(target=run_engine, daemon=True)
+        video_thread.start()
+        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+
+    # 실시간 검색어 백그라운드 갱신 시작 (asyncio)
+    import asyncio
+    asyncio.create_task(trending_service.start_background_update())
+    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
+
+# ===== 기사 생성 엔드포인트 =====
+@app.post("/api/ai/generate-article")
+async def generate_article(req: ArticleGenerationRequest):
+    """사용자가 입력한 제목을 바탕으로 뉴스 본문 생성"""
+    try:
+        logger.info(f"📝 AI 기사 생성 요청: {req.title}")
+        prompt = f"""
+        뉴스 제목: "{req.title}"
+        위 제목을 바탕으로 전문적인 뉴스 기사 본문을 작성해줘.
+        - 아나운서가 읽기 좋은 부드러운 문체 (~입니다, ~습니다) 사용.
+        - 40초 내외의 분량 (약 3~4문장).
+        - 신뢰감 있는 뉴스 톤 유지.
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800,
+            temperature=0.7
+        )
+        return {"content": response.choices[0].message.content}
+    except Exception as e:
+        logger.error(f"AI 글쓰기 오류: {e}")
+        raise HTTPException(status_code=500, detail="기사 생성에 실패했습니다.")
+# 생존 확인 엔드포인트
+@app.get("/")
+async def root():
+    return {
+        "status": "ok",
+        "message": "AI Chat & Video API is running",
+        "video_engine": "Active" if run_engine else "Missing"
+    }
+
+# 얼굴 데이터 저장 디렉토리
+FACE_DATA_DIR = Path("face_data")
+FACE_DATA_DIR.mkdir(exist_ok=True)
+
+
+# ===== 앱 시작/종료 이벤트 =====
+@app.on_event("startup")
+async def startup_event():
+    """앱 시작 시 실행"""
+    import asyncio
+    logger.info("🚀 FastAPI 앱 시작")
+    # 실시간 검색어 백그라운드 갱신 시작
+    asyncio.create_task(trending_service.start_background_update())
+    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """앱 종료 시 실행"""
+    logger.info("🛑 FastAPI 앱 종료")
+    trending_service.stop_background_update()
+
+
+
 
 
 # ===== 시스템 프롬프트 =====
@@ -727,7 +713,7 @@ async def get_trending():
     }
 
 
-# [수정됨] 채팅 엔드포인트 - 링크 누락 문제 해결 + 실시간 검색어 지원
+# 채팅 엔드포인트 - 링크 누락 문제 해결 + 실시간 검색어 지원
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
@@ -1531,45 +1517,6 @@ async def crawl_stock_indices(mrkt_cls: Optional[str] = None, search_date: Optio
             status_code=500,
             detail=f"주가지수 크롤링 중 오류가 발생했습니다: {str(e)}"
         )
-
-
-# ===== 주가지수 실시간(5초 간격) 조회 API =====
-@app.get("/api/stock-index/realtime")
-async def get_realtime_stock_indices():
-    """
-    5초 간격으로 파이썬에서 크롤링해 저장해 둔
-    최신 주가지수(KOSPI, KOSDAQ) 데이터를 조회하는 엔드포인트
-
-    - 백그라운드 루프가 5초마다 네이버 금융에서 크롤링
-    - 캐시에 없으면 즉시 한 번 크롤링해서 반환
-    """
-    global stock_index_realtime_cache, stock_index_realtime_last_updated
-
-    if stock_index_crawler is None:
-        raise HTTPException(
-            status_code=503,
-            detail="주가지수 크롤러를 사용할 수 없습니다."
-        )
-
-    # 캐시에 아직 데이터가 없으면 즉시 한 번 크롤링
-    if not stock_index_realtime_cache:
-        try:
-            indices = stock_index_crawler.crawl_stock_index(mrkt_cls=None, search_date=None)
-            if indices:
-                stock_index_realtime_cache = indices
-                stock_index_realtime_last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        except Exception as e:
-            logger.error(f"[주가지수-실시간] 초기 크롤링 실패: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=f"주가지수 실시간 데이터 조회 중 오류가 발생했습니다: {str(e)}"
-            )
-
-    return {
-        "stock_indices": stock_index_realtime_cache,
-        "count": len(stock_index_realtime_cache),
-        "last_updated": stock_index_realtime_last_updated,
-    }
 
 
 # ===== 서버 실행 =====

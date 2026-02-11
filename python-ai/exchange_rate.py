@@ -8,6 +8,11 @@ from typing import Dict, List, Optional
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
+import os
+from dotenv import load_dotenv
+
+# 환경 변수 로드
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +32,17 @@ class ExchangeRateClient:
     """한국수출입은행 환율 API 클라이언트"""
     
     BASE_URL = "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON"
-    DEFAULT_AUTHKEY = "1bjMCNYULSX7JIDQjeheZpNEHchcTF51"
+    DEFAULT_AUTHKEY = "1bjMCNYULSX7JIDQjeheZpNEHchcTF51"  # 기본값 (환경 변수가 없을 때 사용)
     
     def __init__(self, authkey: Optional[str] = None):
         """
         초기화
         
         Args:
-            authkey: API 인증 키 (기본값 사용 가능)
+            authkey: API 인증 키 (환경 변수 EXCHANGE_RATE_AUTHKEY 또는 기본값 사용)
         """
-        self.authkey = authkey or self.DEFAULT_AUTHKEY
+        # 우선순위: 인자로 전달된 키 > 환경 변수 > 기본값
+        self.authkey = authkey or os.getenv("EXCHANGE_RATE_AUTHKEY") or self.DEFAULT_AUTHKEY
     
     def get_exchange_rates(
         self, 

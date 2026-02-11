@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FaStar } from "react-icons/fa";
 
 const PLACEHOLDER_IMAGE =
     "https://placehold.co/320x180/1a1a2e/eee?text=News";
@@ -60,7 +59,7 @@ const ScrapCard = ({ item, onUnscrap }) => {
               title="스크랩 해제"
               aria-label="스크랩 해제"
             >
-              <FaStar />
+              ★
             </button>
           )}
         </div>

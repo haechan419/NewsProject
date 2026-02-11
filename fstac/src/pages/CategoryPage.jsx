@@ -5,7 +5,6 @@ import axios from 'axios';
 import { getMyPageData } from '@/api/myPageApi';
 import { toggleScrap } from '@/scrap/api/scrapApi';
 import './CategoryPage.css';
-import { FaStar, FaRegStar } from 'react-icons/fa';
 
 const CategoryPage = () => {
     const { category } = useParams();
@@ -278,7 +277,7 @@ const CategoryPage = () => {
                                         title={scrapIds.includes(String(news.id)) ? '스크랩 해제' : '스크랩'}
                                         aria-label={scrapIds.includes(String(news.id)) ? '스크랩 해제' : '스크랩'}
                                     >
-                                        {scrapIds.includes(String(news.id)) ? <FaStar /> : <FaRegStar />}
+                                        {scrapIds.includes(String(news.id)) ? '★' : '☆'}
                                     </button>
                                 </div>
                             ))}

@@ -4,7 +4,6 @@ import com.fullStc.briefdelivery.dto.*;
 import com.fullStc.briefdelivery.entity.BriefDeliverySchedule;
 import com.fullStc.briefdelivery.repository.BriefDeliveryScheduleRepository;
 import com.fullStc.briefdelivery.service.BriefDeliveryMailService;
-import com.fullStc.briefdelivery.service.BriefDeliveryNluService;
 import com.fullStc.briefdelivery.service.BriefDeliveryPdfService;
 import com.fullStc.briefdelivery.service.BriefDeliveryScheduleService;
 import com.fullStc.member.domain.Member;
@@ -43,12 +42,10 @@ public class BriefDeliveryScheduleServiceImpl implements BriefDeliveryScheduleSe
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_FAILED = "FAILED";
-    private static final String INTENT_BRIEF_DELIVERY = "BRIEF_DELIVERY_SUBSCRIBE";
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy. MM. dd").withZone(ZoneId.of("Asia/Seoul"));
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("a hh:mm").withZone(ZoneId.of("Asia/Seoul"));
 
     private final BriefDeliveryScheduleRepository scheduleRepository;
-    private final BriefDeliveryNluService nluService;
     private final MemberRepository memberRepository;
     private final CategoryService categoryService;
     private final NewsClusterRepository newsClusterRepository;
@@ -238,45 +235,6 @@ public class BriefDeliveryScheduleServiceImpl implements BriefDeliveryScheduleSe
         return scheduleRepository.findByUserIdOrderByScheduledAtDesc(userId).stream()
                 .map(BriefDeliveryScheduleServiceImpl::toResponse)
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public BriefDeliveryDebugStatusResponse findLatestDebugStatus(Long userId) {
-        BriefDeliverySchedule latest = scheduleRepository.findTopByUserIdOrderByCreatedAtDesc(userId);
-        if (latest == null) {
-            return BriefDeliveryDebugStatusResponse.builder()
-                    .scheduleId(null)
-                    .userId(userId)
-                    .status("NO_SCHEDULE")
-                    .errorMessage("No brief delivery schedule found for this user.")
-                    .build();
-        }
-        return BriefDeliveryDebugStatusResponse.builder()
-                .scheduleId(latest.getId())
-                .userId(latest.getUserId())
-                .scheduledAt(latest.getScheduledAt())
-                .status(latest.getStatus())
-                .createdAt(latest.getCreatedAt())
-                .lastAttemptAt(latest.getLastAttemptAt())
-                .completedAt(latest.getCompletedAt())
-                .errorMessage(latest.getErrorMessage())
-                .build();
-    }
-
-    @Override
-    @Transactional
-    public BriefDeliveryAnalyzeResponse analyzeAndScheduleFromText(Long userId, String rawText) {
-        BriefDeliveryAnalyzeResponse response = nluService.analyze(rawText, userId);
-        if (INTENT_BRIEF_DELIVERY.equals(response.getIntent()) && response.getScheduledAt() != null) {
-            BriefDeliveryScheduleRequest request = BriefDeliveryScheduleRequest.builder()
-                    .scheduledAt(response.getScheduledAt())
-                    .build();
-            register(userId, request);
-            response.setScheduled(true);
-            response.setMessage(response.getMessage() != null ? response.getMessage() : "예약이 완료되었습니다.");
-        }
-        return response;
     }
 
     private static BriefDeliveryScheduleResponse toResponse(BriefDeliverySchedule s) {
