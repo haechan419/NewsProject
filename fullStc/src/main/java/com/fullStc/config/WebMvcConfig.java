@@ -6,7 +6,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * WebMvcConfig - 정적 리소스 설정
- * 
+ *
  * 주의: WebConfig.java에서 /upload/videos/** 경로를 이미 처리하고 있으므로,
  * 이 클래스는 다른 정적 리소스가 필요한 경우에만 사용하세요.
  * 현재는 비어있지만 향후 확장을 위해 유지합니다.

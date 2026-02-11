@@ -41,30 +41,30 @@ class ExchangeRateCrawler:
         if search_date is None:
             search_date = datetime.now().strftime("%Y%m%d")
         
-        logger.info(f"[크롤링] 환율 데이터 수집 시작 - 날짜: {search_date}")
+        # logger.info(f"[크롤링] 환율 데이터 수집 시작 - 날짜: {search_date}")
         
         # 네이버 → 하나은행 → 한국수출입은행 순서로 시도
         rates = []
         
         # 1. 네이버 환율 크롤링 시도
-        logger.info("[크롤링] 네이버 환율 정보 크롤링 시도")
+        # logger.info("[크롤링] 네이버 환율 정보 크롤링 시도")
         rates = self._crawl_naver_exchange_rates(search_date)
         
         # 2. 하나은행 환율 크롤링 시도
         if not rates:
-            logger.info("[크롤링] 하나은행 환율 정보 크롤링 시도")
+            # logger.info("[크롤링] 하나은행 환율 정보 크롤링 시도")
             rates = self._crawl_hana_bank_exchange_rates(search_date)
         
         # 3. 한국수출입은행 웹사이트 크롤링 시도
         if not rates:
-            logger.info("[크롤링] 한국수출입은행 웹사이트 크롤링 시도")
+            # logger.info("[크롤링] 한국수출입은행 웹사이트 크롤링 시도")
             rates = self._crawl_korea_exim_website(search_date)
         
         if not rates:
-            logger.warn(f"[크롤링] 환율 데이터를 찾을 수 없습니다. 날짜: {search_date}")
+            # logger.warn(f"[크롤링] 환율 데이터를 찾을 수 없습니다. 날짜: {search_date}")
             return []
         
-        logger.info(f"[크롤링] 환율 데이터 수집 완료 - 날짜: {search_date}, 개수: {len(rates)}")
+        # logger.info(f"[크롤링] 환율 데이터 수집 완료 - 날짜: {search_date}, 개수: {len(rates)}")
         return rates
     
     def _crawl_naver_exchange_rates(self, search_date: str) -> List[Dict]:
@@ -98,14 +98,14 @@ class ExchangeRateCrawler:
             for selector in selectors:
                 rows = soup.select(selector)
                 if rows:
-                    logger.info(f"[크롤링] 선택자 성공: {selector} (행 개수: {len(rows)})")
+                    # logger.info(f"[크롤링] 선택자 성공: {selector} (행 개수: {len(rows)})")
                     break
             
             if not rows:
-                logger.warn("[크롤링] 모든 선택자 실패. 페이지 구조 확인 필요.")
+                # logger.warn("[크롤링] 모든 선택자 실패. 페이지 구조 확인 필요.")
                 return rates
             
-            logger.info(f"[크롤링] 네이버 환율 테이블 행 개수: {len(rows)}")
+            # logger.info(f"[크롤링] 네이버 환율 테이블 행 개수: {len(rows)}")
             
             for row in rows:
                 try:
@@ -130,7 +130,7 @@ class ExchangeRateCrawler:
                     # 통화 코드 추출
                     cur_unit = self._extract_currency_code(currency_info)
                     if not cur_unit:
-                        logger.debug(f"[크롤링] 통화 코드 추출 실패: {currency_info}")
+                        # logger.debug(f"[크롤링] 통화 코드 추출 실패: {currency_info}")
                         continue
                     
                     # 통화명 정리 (괄호 제거)
@@ -147,13 +147,13 @@ class ExchangeRateCrawler:
                         "result": 1
                     }
                     rates.append(rate_data)
-                    logger.debug(f"[크롤링] 네이버 환율 데이터 파싱 성공: {cur_unit} - {deal_bas_r}")
+                    # logger.debug(f"[크롤링] 네이버 환율 데이터 파싱 성공: {cur_unit} - {deal_bas_r}")
                     
                 except Exception as e:
-                    logger.debug(f"[크롤링] 네이버 환율 행 파싱 실패: {e}")
+                    # logger.debug(f"[크롤링] 네이버 환율 행 파싱 실패: {e}")
                     continue
             
-            logger.info(f"[크롤링] 네이버 환율 크롤링 완료 - 수집된 데이터: {len(rates)}개")
+            # logger.info(f"[크롤링] 네이버 환율 크롤링 완료 - 수집된 데이터: {len(rates)}개")
             
         except Exception as e:
             logger.error(f"[크롤링] 네이버 환율 크롤링 실패: {e}", exc_info=True)
@@ -181,7 +181,7 @@ class ExchangeRateCrawler:
             if not rows:
                 rows = soup.select("table tr")
             
-            logger.info(f"[크롤링] 하나은행 환율 테이블 행 개수: {len(rows)}")
+            # logger.info(f"[크롤링] 하나은행 환율 테이블 행 개수: {len(rows)}")
             
             for row in rows:
                 try:
@@ -224,10 +224,10 @@ class ExchangeRateCrawler:
                     rates.append(rate_data)
                     
                 except Exception as e:
-                    logger.debug(f"[크롤링] 하나은행 환율 행 파싱 실패: {e}")
+                    # logger.debug(f"[크롤링] 하나은행 환율 행 파싱 실패: {e}")
                     continue
             
-            logger.info(f"[크롤링] 하나은행 환율 크롤링 완료 - 수집된 데이터: {len(rates)}개")
+            # logger.info(f"[크롤링] 하나은행 환율 크롤링 완료 - 수집된 데이터: {len(rates)}개")
             
         except Exception as e:
             logger.error(f"[크롤링] 하나은행 환율 크롤링 실패: {e}", exc_info=True)
@@ -276,10 +276,10 @@ class ExchangeRateCrawler:
                     rates.append(rate_data)
                     
                 except Exception as e:
-                    logger.debug(f"[크롤링] 한국수출입은행 환율 행 파싱 실패: {e}")
+                    # logger.debug(f"[크롤링] 한국수출입은행 환율 행 파싱 실패: {e}")
                     continue
             
-            logger.info(f"[크롤링] 한국수출입은행 환율 크롤링 완료 - 수집된 데이터: {len(rates)}개")
+            # logger.info(f"[크롤링] 한국수출입은행 환율 크롤링 완료 - 수집된 데이터: {len(rates)}개")
             
         except Exception as e:
             logger.error(f"[크롤링] 한국수출입은행 환율 크롤링 실패: {e}", exc_info=True)

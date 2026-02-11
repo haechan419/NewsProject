@@ -39,40 +39,40 @@ class StockIndexCrawler:
         Returns:
             주가지수 데이터 리스트
         """
-        logger.info(f"[크롤링] 주가지수 데이터 수집 시작 - 시장: {mrkt_cls or '전체'}")
+        # logger.info(f"[크롤링] 주가지수 데이터 수집 시작 - 시장: {mrkt_cls or '전체'}")
         
         indices = []
         
         if mrkt_cls is None or mrkt_cls.upper() == "KOSPI":
-            logger.info("[크롤링] KOSPI 지수 크롤링 시도")
+            # logger.info("[크롤링] KOSPI 지수 크롤링 시도")
             kospi = self._crawl_kospi()
             if kospi:
                 indices.extend(kospi)
         
         if mrkt_cls is None or mrkt_cls.upper() == "KOSDAQ":
-            logger.info("[크롤링] KOSDAQ 지수 크롤링 시도")
+            # logger.info("[크롤링] KOSDAQ 지수 크롤링 시도")
             kosdaq = self._crawl_kosdaq()
             if kosdaq:
                 indices.extend(kosdaq)
         
         if not indices:
-            logger.warning(f"[크롤링] 주가지수 데이터를 찾을 수 없습니다. 시장: {mrkt_cls or '전체'}")
+            # logger.warning(f"[크롤링] 주가지수 데이터를 찾을 수 없습니다. 시장: {mrkt_cls or '전체'}")
             return []
         
-        logger.info(f"[크롤링] 주가지수 데이터 수집 완료 - 시장: {mrkt_cls or '전체'}, 개수: {len(indices)}")
+        # logger.info(f"[크롤링] 주가지수 데이터 수집 완료 - 시장: {mrkt_cls or '전체'}, 개수: {len(indices)}")
         return indices
     
     def _crawl_kospi(self) -> List[Dict]:
         """KOSPI 지수 크롤링"""
         try:
             url = "https://finance.naver.com/sise/sise_index.naver?code=KOSPI"
-            logger.info(f"[크롤링] 네이버 금융 KOSPI 페이지 접속 시도: {url}")
+            # logger.info(f"[크롤링] 네이버 금융 KOSPI 페이지 접속 시도: {url}")
             
             response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=self.timeout)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
-            logger.debug("[크롤링] 네이버 KOSPI 페이지 로드 완료")
+            # logger.debug("[크롤링] 네이버 KOSPI 페이지 로드 완료")
             
             # KOSPI 지수 정보 추출
             index_data = self._parse_index_page(soup, "KOSPI")
@@ -82,7 +82,7 @@ class StockIndexCrawler:
             return []
             
         except Exception as e:
-            logger.error(f"[크롤링] KOSPI 크롤링 실패: {str(e)}", exc_info=True)
+            # logger.error(f"[크롤링] KOSPI 크롤링 실패: {str(e)}", exc_info=True)
             return []
     
     def _crawl_kosdaq(self) -> List[Dict]:
@@ -105,7 +105,7 @@ class StockIndexCrawler:
             return []
             
         except Exception as e:
-            logger.error(f"[크롤링] KOSDAQ 크롤링 실패: {str(e)}", exc_info=True)
+            # logger.error(f"[크롤링] KOSDAQ 크롤링 실패: {str(e)}", exc_info=True)
             return []
     
     def _parse_index_page(self, soup: BeautifulSoup, mrkt_cls: str) -> Optional[Dict]:
@@ -207,7 +207,7 @@ class StockIndexCrawler:
                     pass
             
             if not clpr:
-                logger.warning(f"[크롤링] {mrkt_cls} 지수 종가를 찾을 수 없습니다.")
+                # logger.warning(f"[크롤링] {mrkt_cls} 지수 종가를 찾을 수 없습니다.")
                 return None
             
             result = {
@@ -219,9 +219,9 @@ class StockIndexCrawler:
                 "mrktCls": mrkt_cls
             }
             
-            logger.info(f"[크롤링] {mrkt_cls} 지수 파싱 성공 - 종가: {clpr}, 전일대비: {vs}, 등락률: {flt_rt}%")
+            # logger.info(f"[크롤링] {mrkt_cls} 지수 파싱 성공 - 종가: {clpr}, 전일대비: {vs}, 등락률: {flt_rt}%")
             return result
             
         except Exception as e:
-            logger.error(f"[크롤링] {mrkt_cls} 지수 파싱 실패: {str(e)}", exc_info=True)
+            # logger.error(f"[크롤링] {mrkt_cls} 지수 파싱 실패: {str(e)}", exc_info=True)
             return None

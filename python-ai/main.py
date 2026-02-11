@@ -1,4 +1,5 @@
 # main.py - AI 챗봇 FastAPI 서버 (링크 누락 수정판)
+from urllib import request
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -160,10 +161,8 @@ search_service = SearchService(client)
 # 서버 시작 시 영상 엔진 자동 가동
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 FastAPI 앱 가동 시작")
-
-    # 영상 제작 엔진 가동 (Thread)
     if run_engine:
+        # 영상 제작은 시간이 걸리므로 별도 스레드(Thread)에서 실행
         video_thread = threading.Thread(target=run_engine, daemon=True)
         video_thread.start()
         logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
@@ -216,6 +215,10 @@ class ConversationMessage(BaseModel):
     """대화 메시지"""
     role: str  # "user" 또는 "assistant"
     content: str
+
+# ===== 기사 생성 요청 모델 =====
+class ArticleGenerationRequest(BaseModel):
+    title: str
 
 # 기존 ChatResponse 클래스 아래에 추가
 class VideoGenerationRequest(BaseModel):
@@ -338,6 +341,82 @@ class ExchangeRateListResponse(BaseModel):
     exchange_rates: List[ExchangeRateResponse]
     count: int
     search_date: Optional[str] = None
+
+# 검색 서비스 초기화
+search_service = SearchService(client)
+
+# 서버 시작 시 영상 엔진 자동 가동
+@app.on_event("startup")
+async def startup_event():
+    logger.info("🚀 FastAPI 앱 가동 시작")
+
+    # 영상 제작 엔진 가동 (Thread)
+    if run_engine:
+        video_thread = threading.Thread(target=run_engine, daemon=True)
+        video_thread.start()
+        logger.info("🎬 [System] AI 영상 제작 엔진이 통합 가동되었습니다.")
+
+    # 실시간 검색어 백그라운드 갱신 시작 (asyncio)
+    import asyncio
+    asyncio.create_task(trending_service.start_background_update())
+    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
+
+# ===== 기사 생성 엔드포인트 =====
+@app.post("/api/ai/generate-article")
+async def generate_article(req: ArticleGenerationRequest):
+    """사용자가 입력한 제목을 바탕으로 뉴스 본문 생성"""
+    try:
+        logger.info(f"📝 AI 기사 생성 요청: {req.title}")
+        prompt = f"""
+        뉴스 제목: "{req.title}"
+        위 제목을 바탕으로 전문적인 뉴스 기사 본문을 작성해줘.
+        - 아나운서가 읽기 좋은 부드러운 문체 (~입니다, ~습니다) 사용.
+        - 40초 내외의 분량 (약 3~4문장).
+        - 신뢰감 있는 뉴스 톤 유지.
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800,
+            temperature=0.7
+        )
+        return {"content": response.choices[0].message.content}
+    except Exception as e:
+        logger.error(f"AI 글쓰기 오류: {e}")
+        raise HTTPException(status_code=500, detail="기사 생성에 실패했습니다.")
+# 생존 확인 엔드포인트
+@app.get("/")
+async def root():
+    return {
+        "status": "ok",
+        "message": "AI Chat & Video API is running",
+        "video_engine": "Active" if run_engine else "Missing"
+    }
+
+# 얼굴 데이터 저장 디렉토리
+FACE_DATA_DIR = Path("face_data")
+FACE_DATA_DIR.mkdir(exist_ok=True)
+
+
+# ===== 앱 시작/종료 이벤트 =====
+@app.on_event("startup")
+async def startup_event():
+    """앱 시작 시 실행"""
+    import asyncio
+    logger.info("🚀 FastAPI 앱 시작")
+    # 실시간 검색어 백그라운드 갱신 시작
+    asyncio.create_task(trending_service.start_background_update())
+    logger.info("✅ 실시간 검색어 백그라운드 갱신 태스크 시작됨")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """앱 종료 시 실행"""
+    logger.info("🛑 FastAPI 앱 종료")
+    trending_service.stop_background_update()
+
+
+
 
 
 # ===== 시스템 프롬프트 =====
@@ -1463,18 +1542,18 @@ async def crawl_exchange_rates(search_date: Optional[str] = None):
         )
     
     try:
-        logger.info(f"[크롤링] 환율 데이터 크롤링 요청 - 날짜: {search_date}")
+        # logger.info(f"[크롤링] 환율 데이터 크롤링 요청 - 날짜: {search_date}")
         rates = exchange_rate_crawler.crawl_exchange_rates(search_date)
         
         if not rates:
-            logger.warning(f"[크롤링] 환율 데이터를 찾을 수 없습니다 - 날짜: {search_date}")
+            # logger.warning(f"[크롤링] 환율 데이터를 찾을 수 없습니다 - 날짜: {search_date}")
             return {
                 "exchange_rates": [],
                 "count": 0,
                 "search_date": search_date or datetime.now().strftime("%Y%m%d")
             }
         
-        logger.info(f"[크롤링] 환율 데이터 크롤링 성공 - 날짜: {search_date}, 개수: {len(rates)}")
+        # logger.info(f"[크롤링] 환율 데이터 크롤링 성공 - 날짜: {search_date}, 개수: {len(rates)}")
         return {
             "exchange_rates": rates,
             "count": len(rates),
@@ -1482,7 +1561,7 @@ async def crawl_exchange_rates(search_date: Optional[str] = None):
         }
         
     except Exception as e:
-        logger.error(f"[크롤링] 환율 데이터 크롤링 실패 - 날짜: {search_date}, 오류: {str(e)}", exc_info=True)
+        # logger.error(f"[크롤링] 환율 데이터 크롤링 실패 - 날짜: {search_date}, 오류: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"환율 크롤링 중 오류가 발생했습니다: {str(e)}"
@@ -1509,24 +1588,24 @@ async def crawl_stock_indices(mrkt_cls: Optional[str] = None, search_date: Optio
         )
     
     try:
-        logger.info(f"[크롤링] 주가지수 데이터 크롤링 요청 - 시장: {mrkt_cls or '전체'}, 날짜: {search_date or '오늘'}")
+        # logger.info(f"[크롤링] 주가지수 데이터 크롤링 요청 - 시장: {mrkt_cls or '전체'}, 날짜: {search_date or '오늘'}")
         indices = stock_index_crawler.crawl_stock_index(mrkt_cls, search_date)
         
         if not indices:
-            logger.warning(f"[크롤링] 주가지수 데이터를 찾을 수 없습니다 - 시장: {mrkt_cls or '전체'}")
+            # logger.warning(f"[크롤링] 주가지수 데이터를 찾을 수 없습니다 - 시장: {mrkt_cls or '전체'}")
             return {
                 "stock_indices": [],
                 "count": 0
             }
         
-        logger.info(f"[크롤링] 주가지수 데이터 크롤링 성공 - 시장: {mrkt_cls or '전체'}, 개수: {len(indices)}")
+        # logger.info(f"[크롤링] 주가지수 데이터 크롤링 성공 - 시장: {mrkt_cls or '전체'}, 개수: {len(indices)}")
         return {
             "stock_indices": indices,
             "count": len(indices)
         }
         
     except Exception as e:
-        logger.error(f"[크롤링] 주가지수 데이터 크롤링 실패 - 시장: {mrkt_cls or '전체'}, 오류: {str(e)}", exc_info=True)
+        # logger.error(f"[크롤링] 주가지수 데이터 크롤링 실패 - 시장: {mrkt_cls or '전체'}, 오류: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"주가지수 크롤링 중 오류가 발생했습니다: {str(e)}"

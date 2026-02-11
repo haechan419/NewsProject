@@ -41,16 +41,22 @@ const MyPage = ({ memberId }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // 영상 제작 관련 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [rawText, setRawText] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [videoMode, setVideoMode] = useState("9:16");
+  const [isGenerating, setIsGenerating] = useState(false); // AI 글쓰기 로딩 상태 
+
+  // 탭 및 뷰 상태
   const [activeTab, setActiveTab] = useState("videos");
   const [mainView, setMainView] = useState("feed"); // "feed" | "category"
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoLoading, setVideoLoading] = useState(true);
+
   // 피드 카테고리 설정
   const [categoryList, setCategoryList] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -73,7 +79,7 @@ const MyPage = ({ memberId }) => {
     setSearchParams(tab === "scrap" ? { tab: "scrap" } : {});
   };
 
-  // 피드 카테고리 설정 로드 (프로필 수정과 동일 API)
+  // 피드 카테고리 설정 로드
   const loadCategories = useCallback(async () => {
     try {
       setCategoryLoading(true);
@@ -118,7 +124,7 @@ const MyPage = ({ memberId }) => {
     }
   };
 
-  /** 스크랩 해제 시 목록에서만 제거 (전체 새로고침 없음) */
+  /** 스크랩 해제 시 목록에서만 제거 */
   const handleUnscrapSuccess = useCallback((item) => {
     setData((prev) => {
       if (!prev?.scrapItems) return prev;
@@ -162,6 +168,55 @@ const MyPage = ({ memberId }) => {
     }
   }, [location.pathname, memberId, isAuthenticated, fetchData]);
 
+  // 제작상태 자동 갱신 (Polling)
+  useEffect(() => {
+    const hasActiveTask = data?.myVideos?.some(
+      (v) => v.status === "PENDING" || v.status === "PROCESSING",
+    );
+
+    if (hasActiveTask) {
+      const timer = setInterval(() => {
+        fetchData();
+      }, 5000); // 5초 주기
+      return () => clearInterval(timer);
+    }
+  }, [data, fetchData]);
+
+  //  영상 삭제 기능
+  const handleDeleteVideo = async (vno, e) => {
+    e.stopPropagation(); // 카드 클릭(영상 재생) 방지
+    if (!window.confirm("정말 이 영상을 삭제하시겠습니까?")) return;
+
+    try {
+      await axios.delete(`http://localhost:8080/api/ai/video/delete/${vno}`, {
+        withCredentials: true,
+      });
+      alert("삭제되었습니다.");
+      fetchData(); // 목록 새로고침
+    } catch (err) {
+      alert("삭제 실패");
+    }
+  };
+
+  //  AI 글쓰기 연동
+  const handleAiWriting = async () => {
+    if (!customTitle.trim()) return alert("영상 제목을 먼저 입력해주세요!");
+
+    setIsGenerating(true);
+    try {
+      const res = await axios.post(
+        "http://localhost:8000/api/ai/generate-article",
+        { title: customTitle },
+      );
+      setRawText(res.data.content); // 생성된 글을 본문 영역에 자동 채움
+    } catch (err) {
+      console.error("AI 글쓰기 실패", err);
+      alert("AI 글쓰기 엔진에 연결할 수 없습니다.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleVideoClick = (video) => {
     if (video.status === "COMPLETED" && video.videoUrl) {
       setIsModalOpen(false);
@@ -171,12 +226,15 @@ const MyPage = ({ memberId }) => {
     } else {
       if (video.status === "COMPLETED" && !video.videoUrl) {
         alert("영상 파일을 찾을 수 없습니다. 관리자에게 문의해주세요.");
+      } else {
+        alert("영상 제작이 완료될 때까지 기다려주세요!");
       }
     }
   };
 
   const playableVideos =
     data?.myVideos?.filter((v) => v.status === "COMPLETED") || [];
+    
   const handlePrevVideo = useCallback(() => {
     const idx = playableVideos.findIndex((v) => v.vno === selectedVideo?.vno);
     if (idx > 0) setSelectedVideo(playableVideos[idx - 1]);
@@ -229,7 +287,7 @@ const MyPage = ({ memberId }) => {
     }
   };
 
-  if (loading) return <div className="mypage-loading">마이페이지 로딩 중...</div>;
+  if (loading && !data) return <div className="mypage-loading">마이페이지 로딩 중...</div>;
   if (error) return <div className="mypage-error">{error}</div>;
 
   return (
@@ -411,6 +469,14 @@ const MyPage = ({ memberId }) => {
                     }}
                   >
                     <div className="video-thumb">
+                        {/* 삭제 버튼 추가 */}
+                        <button
+                          className="btn-delete-task"
+                          onClick={(e) => handleDeleteVideo(video.vno, e)}
+                        >
+                          &times;
+                        </button>
+
                       {video.status === "COMPLETED" && video.videoUrl ? (
                         <video
                           src={`http://localhost:8080/upload/videos/${video.videoUrl}`}
@@ -420,6 +486,8 @@ const MyPage = ({ memberId }) => {
                         />
                       ) : (
                         <div className={`processing-placeholder ${video.status}`}>
+                          {/* 로딩 스피너 */}
+                           {video.status !== "CANCELED" && <div className="spinner"></div>}
                           <span>{video.status}</span>
                         </div>
                       )}
@@ -485,13 +553,23 @@ const MyPage = ({ memberId }) => {
           </div>
           <div className="panel-input-group">
             <label className="panel-label">영상 제목</label>
-            <input
-              type="text"
-              className="modal-input"
-              placeholder="영상의 핵심 제목을 입력하세요"
-              value={customTitle}
-              onChange={(e) => setCustomTitle(e.target.value)}
-            />
+            {/*  제목 입력창 옆에 AI 버튼 배치 */}
+            <div className="input-with-btn">
+                <input
+                type="text"
+                className="modal-input"
+                placeholder="영상의 핵심 제목을 입력하세요"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                />
+                <button
+                className={`btn-ai-magic ${isGenerating ? "loading" : ""}`}
+                onClick={handleAiWriting}
+                disabled={isGenerating}
+                >
+                {isGenerating ? "✍️..." : "🪄 AI 작성"}
+                </button>
+            </div>
           </div>
           <div className="panel-input-group flex-grow">
             <label className="panel-label">기사 본문 내용</label>

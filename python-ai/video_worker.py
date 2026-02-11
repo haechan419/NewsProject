@@ -1,193 +1,236 @@
-import os
-import time
-import json
-import re
-import mysql.connector
-from moviepy.config import change_settings 
+import os, time, json, re, mysql.connector
+from moviepy.config import change_settings
 from moviepy.editor import *
-from moviepy.audio.AudioClip import AudioClip 
-from moviepy.audio.fx.all import audio_fadein, audio_fadeout
-import media_tools 
+import media_tools
 import openai
+from dotenv import load_dotenv
 
-# Pillow 10.0.0 이상 호환성 패치 (ANTIALIAS 제거 대응)
-try:
-    from PIL import Image
-    # Pillow 10.0.0 이상에서는 ANTIALIAS가 제거되었으므로 LANCZOS로 대체
-    if not hasattr(Image, 'ANTIALIAS'):
-        Image.ANTIALIAS = Image.LANCZOS
-except ImportError:
-    pass
+# [.env 파일 로드 및 환경 설정]
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# [1. 설정]
-IMAGEMAGICK_BINARY = r"D:\ImageMagick-7.1.2-Q16-HDRI\magick.exe"
+# [1. 환경 설정]
+IMAGEMAGICK_BINARY =os.getenv("IMAGEMAGICK_PATH")
 change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_BINARY})
 
+# DB설정 연동
 DB_CONFIG = {
-    'host': 'localhost', 
-    'user': 'newsuser', 
-    'password': 'newsuser', 
-    'database': 'newsdb'
+    'host': os.getenv("DB_HOST"),
+    'user': os.getenv("DB_USER"),
+    'password': os.getenv("DB_PASS"),
+    'database': os.getenv("DB_NAME")
 }
-
+print(f"DEBUG: DB 접속 시도 유저 -> {os.getenv('DB_USER')}")
+print(f"DEBUG: DB 접속 시도 호스트 -> {os.getenv('DB_HOST')}")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "videos")
-if not os.path.exists(OUTPUT_DIR):
-    try:
-        os.makedirs(OUTPUT_DIR)
-        print(f"✅ 폴더 생성 성공: {OUTPUT_DIR}")
-    except Exception as e:
-        print(f"❌ 폴더 생성 실패: {e}")
 
-# [2. AI 스토리보드 생성]
+# [2. AI 스토리보드 - 문맥 중심 고퀄리티 리포트]
 def get_storyboard_from_ai(news_text):
-    print("🤖 [AI Director] 맥락 인지형 스크립트 구성 중...")
-    system_prompt = "너는 '30초 뉴스' 편집자야. 형식: JSON [ {'text': '...', 'keyword': '...', 'type': 'video'} ] 만 출력해."
+    print("🤖 [AI Director] 문맥 중심 고퀄리티 대본 구성 중...")
+    system_prompt = """
+    너는 시청률 1위 뉴스의 수석 작가야. 딱딱한 정보를 시청자가 편하게 들을 수 있는 '스토리텔링형 뉴스'로 재구성해줘.
+    [작성 규칙]
+    1. 맥락 전환: '한편', '이어서' 대신 "IT 소식에 이어 이번엔 경제 동향 짚어봅니다"처럼 자연스럽게 연결해.
+    2. 전문 어미: "~인 것으로 알려졌습니다", "~할 전망입니다" 사용.
+    3. 자막 최적화: 자막 1줄 분량인 공백 포함 30~35자 내외가 가장 좋아.
+    4. 시각화: 특정 인물/기업은 'image', 일반 배경은 'video'로 지정해.
+    형식: JSON [ {"text": "자연스러운 멘트", "keyword": "영어 키워드", "type": "video|image"} ]
+    """
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": news_text}]
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"다음 기사들을 엮어줘: {news_text}"}
+            ],
+            temperature=0.8
         )
         content = response.choices[0].message.content.strip()
         match = re.search(r'\[.*\]', content.replace("```json", "").replace("```", ""), re.DOTALL)
         return json.loads(match.group()) if match else None
     except Exception as e:
-        print(f"⚠️ AI 분석 오류 (API키/잔액 확인 필요): {e}")
-        return None
+        print(f"⚠️ 대본 생성 오류: {e}"); return None
 
-# [3. 보조 함수들]
-def split_text_natural(text, min_len=8, max_len=18):
-    words = text.split(' ')
-    chunks, current_chunk, current_len = [], [], 0
-    markers = ["은", "는", "이", "가", "을", "를", "에", "서", "로", "고", "며", "요", "죠", "다"]
-    for word in words:
-        current_chunk.append(word); current_len += len(word) + 1
-        if current_len >= max_len or (current_len >= min_len and any(word.endswith(m) for m in markers)):
-            chunks.append(' '.join(current_chunk)); current_chunk, current_len = [], 0
-    if current_chunk: chunks.append(' '.join(current_chunk))
-    return chunks
+# [2.5 한국형 상징물 & 지역 최적화 필터]
+def apply_korean_context_filter(keyword):
+    """AI가 생성한 영어 키워드를 한국적 상징물로 치환합니다."""
+    k = keyword.lower()
 
-def make_scene_clip(text, keyword, media_type, index, video_mode="16:9"):
+    # 1. 정치 및 인물 상징화 (인물 실명 대신 상징물로)
+    politics_map = {
+        "politician": "The National Assembly of the Republic of Korea, Yeouido",
+        "assembly": "The National Assembly of the Republic of Korea building",
+        "prosecutor": "Supreme Prosecutors Office of the Republic of Korea building, Seoul",
+        "investigation": "Press conference with many microphones and camera flashes, professional news",
+        "court": "The Supreme Court of Korea gavel and scales of justice",
+        "president": "The Office of the President of the Republic of Korea, Yongsan",
+    }
+
+    # 2. 한국 도시별 대표 랜드마크 (해외 도시 방지)
+    city_map = {
+        "seoul": "N Seoul Tower and Han River cityscape",
+        "incheon": "Incheon Bridge South Korea",
+        "busan": "Gwangandaegyo Bridge Busan",
+        "daegu": "83 Tower night view Daegu"
+    }
+
+    # 키워드 매칭 (가장 먼저 발견되는 상징물 적용)
+    for key, val in politics_map.items():
+        if key in k: return val
+    for key, val in city_map.items():
+        if key in k: return val
+
+    # 기본: 한국적 맥락 강제 부여
+    return f"{keyword}, South Korea style"
+
+# [3. 장면 제작 - 고정 자막 및 분할 로직 핵심]
+def make_hybrid_scene(scene, index, video_mode="16:9"):
     is_portrait = (video_mode == "9:16")
     target_w, target_h = (720, 1280) if is_portrait else (1280, 720)
-    audio_path = os.path.abspath(f"temp_audio_{index}.mp3")
-    media_path_img = os.path.abspath(f"temp_media_{index}.jpg")
-    media_path_vid = os.path.abspath(f"temp_media_{index}.mp4")
+    audio_path = os.path.join(BASE_DIR, f"temp_audio_{index}.mp3")
+    media_path = os.path.join(BASE_DIR, f"temp_media_{index}")
+    filtered_k = apply_korean_context_filter(scene.get('keyword', 'news'))
+    print(f"🔍 [Filter] '{scene['keyword']}' -> '{filtered_k}'")
+
+    # 1. TTS 및 오디오
+    if not media_tools.create_tts(scene['text'], audio_path): return None, []
+    tts_clip = AudioFileClip(audio_path)
+    duration = tts_clip.duration
     temp_files = [audio_path]
 
-    if not media_tools.create_tts(text, audio_path): return None, []
-    
-    tts_clip = AudioFileClip(audio_path)
-    duration = tts_clip.duration + 0.6
-    
+    # 2. 비주얼 로직 (이전과 동일)
     visual_clip = None
-    if media_type == 'image' and media_tools.generate_free_image(keyword, media_path_img, is_portrait):
-        visual_clip = ImageClip(media_path_img).set_duration(duration)
-        temp_files.append(media_path_img)
-    elif media_tools.download_pexels_video(keyword, media_path_vid, is_portrait):
-        visual_clip = VideoFileClip(media_path_vid)
-        temp_files.append(media_path_vid)
-    
+    if scene['type'] == 'image':
+        img_file = media_path + ".jpg"
+        if media_tools.generate_free_image(filtered_k, img_file, is_portrait):
+            visual_clip = ImageClip(img_file).set_duration(duration + 0.5)
+            temp_files.append(img_file)
+
     if visual_clip is None:
-        visual_clip = ColorClip(size=(target_w, target_h), color=(30, 30, 30)).set_duration(duration)
+        vid_file = media_path + ".mp4"
+        if media_tools.download_pexels_video(scene['keyword'], vid_file, is_portrait):
+            raw = VideoFileClip(vid_file)
+            visual_clip = vfx.loop(raw, duration=duration + 1) if raw.duration < duration else raw
+            temp_files.append(vid_file)
+        else:
+            img_file = media_path + "_fallback.jpg"
+            if media_tools.generate_free_image(scene['keyword'], img_file, is_portrait):
+                visual_clip = ImageClip(img_file).set_duration(duration + 0.5)
+                temp_files.append(img_file)
+            else:
+                visual_clip = ColorClip(size=(target_w, target_h), color=(30, 30, 30)).set_duration(duration)
 
-    visual_clip = visual_clip.resize(newsize=(target_w, target_h))
-    if hasattr(visual_clip, 'duration') and visual_clip.duration < duration:
-        visual_clip = vfx.loop(visual_clip, duration=duration)
+    #화면 리사이징 처리 => 일단 주석처리
+    # visual_clip = visual_clip.resize(newsize=(target_w, target_h)).subclip(0, duration)
+
+
+    # 비율 채우기 및 크롭
+    img_w, img_h = visual_clip.size
+    target_ratio = target_w / target_h
+    img_ratio = img_w / img_h
+
+    if img_ratio > target_ratio:
+        # 이미지가 더 가로로 긴 경우: 세로를 맞추고 좌우를 자름
+        visual_clip = visual_clip.resize(height=target_h)
     else:
-        visual_clip = visual_clip.subclip(0, duration)
+        # 이미지가 더 세로로 긴 경우: 가로를 맞추고 위아래를 자름
+        visual_clip = visual_clip.resize(width=target_w)
 
-    # --------------------------------------------------------
-    # ✅ 수정 포인트: sub_clips 변수를 먼저 빈 리스트로 만들어줍니다.
-    # --------------------------------------------------------
-    sub_clips = [] 
-    
-    # (선택 사항) 만약 화면에 자막을 넣고 싶다면, 
-    # 여기서 TextClip을 생성해서 sub_clips.append(자막클립)를 하면 됩니다.
-    # 지금은 자막 로직이 없으므로 빈 리스트로 둡니다.
-    # --------------------------------------------------------
+    # 중앙을 기준으로 타겟 사이즈만큼 크롭
+    visual_clip = visual_clip.crop(x_center=visual_clip.w/2, y_center=visual_clip.h/2,
+                                   width=target_w, height=target_h)
 
-    final_scene = CompositeVideoClip([visual_clip] + sub_clips)
-    return final_scene.set_audio(tts_clip), temp_files
+    # 0초부터 duration까지 확정
+    visual_clip = visual_clip.subclip(0, duration)
+    # 자막 로직
+    fixed_fs = 35 if is_portrait else 50
+    pos_y = target_h * (0.80 if is_portrait else 0.85)
+    # 화면 너비의 90%를 넘지 못하도록 제한선 설정
+    max_txt_w = target_w * 0.90
 
-# [4. 메인 엔진 루프]
+    full_text = scene['text']
+    subtitle_clips = []
+
+    # 텍스트 클립 생성 및 안전 리사이징
+    def create_safe_text_clip(txt_content, duration_part, start_time=0):
+        # 일단 고정 크기로 생성
+        st = TextClip(txt_content, fontsize=fixed_fs, color='white', font="C:/Windows/Fonts/malgunbd.ttf", method='label')
+        # 핵심: 화면보다 넓으면 강제로 줄임
+        if st.w > max_txt_w:
+            st = st.resize(width=max_txt_w)
+        return st.set_duration(duration_part).set_start(start_time).set_position('center')
+
+    # 분할 로직 적용
+    if len(full_text) > 30:
+        mid = len(full_text) // 2
+        split_idx = full_text.find(' ', mid - 5, mid + 5)
+        if split_idx == -1: split_idx = mid
+        parts = [full_text[:split_idx], full_text[split_idx:].strip()]
+        part_dur = duration / 2
+        for i, p in enumerate(parts):
+            st = create_safe_text_clip(p, part_dur, i * part_dur)
+            subtitle_clips.append(st)
+    else:
+        st = create_safe_text_clip(full_text, duration)
+        subtitle_clips.append(st)
+
+    # 자막 배경바 (높이 고정)
+    bg_h = fixed_fs + 40
+    txt_bg = ColorClip(size=(target_w, bg_h), color=(0,0,0)).set_opacity(0.6).set_duration(duration)
+
+    subtitle_group = CompositeVideoClip([txt_bg] + subtitle_clips, size=(target_w, bg_h)).set_position(('center', pos_y))
+
+    # 최종 합성
+    final_scene = CompositeVideoClip([visual_clip, subtitle_group]).set_audio(tts_clip)
+    return final_scene, temp_files
+
+
+# 메인 엔진 루프
 def run_engine():
-    print("🚀 [Engine] 뉴스 영상 제작 엔진 가동 시작!")
+    print("🚀 [Engine] 아나운서 싱크 & 자막 분할 모드 가동!")
     while True:
-        # ★ 중요: 모든 주요 변수를 루프 시작 시 None으로 초기화 (NameError 방지)
         conn = None
-        task = None
+        all_temps, final_clips = [], []
         final_video = None
-        final_clips = []
-        all_temps = []
-
         try:
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
-            
-            cursor.execute("""
-                SELECT * FROM tbl_video_task 
-                WHERE status = 'PENDING' 
-                ORDER BY vno ASC LIMIT 1
-            """)
+            cursor.execute("SELECT * FROM tbl_video_task WHERE status = 'PENDING' ORDER BY vno ASC LIMIT 1")
             task = cursor.fetchone()
 
             if task:
                 vno = task['vno']
+                print(f"🎬 [Job {vno}] 제작 시작...")
                 cursor.execute("UPDATE tbl_video_task SET status = 'PROCESSING' WHERE vno = %s", (vno,))
                 conn.commit()
-                print(f"🎬 [Job {vno}] 제작을 시작합니다.")
 
-                # AI 분석 수행
                 story_board = get_storyboard_from_ai(task['raw_text'])
-                
-                # AI 분석 실패 시 (API키 오류 등)
-                if not story_board:
-                    print(f"❌ [Job {vno}] AI 분석 실패. 작업을 중단합니다.")
-                    cursor.execute("UPDATE tbl_video_task SET status = 'FAILED' WHERE vno = %s", (vno,))
-                    conn.commit()
-                    continue
+                if story_board:
+                    for i, scene in enumerate(story_board):
+                        clip, files = make_hybrid_scene(scene, i, task.get('video_mode', '16:9'))
+                        if clip:
+                            final_clips.append(clip)
+                            all_temps.extend(files)
 
-                v_mode = task.get('video_mode', '9:16')
-                for i, scene in enumerate(story_board):
-                    clip, files = make_scene_clip(scene['text'], scene['keyword'], scene['type'], i, v_mode)
-                    if clip:
-                        final_clips.append(clip)
-                        all_temps.extend(files)
-
-                if final_clips:
-                    file_name = f"result_vno_{vno}.mp4"
-                    save_path = os.path.join(OUTPUT_DIR, file_name)
-                    
-                    final_video = concatenate_videoclips(final_clips, method="compose")
-                    final_video.write_videofile(save_path, fps=24, codec='libx264', audio_codec='libmp3lame', threads=4)
-                    
-                    cursor.execute("UPDATE tbl_video_task SET status = 'COMPLETED', video_url=%s WHERE vno = %s", (file_name, vno))
-                    conn.commit()
-                    print(f"✅ [Job {vno}] 제작 완료!")
-
+                    if final_clips:
+                        file_name = f"result_vno_{vno}.mp4"
+                        save_path = os.path.join(OUTPUT_DIR, file_name)
+                        final_video = concatenate_videoclips(final_clips, method="compose")
+                        final_video.write_videofile(save_path, fps=24, codec='libx264', audio_codec='aac', threads=8, preset='ultrafast')
+                        cursor.execute("UPDATE tbl_video_task SET status = 'COMPLETED', video_url=%s WHERE vno = %s", (file_name, vno))
+                        conn.commit()
+                        print(f"✅ [Job {vno}] 제작 완료!")
             cursor.close()
-        except Exception as e:
-            # task 변수가 정의된 경우에만 작업 번호 출력
-            vno_str = f"Job {task['vno']}" if task else "Unknown Job"
-            print(f"❌ [Error] {vno_str} 엔진 작동 중 에러 발생: {e}")
-        finally: 
-            # ★ 자원 해제 안전장치 (정의 여부 확인 후 닫기)
-            if final_video: 
-                try: final_video.close()
-                except: pass
-            for c in final_clips: 
-                try: c.close()
-                except: pass
-            if conn and conn.is_connected(): 
-                conn.close()
-            
-            # 임시 파일 삭제
+        except Exception as e: print(f"❌ 에러: {e}")
+        finally:
+            if conn and conn.is_connected(): conn.close()
+            if final_video: final_video.close()
+            for c in final_clips: c.close()
             for f in all_temps:
                 if f and os.path.exists(f):
                     try: os.remove(f)
                     except: pass
-        
         time.sleep(10)
 
 if __name__ == "__main__":

@@ -7,8 +7,8 @@ import com.fullStc.member.domain.Member;
 import com.fullStc.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.data.domain.PageRequest; // ◀ 필수
-import org.springframework.data.domain.Pageable;    // ◀ 필수
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -16,6 +16,9 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 @Log4j2
@@ -26,13 +29,45 @@ public class VideoServiceImpl implements VideoService {
     private final VideoTaskRepository videoTaskRepository;
     private final MemberRepository memberRepository;
 
+    /**
+     * 영상 파일이 저장되는 디렉터리.
+     * - 기준: 애플리케이션이 실행되는 현재 작업 디렉터리(user.dir)
+     * - 구조: [프로젝트 루트]/python-ai/videos
+     * → 다른 PC에서도 프로젝트 루트만 같으면 동일하게 동작
+     */
+    private final Path uploadDir = Paths.get(System.getProperty("user.dir"), "python-ai", "videos");
+
+    @Override
+    public void deleteVideo(Long vno) {
+        log.info("영상 삭제 요청 vno: " + vno);
+
+        // 1. 엔티티 조회
+        VideoTask task = videoTaskRepository.findById(vno)
+                .orElseThrow(() -> new RuntimeException("해당 영상을 찾을 수 없습니다."));
+
+        // 2. 물리 파일 삭제 로직
+        String fileName = task.getVideoUrl();
+        if (fileName != null && !fileName.isEmpty()) {
+            File file = uploadDir.resolve(fileName).toFile();
+            if (file.exists()) {
+                if (file.delete()) {
+                    log.info("MP4 파일 삭제 성공: " + fileName);
+                } else {
+                    log.error("MP4 파일 삭제 실패: " + fileName);
+                }
+            }
+        }
+
+        // 3. DB 레코드 삭제
+        videoTaskRepository.deleteById(vno);
+    }
+
     @Override
     public Long requestVideoGeneration(VideoTaskDTO dto) {
         // 기존 작업 취소
         List<VideoTask> activeTasks = videoTaskRepository.findByMemberIdAndStatusIn(
-            dto.getMemberId(), List.of("PENDING", "PROCESSING")
-        );
-        
+                dto.getMemberId(), List.of("PENDING", "PROCESSING"));
+
         if (!activeTasks.isEmpty()) {
             activeTasks.forEach(task -> task.changeStatus("CANCELED"));
             videoTaskRepository.saveAll(activeTasks);
@@ -60,7 +95,9 @@ public class VideoServiceImpl implements VideoService {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> body = Map.of("vno", vno, "rawText", dto.getRawText(), "videoMode", dto.getVideoMode());
             restTemplate.postForEntity("http://localhost:8000/generate_video", body, String.class);
-        } catch (Exception e) { log.error("파이썬 호출 실패: " + e.getMessage()); }
+        } catch (Exception e) {
+            log.error("파이썬 호출 실패: " + e.getMessage());
+        }
 
         return vno;
     }
@@ -85,7 +122,8 @@ public class VideoServiceImpl implements VideoService {
     public void updateVideoStatus(Long vno, String status, String videoUrl, String imgUrl) {
         videoTaskRepository.findById(vno).ifPresent(task -> {
             task.changeStatus(status);
-            if (videoUrl != null || imgUrl != null) task.updateResult(videoUrl, imgUrl);
+            if (videoUrl != null || imgUrl != null)
+                task.updateResult(videoUrl, imgUrl);
         });
     }
 

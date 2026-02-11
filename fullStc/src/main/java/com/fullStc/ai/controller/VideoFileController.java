@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @RestController
-@RequestMapping("/upload/videos")
+@RequestMapping("/python-ai/videos")
 @Log4j2
 @CrossOrigin(origins = "http://localhost:5173")
 public class VideoFileController {

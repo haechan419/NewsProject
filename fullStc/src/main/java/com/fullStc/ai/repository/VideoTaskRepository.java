@@ -15,14 +15,14 @@ public interface VideoTaskRepository extends JpaRepository<VideoTask, Long> {
     
     boolean existsByMemberIdAndStatusIn(Long memberId, Collection<String> statuses);
     
-    // ✅ 중복 메서드 하나로 통합 (Long 타입 사용)
+    // 중복 메서드 하나로 통합 (Long 타입 사용)
     List<VideoTask> findByMemberIdAndStatusIn(Long memberId, Collection<String> statuses);
     
     List<VideoTask> findByMemberIdAndStatusInOrderByRegDateDesc(Long memberId, Collection<String> statuses);
     
     List<VideoTask> findByMemberIdOrderByRegDateDesc(Long memberId);
     
-    // ✅ Pageable을 정상적으로 인식하도록 설정
+    // Pageable을 정상적으로 인식하도록 설정
     @Query("SELECT v FROM VideoTask v WHERE v.isMainHot = true AND v.status = :status ORDER BY v.vno DESC")
     List<VideoTask> findMainHotVideos(@Param("status") String status, Pageable pageable);
 }

@@ -14,4 +14,6 @@ public interface VideoService {
 
     // 영상 작업 상태 업데이트 (Python 엔진 연동용)
     void updateVideoStatus(Long vno, String status, String videoUrl, String imgUrl);
+    // 영상 작업 삭제
+    void deleteVideo(Long vno);
 }

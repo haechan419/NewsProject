@@ -2,6 +2,7 @@ package com.fullStc.ai.service;
 
 import com.fullStc.ai.domain.VideoTask; // SNVideoTask -> VideoTask 이름 변경 반영
 import com.fullStc.ai.domain.MemberConfig;
+import com.fullStc.ai.domain.Scrap;
 import com.fullStc.ai.dto.MyPageResponseDTO;
 import com.fullStc.ai.dto.VideoTaskDTO; // SNVideoTaskDTO -> VideoTaskDTO 이름 변경 반영
 import com.fullStc.ai.repository.VideoTaskRepository; // SNVideoTaskRepository -> VideoTaskRepository 이름 변경 반영
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class MyPageServiceImpl implements MyPageService {
 
-    private final VideoTaskRepository videoTaskRepository;
+    private final VideoTaskRepository videoTaskRepository; // 변수명 수정
     private final MemberConfigRepository memberConfigRepository;
     private final ScrapService scrapService;
 

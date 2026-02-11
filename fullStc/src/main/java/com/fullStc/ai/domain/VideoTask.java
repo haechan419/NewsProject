@@ -49,7 +49,7 @@ public class VideoTask {
 
     private boolean isVipAuto;
     private boolean isMainHot;
-    
+
     @CreatedDate
     @Column(name = "regdate", updatable = false)
     private LocalDateTime regDate;
