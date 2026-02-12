@@ -19,6 +19,9 @@ public class VideoController {
 
     @PostMapping("/request")
     public Long requestVideo(@RequestBody VideoTaskDTO dto) {
+        log.info("[영상 제작 요청 수신] memberId: {}, customTitle: {}, rawText 길이: {}",
+                dto.getMemberId(), dto.getCustomTitle(),
+                dto.getRawText() != null ? dto.getRawText().length() : 0);
         return videoService.requestVideoGeneration(dto);
     }
 
@@ -26,12 +29,14 @@ public class VideoController {
     public List<VideoTaskDTO> getVideoList(@PathVariable("memberId") Long memberId) {
         return videoService.getMemberVideoList(memberId);
     }
+
     // VideoController.java
     @GetMapping("/main-hot")
     public List<VideoTaskDTO> getMainHotVideos() {
         return videoService.getMainHotVideoList();
-}
-@DeleteMapping("/delete/{vno}")
+    }
+
+    @DeleteMapping("/delete/{vno}")
     public ResponseEntity<String> deleteVideo(@PathVariable("vno") Long vno) {
         log.info("비디오 삭제 요청 vno: " + vno);
         try {

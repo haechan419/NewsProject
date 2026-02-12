@@ -64,6 +64,8 @@ public class VideoServiceImpl implements VideoService {
 
     @Override
     public Long requestVideoGeneration(VideoTaskDTO dto) {
+        log.info("[영상 제작 요청] customTitle: {}", dto.getCustomTitle());
+
         // 기존 작업 취소
         List<VideoTask> activeTasks = videoTaskRepository.findByMemberIdAndStatusIn(
                 dto.getMemberId(), List.of("PENDING", "PROCESSING"));
@@ -76,11 +78,19 @@ public class VideoServiceImpl implements VideoService {
         Member member = memberRepository.findById(dto.getMemberId())
                 .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다."));
 
+        // customTitle이 null이거나 빈 문자열인 경우 처리
+        String customTitle = dto.getCustomTitle();
+        if (customTitle != null && customTitle.trim().isEmpty()) {
+            customTitle = null;
+        } else if (customTitle != null) {
+            customTitle = customTitle.trim();
+        }
+
         VideoTask task = VideoTask.builder()
                 .member(member)
                 .newsId(dto.getNewsId())
                 .rawText(dto.getRawText())
-                .customTitle(dto.getCustomTitle())
+                .customTitle(customTitle)
                 .category(dto.getCategory() != null ? dto.getCategory() : "politics")
                 .videoMode(dto.getVideoMode())
                 .status("PENDING")
@@ -89,6 +99,7 @@ public class VideoServiceImpl implements VideoService {
                 .build();
 
         Long vno = videoTaskRepository.save(task).getVno();
+        log.info("[영상 제작 요청 완료] vno: {}, 저장된 customTitle: {}", vno, task.getCustomTitle());
 
         // 파이썬 연동
         try {
@@ -133,7 +144,9 @@ public class VideoServiceImpl implements VideoService {
                 .memberId(entity.getMember() != null ? entity.getMember().getId() : null)
                 .newsId(entity.getNewsId())
                 .rawText(entity.getRawText())
-                .customTitle(entity.getCustomTitle())
+                .customTitle(entity.getCustomTitle() != null && !entity.getCustomTitle().trim().isEmpty()
+                        ? entity.getCustomTitle()
+                        : null)
                 .category(entity.getCategory() != null ? entity.getCategory() : "politics")
                 .videoMode(entity.getVideoMode())
                 .status(entity.getStatus())

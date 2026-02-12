@@ -41,7 +41,7 @@ const MyPage = ({ memberId }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // 영상 제작 관련 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [rawText, setRawText] = useState("");
@@ -234,7 +234,7 @@ const MyPage = ({ memberId }) => {
 
   const playableVideos =
     data?.myVideos?.filter((v) => v.status === "COMPLETED") || [];
-    
+
   const handlePrevVideo = useCallback(() => {
     const idx = playableVideos.findIndex((v) => v.vno === selectedVideo?.vno);
     if (idx > 0) setSelectedVideo(playableVideos[idx - 1]);
@@ -260,17 +260,22 @@ const MyPage = ({ memberId }) => {
   }, [selectedVideo, isScrolling, handlePrevVideo, handleNextVideo]);
 
   const handleCreateVideo = async () => {
-    if (!rawText || !customTitle) {
+    if (!rawText || !rawText.trim()) {
       alert("내용을 입력해주세요!");
       return;
     }
+    if (!customTitle || !customTitle.trim()) {
+      alert("제목을 입력해주세요!");
+      return;
+    }
     try {
+      console.log("[영상 제작 요청] customTitle:", customTitle);
       await axios.post(
         "http://localhost:8080/api/ai/video/request",
         {
           memberId: Number(memberId),
-          rawText,
-          customTitle,
+          rawText: rawText.trim(),
+          customTitle: customTitle.trim(),
           videoMode,
           isVipAuto: data?.isVip || false,
           isMainHot: false,
@@ -450,80 +455,84 @@ const MyPage = ({ memberId }) => {
 
             {/* 탭별 콘텐츠 */}
             <section className="mypage-content">
-        {activeTab === "videos" && (
-          <>
-            <div className="mypage-content-header">
-              <span className="mypage-content-title">제작한 영상</span>
-            </div>
-            <div className="video-grid">
-              {data?.myVideos?.length ? (
-                data.myVideos.map((video) => (
-                  <div
-                    key={video.vno}
-                    className={`video-card ${video.status === "COMPLETED" ? "playable" : ""}`}
-                    onClick={() => handleVideoClick(video)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") handleVideoClick(video);
-                    }}
-                  >
-                    <div className="video-thumb">
-                        {/* 삭제 버튼 추가 */}
-                        <button
-                          className="btn-delete-task"
-                          onClick={(e) => handleDeleteVideo(video.vno, e)}
-                        >
-                          &times;
-                        </button>
-
-                      {video.status === "COMPLETED" && video.videoUrl ? (
-                        <video
-                          src={`http://localhost:8080/upload/videos/${video.videoUrl}`}
-                          muted
-                          loop
-                          onError={() => {}}
-                        />
-                      ) : (
-                        <div className={`processing-placeholder ${video.status}`}>
-                          {/* 로딩 스피너 */}
-                           {video.status !== "CANCELED" && <div className="spinner"></div>}
-                          <span>{video.status}</span>
-                        </div>
-                      )}
-                      <span className="badge">{video.videoMode}</span>
-                    </div>
-                    <div className="video-info">
-                      <p className="video-title">
-                        {video.customTitle || "제목 없음"}
-                      </p>
-                    </div>
+              {activeTab === "videos" && (
+                <>
+                  <div className="mypage-content-header">
+                    <span className="mypage-content-title">제작한 영상</span>
                   </div>
-                ))
-              ) : (
-                <div className="mypage-empty">
-                  <p>제작한 영상이 없습니다.</p>
-                  <button
-                    type="button"
-                    className="mypage-btn primary"
-                    onClick={() => setIsModalOpen(true)}
-                  >
-                    영상 제작
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                  <div className="video-grid">
+                    {data?.myVideos?.length ? (
+                      data.myVideos.map((video) => (
+                        <div
+                          key={video.vno}
+                          className={`video-card ${video.status === "COMPLETED" ? "playable" : ""}`}
+                          onClick={() => handleVideoClick(video)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") handleVideoClick(video);
+                          }}
+                        >
+                          <div className="video-thumb">
+                            {/* 삭제 버튼 추가 */}
+                            <button
+                              className="btn-delete-task"
+                              onClick={(e) => handleDeleteVideo(video.vno, e)}
+                            >
+                              &times;
+                            </button>
 
-        {activeTab === "scrap" && (
-          <ScrapTab
-            scrapItems={data?.scrapItems || []}
-            memberId={memberId}
-            onUnscrapSuccess={handleUnscrapSuccess}
-          />
-        )}
-      </section>
+                            {video.status === "COMPLETED" && video.videoUrl ? (
+                              <video
+                                src={`http://localhost:8080/upload/videos/${video.videoUrl}`}
+                                muted
+                                loop
+                                onError={(e) => {
+                                  console.error("영상 로드 실패:", video.videoUrl, e);
+                                }}
+                              />
+                            ) : (
+                              <div className={`processing-placeholder ${video.status}`}>
+                                {/* 로딩 스피너 */}
+                                {video.status !== "CANCELED" && <div className="spinner"></div>}
+                                <span>{video.status}</span>
+                              </div>
+                            )}
+                            <span className="badge">{video.videoMode}</span>
+                          </div>
+                          <div className="video-info">
+                            <p className="video-title">
+                              {video.customTitle && video.customTitle.trim() !== ""
+                                ? video.customTitle
+                                : "제목 없음"}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="mypage-empty">
+                        <p>제작한 영상이 없습니다.</p>
+                        <button
+                          type="button"
+                          className="mypage-btn primary"
+                          onClick={() => setIsModalOpen(true)}
+                        >
+                          영상 제작
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {activeTab === "scrap" && (
+                <ScrapTab
+                  scrapItems={data?.scrapItems || []}
+                  memberId={memberId}
+                  onUnscrapSuccess={handleUnscrapSuccess}
+                />
+              )}
+            </section>
           </>
         )}
       </div>
@@ -555,20 +564,20 @@ const MyPage = ({ memberId }) => {
             <label className="panel-label">영상 제목</label>
             {/*  제목 입력창 옆에 AI 버튼 배치 */}
             <div className="input-with-btn">
-                <input
+              <input
                 type="text"
                 className="modal-input"
                 placeholder="영상의 핵심 제목을 입력하세요"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
-                />
-                <button
+              />
+              <button
                 className={`btn-ai-magic ${isGenerating ? "loading" : ""}`}
                 onClick={handleAiWriting}
                 disabled={isGenerating}
-                >
+              >
                 {isGenerating ? "✍️..." : "🪄 AI 작성"}
-                </button>
+              </button>
             </div>
           </div>
           <div className="panel-input-group flex-grow">
@@ -658,7 +667,8 @@ const MyPage = ({ memberId }) => {
                       selectedVideo.videoMode === "9:16" ? "portrait" : "landscape"
                     }
                     onEnded={handleNextVideo}
-                    onError={() => {
+                    onError={(e) => {
+                      console.error("영상 재생 실패:", selectedVideo.videoUrl, e);
                       setVideoError(true);
                       setVideoLoading(false);
                     }}

@@ -67,11 +67,17 @@ public class MyPageServiceImpl implements MyPageService {
                 .vno(entity.getVno())
                 .memberId(entity.getMember().getId()) // 중요: entity.getMember().getId()로 변경
                 .newsId(entity.getNewsId())
+                .rawText(entity.getRawText())
+                .customTitle(entity.getCustomTitle()) // customTitle 추가
+                .category(entity.getCategory() != null ? entity.getCategory() : "politics")
                 .videoMode(entity.getVideoMode())
                 .status(entity.getStatus())
                 .videoUrl(entity.getVideoUrl())
                 .imgUrl(entity.getImgUrl())
+                .isVipAuto(entity.isVipAuto())
+                .isMainHot(entity.isMainHot())
                 .regDate(entity.getRegDate())
+                .modDate(entity.getModDate())
                 .build();
     }
 }

@@ -22,7 +22,7 @@ public class NewsVideoScheduler {
     private final NewsClusterRepository newsClusterRepository;
 
     /* 10분마다 실행, 각 카테고리별 HOT 이슈 영상제작 요청 */
-    @Scheduled(cron = "0 0/1 * * * *")
+    @Scheduled(cron = "0 0/10 * * * *")
     public void generateCategoryHotDigest() {
 
         String[] categories = { "politics", "economy", "society", "world", "it", "culture" };
