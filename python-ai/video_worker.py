@@ -1,4 +1,4 @@
-import os, time, json, re, mysql.connector
+import os, time, json, re, mysql.connector, gc
 from moviepy.config import change_settings
 from moviepy.editor import *
 import media_tools
@@ -198,7 +198,8 @@ def run_engine():
         try:
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM tbl_video_task WHERE status = 'PENDING' ORDER BY vno ASC LIMIT 1")
+            # 스케줄러 작업(is_main_hot=1)을 우선 처리, 그 다음 일반 작업 처리
+            cursor.execute("SELECT * FROM tbl_video_task WHERE status = 'PENDING' ORDER BY is_main_hot DESC, vno ASC LIMIT 1")
             task = cursor.fetchone()
 
             if task:
@@ -223,6 +224,9 @@ def run_engine():
                         final_video = concatenate_videoclips(final_clips, method="compose")
                         final_video.write_videofile(save_path, fps=24, codec='libx264', audio_codec='aac', threads=8, preset='ultrafast')
                         
+                        # write_videofile 완료 후 파일 핸들이 해제될 때까지 대기
+                        time.sleep(2.0)
+                        
                         # 파일 저장 확인
                         if os.path.exists(save_path):
                             file_size = os.path.getsize(save_path)
@@ -234,6 +238,13 @@ def run_engine():
                         cursor.execute("UPDATE tbl_video_task SET status = 'COMPLETED', video_url=%s WHERE vno = %s", (file_name, vno))
                         conn.commit()
                         print(f"✅ [Job {vno}] 제작 완료! DB 업데이트: video_url={file_name}")
+                        
+                        # final_video 참조를 명시적으로 해제하기 전에 close
+                        try:
+                            final_video.close()
+                            final_video = None
+                        except:
+                            pass
             cursor.close()
         except Exception as e: print(f"❌ 에러: {e}")
         finally:
@@ -244,6 +255,7 @@ def run_engine():
             if final_video:
                 try:
                     final_video.close()
+                    final_video = None
                 except:
                     pass
             
@@ -253,40 +265,65 @@ def run_engine():
                 except:
                     pass
             
-            # 약간의 지연 후 임시 파일 삭제 (파일 핸들이 완전히 해제될 때까지 대기)
-            time.sleep(0.5)
+            # 참조 해제 후 가비지 컬렉션 강제 실행
+            final_clips.clear()
+            gc.collect()
             
-            # 임시 파일 삭제 (재시도 로직 포함)
-            for f in all_temps:
-                if f and os.path.exists(f):
-                    max_retries = 3
-                    for attempt in range(max_retries):
-                        try:
-                            os.remove(f)
-                            break  # 성공하면 루프 종료
-                        except PermissionError:
+            # 파일 핸들이 완전히 해제될 때까지 충분한 대기 시간
+            time.sleep(3.0)
+            
+            # 임시 파일 삭제 함수 (재시도 로직 포함)
+            def safe_remove_file(file_path, max_retries=5, retry_delay=1.0):
+                """파일을 안전하게 삭제 (재시도 로직 포함)"""
+                if not file_path or not os.path.exists(file_path):
+                    return True
+                
+                for attempt in range(max_retries):
+                    try:
+                        os.remove(file_path)
+                        return True  # 성공
+                    except (PermissionError, OSError) as e:
+                        # WinError 32 (파일 사용 중) 또는 PermissionError
+                        errno = getattr(e, 'winerror', getattr(e, 'errno', None))
+                        if errno == 32 or isinstance(e, PermissionError):
                             if attempt < max_retries - 1:
-                                time.sleep(0.5)  # 0.5초 대기 후 재시도
+                                time.sleep(retry_delay * (attempt + 1))  # 점진적으로 대기 시간 증가
                             else:
-                                print(f"임시 파일 삭제 실패 (재시도 {max_retries}회): {f}")
-                        except Exception as e:
-                            # PermissionError 외 다른 에러는 로그만 남기고 넘어감
+                                print(f"⚠️ 임시 파일 삭제 실패 (재시도 {max_retries}회): {file_path}")
+                                return False
+                        else:
+                            # 기타 OSError는 로그만 남기고 넘어감
                             if attempt == max_retries - 1:
-                                print(f"임시 파일 삭제 중 예외: {f}, {e}")
-                            break
+                                print(f"⚠️ 임시 파일 삭제 중 예외: {file_path}, {e}")
+                            return False
+                    except Exception as e:
+                        # 기타 예외는 로그만 남기고 넘어감
+                        if attempt == max_retries - 1:
+                            print(f"⚠️ 임시 파일 삭제 중 예외: {file_path}, {e}")
+                        return False
+                return False
             
-            # MoviePy가 생성한 추가 임시 파일들도 정리 (BASE_DIR 내 TEMP_MPY_* 패턴)
-            try:
-                for temp_file in os.listdir(BASE_DIR):
-                    if temp_file.startswith("result_vno_") and "TEMP_MPY_" in temp_file:
-                        temp_path = os.path.join(BASE_DIR, temp_file)
-                        if os.path.isfile(temp_path):
-                            try:
-                                os.remove(temp_path)
-                            except (PermissionError, OSError):
-                                pass  # 삭제 실패해도 계속 진행
-            except Exception:
-                pass  # 디렉토리 읽기 실패해도 계속 진행
+            # all_temps 리스트의 임시 파일 삭제
+            for f in all_temps:
+                safe_remove_file(f, max_retries=5, retry_delay=1.0)
+            
+            # MoviePy가 생성한 추가 임시 파일들도 정리 (BASE_DIR 및 OUTPUT_DIR 내)
+            # 가비지 컬렉션 후 추가 대기 시간
+            time.sleep(1.0)
+            temp_dirs = [BASE_DIR, OUTPUT_DIR]
+            for temp_dir in temp_dirs:
+                try:
+                    if not os.path.exists(temp_dir):
+                        continue
+                    for temp_file in os.listdir(temp_dir):
+                        # TEMP_MPY_ 패턴 또는 temp_audio_ 패턴 파일 삭제
+                        if ("TEMP_MPY_" in temp_file or temp_file.startswith("temp_audio_")) and temp_file.endswith((".mp4", ".mp3", ".wav")):
+                            temp_path = os.path.join(temp_dir, temp_file)
+                            if os.path.isfile(temp_path):
+                                safe_remove_file(temp_path, max_retries=5, retry_delay=1.0)
+                except Exception as e:
+                    # 디렉토리 읽기 실패해도 계속 진행
+                    pass
                 
         time.sleep(10)
 

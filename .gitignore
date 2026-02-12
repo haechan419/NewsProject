@@ -60,3 +60,17 @@ fullStc/.env.local
 fullStc/.env.*.local
 fullStc/application-local.properties
 fullStc/**/application.properties
+
+# 파이썬 AI 엔진 (python-ai)
+python-ai/venv/
+python-ai/.env
+python-ai/__pycache__/
+python-ai/*.pyc
+python-ai/.pytest_cache/
+
+# AI 생성물 및 임시 파일 (용량이 크므로 제외 필수)
+python-ai/videos/*.mp4
+python-ai/*.jpg
+python-ai/*.mp3
+python-ai/temp_media_*
+python-ai/temp_audio_*

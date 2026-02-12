@@ -138,6 +138,17 @@ public class VideoServiceImpl implements VideoService {
         });
     }
 
+    @Override
+    public void cancelAllProcessingTasks() {
+        List<VideoTask> processingTasks = videoTaskRepository.findByStatusIn(List.of("PENDING", "PROCESSING"));
+        if (!processingTasks.isEmpty()) {
+            int count = processingTasks.size();
+            processingTasks.forEach(task -> task.changeStatus("CANCELED"));
+            videoTaskRepository.saveAll(processingTasks);
+            log.info("[스케줄러] 모든 진행 중인 작업 취소 완료: {}개 작업", count);
+        }
+    }
+
     private VideoTaskDTO entityToDTO(VideoTask entity) {
         return VideoTaskDTO.builder()
                 .vno(entity.getVno())
