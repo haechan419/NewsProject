@@ -32,7 +32,9 @@
 
 👉 [영상 바로가기](https://youtu.be/D9-CwOcEv1w?si=bbBhQPHsbsgI2S9Z)
 
-📄 발표 PDF: [다운로드](./files/team_1_pdf.pdf)
+📄 발표 PDF: [다운로드](./files/1조_2차%20한해찬,%20강진수,%20성건우,%20전유진,%20문주연.pdf)
+
+📄 AI PDF: [다운로드](./files/1조_AI%20PDF.pdf)
 
 ## 👨‍💻 팀 구성 및 역할 분담 (R&R)
 
